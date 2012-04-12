@@ -14,7 +14,7 @@
 #define GEOMETRY_VOLUME_HPP
 
 #include <math/math_all.hpp>
-
+#include <boost/foreach.hpp>
 #include <set>
 #include <vector>
 
@@ -284,9 +284,9 @@ public :
 
     template <typename DstVolume_t>
     void filter( 
-        const FIRFilter_t & filter,
+        const math::FIRFilter_t & filter,
         const VolumeBase_t::Displacement_s & diff,
-        DstVolume_t & dstVolume ) const;
+        DstVolume_t & dstVolume );
 
     /**
      * Provide basic visualization of a scalar field isosurface as a set of
@@ -811,23 +811,24 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t>::grid2geo(
 
 /* class ScalarField_t */
 
+template <class Value_t>
 template <typename DstVolume_t>
-    void ScalarField_t::filter( 
-        const FIRFilter_t & filter,
+    void ScalarField_t<Value_t>::filter( 
+        const math::FIRFilter_t & filter,
         const VolumeBase_t::Displacement_s & diff,
-        DstVolume_t & dstVolume ) const {
+        DstVolume_t & dstVolume ) {
 
-        assert( sizeX() == dstVolume.sizeX() );
-        assert( sizeY() == dstVolume.sizeY() );
-        assert( sizeZ() == dstVolume.sizeZ() );
+        assert( this->sizeX() == dstVolume.sizeX() );
+        assert( this->sizeY() == dstVolume.sizeY() );
+        assert( this->sizeZ() == dstVolume.sizeZ() );
         assert( diff != VolumeBase_t::Displacement_s( 0, 0, 0 ) );
 
-        std::set<VolumeBase_t::Position_s> poss = iteratorPositions( diff );
+        std::set<VolumeBase_t::Position_s> poss = this->iteratorPositions( diff );
 
         BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
 
-            Giterator_t sit( srcVolume, pos, diff );
-            Giterator_t send = gend( sit );
+            typename ScalarField_t<Value_t>::Giterator_t sit( *this, pos, diff );
+            typename ScalarField_t<Value_t>::Giterator_t send = gend( sit );
             typename DstVolume_t::Giterator_t dit( dstVolume, pos, diff );
 
             int rowSize = send - sit;

@@ -68,13 +68,12 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
 
     // perform filtering
     std::cout << "Filtering output.\n";
-    LowPassFilter_t filter( filterCutoffPeriod * delta / _voxelSize,
+    math::LowPassFilter_t filter( filterCutoffPeriod * delta / _voxelSize,
         uint( filterCutoffPeriod * ceil( delta / _voxelSize ) ) );
 
-
     rawfield.filter( filter, Displacement_s( 1, 0, 0 ), *this );
-    filter( filter, Displacement_s( 0, 1, 0 ), rawfield );
-    rawfiled.filter( filter, Displacement_s( 0, 0, 1 ), *this );
+    this->filter( filter, Displacement_s( 0, 1, 0 ), rawfield );
+    rawfield.filter( filter, Displacement_s( 0, 0, 1 ), *this );
 
     // all done
 }

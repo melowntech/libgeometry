@@ -105,7 +105,7 @@ void PointCloud_t::ThreeDistance_t::update( const ublas::vector<double> diff ) {
 
     double dist = ublas::norm_2( diff );
 
-    if ( dist < VERY_SMALL_NUMBER ) return;
+    if ( dist < 1E-15 ) return;
 
     int code = ( fabs( diff[0] ) > fabs( diff[1] ) ) << 0
     | ( fabs( diff[1] ) > fabs( diff[2] ) ) << 1
