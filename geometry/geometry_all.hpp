@@ -5,6 +5,7 @@
  * All of geometry library.
  */
  
+#include "core.hpp"
 #include "pointcloud.hpp"
 #include "volume.hpp"
 
