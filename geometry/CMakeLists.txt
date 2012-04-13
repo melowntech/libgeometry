@@ -12,7 +12,7 @@ set(geometry_SOURCES
 # (like python extension)).
 if(Add_Subdirectory_And_Grab_Sources_Var)
   set(${Add_Subdirectory_And_Grab_Sources_Var}
-    ${${Add_Subdirectory_And_Grab_Sources_Var}};${math_SOURCES}
+    ${${Add_Subdirectory_And_Grab_Sources_Var}};${geometry_SOURCES}
     PARENT_SCOPE)
 else()
   add_library(geometry STATIC ${geometry_SOURCES})
