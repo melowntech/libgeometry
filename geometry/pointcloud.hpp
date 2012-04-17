@@ -74,9 +74,13 @@ private :
     void assign ( InputIterator first, InputIterator last ) {
         assert( false ); }
     void pop_back ( ) { assert( false); }
-    iterator erase ( iterator position ) { assert( false ); }
-    iterator erase ( iterator first, iterator last ) { assert( false ); }
+    iterator erase ( iterator position ) { (void) position; assert( false ); }
+    iterator erase ( iterator first, iterator last ) {
+        (void) first; (void) last;
+        assert( false );
+    }
     void swap( std::vector<ublas::vector< double> >& vec ) {
+        (void) vec;
         assert( false ); }
 
     void updateExtents( const ublas::vector<double> & x );
