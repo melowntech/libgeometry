@@ -17,40 +17,40 @@ namespace ublas = boost::numeric::ublas;
 
 namespace math {
 
-class Point2 : public ublas::vector<double> {
+class Point2 : public ublas::vector<double, ublas::bounded_array<double, 2> > {
 public:
     Point2( const double x = 0.0, const double y = 0.0 )
-        : ublas::vector<double>(2) {
+        : ublas::vector<double, ublas::bounded_array<double, 2> >(2) {
         (*this)(0) = x; (*this)(1) = y;
     }
 
     template <class AE>
     Point2( const ublas::vector_expression<AE> & op )
-        : ublas::vector<double>(2) {
+        : ublas::vector<double, ublas::bounded_array<double, 2> >(2) {
         ublas::vector_assign<ublas::scalar_assign>(*this, op );
     }
 
     Point2( const ublas::vector<double> & op )
-        : ublas::vector<double>(2) {
+        : ublas::vector<double, ublas::bounded_array<double, 2> >(2) {
         ublas::vector_assign<ublas::scalar_assign>( *this, op );
     }
 };
 
-class Point3 : public ublas::vector<double> {
+class Point3 : public ublas::vector<double, ublas::bounded_array<double, 3> > {
 public:
     Point3( const double x = 0.0, const double y = 0.0, const double z = 0.0 )
-        : ublas::vector<double>(3) {
+        : ublas::vector<double, ublas::bounded_array<double, 3> >(3) {
         (*this)(0) = x; (*this)(1) = y; (*this)(2) = z;
     }
 
     template <class AE>
     Point3( const ublas::vector_expression<AE> & op )
-        : ublas::vector<double>(3) {
+        : ublas::vector<double, ublas::bounded_array<double, 3> >(3) {
         ublas::vector_assign<ublas::scalar_assign>( *this, op );
     }
 
     Point3( const ublas::vector<double> & op )
-        : ublas::vector<double>(3) {
+        : ublas::vector<double, ublas::bounded_array<double, 3> >(3) {
         ublas::vector_assign<ublas::scalar_assign>( *this, op );
     }    
 };
