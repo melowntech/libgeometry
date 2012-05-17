@@ -9,32 +9,32 @@
 namespace geometry {
 
 
-void PointCloud_t::push_back( const ublas::vector<double> & x ) {
+void PointCloud::push_back( const ublas::vector<double> & x ) {
 
     updateExtents( x );
     std::vector<ublas::vector<double> >::push_back( x );
 }
 
-PointCloud_t::iterator PointCloud_t::insert( iterator position,
+PointCloud::iterator PointCloud::insert( iterator position,
     const ublas::vector<double> & x ) {
 
     updateExtents( x );
     return std::vector<ublas::vector<double> >::insert( position, x );
 }
 
-void PointCloud_t::insert( iterator position, size_type n,
+void PointCloud::insert( iterator position, size_type n,
     const ublas::vector<double> & x ) {
 
     updateExtents( x );
     std::vector<ublas::vector<double> >::insert( position, n, x );
 }
 
-void PointCloud_t::clear() {
+void PointCloud::clear() {
     _upper = _lower = ublas::zero_vector<double>(3);
 }
 
 
-void PointCloud_t::dump( const std::string & path ) {
+void PointCloud::dump( const std::string & path ) {
 
     std::fstream f;
 
@@ -56,7 +56,7 @@ void PointCloud_t::dump( const std::string & path ) {
     }
 }
 
-void PointCloud_t::updateExtents( const ublas::vector<double> & x ) {
+void PointCloud::updateExtents( const ublas::vector<double> & x ) {
 
     if ( empty() ) {
 
@@ -71,9 +71,9 @@ void PointCloud_t::updateExtents( const ublas::vector<double> & x ) {
     if ( x[2] > _upper[2] ) _upper[2] = x[2];
 }
 
-double PointCloud_t::samplingDelta( float bulkThreshold ) const {
+double PointCloud::samplingDelta( float bulkThreshold ) const {
 
-    ThreeDistance_t * distArray = new ThreeDistance_t[ size() ];
+    ThreeDistance * distArray = new ThreeDistance[ size() ];
 
     // sanity
     assert( ! empty() );
@@ -81,7 +81,7 @@ double PointCloud_t::samplingDelta( float bulkThreshold ) const {
     // obtain array of closest neighbour distances
     double maxDist = ublas::norm_2( _upper - _lower );
     for ( uint i = 0; i < size(); i++ )
-        distArray[i] = ThreeDistance_t( maxDist );
+        distArray[i] = ThreeDistance( maxDist );
 
     for ( uint i = 0; i < size(); i++ )
         for ( uint j = 0; j < i; j++ ) {
@@ -99,9 +99,9 @@ double PointCloud_t::samplingDelta( float bulkThreshold ) const {
     return retval;
 }
 
-/* PointCloud_t::ThreeDistance_s */
+/* PointCloud::ThreeDistance */
 
-void PointCloud_t::ThreeDistance_t::update( const ublas::vector<double> diff ) {
+void PointCloud::ThreeDistance::update( const ublas::vector<double> diff ) {
 
     double dist = ublas::norm_2( diff );
 
@@ -129,7 +129,7 @@ void PointCloud_t::ThreeDistance_t::update( const ublas::vector<double> diff ) {
 }
 
 
-double PointCloud_t::ThreeDistance_t::value() const {
+double PointCloud::ThreeDistance::value() const {
 
     double dists[3];
     dists[0] = distX; dists[1] = distY; dists[2] = distZ;

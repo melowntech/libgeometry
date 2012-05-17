@@ -22,12 +22,12 @@ namespace geometry {
  * maintenance and sampling density computation.
  */
 
-class PointCloud_t: public std::vector<ublas::vector<double> > {
+class PointCloud: public std::vector<ublas::vector<double> > {
 
 public :
 
     /** Initialize */
-    PointCloud_t() :
+    PointCloud() :
         _lower( ublas::zero_vector<double>( 3 ) ),
         _upper( ublas::zero_vector<double>( 3 ) ) {};
 
@@ -86,18 +86,18 @@ private :
 
     void updateExtents( const ublas::vector<double> & x );
 
-    class ThreeDistance_t {
+    class ThreeDistance {
 
     public :
 
-        ThreeDistance_t( double value = 0.0 )
+        ThreeDistance( double value = 0.0 )
             : distX( value ), distY( value ), distZ( value ) {}
 
         void update( const ublas::vector<double> diff );
 
         double value() const;
 
-        bool operator < ( const ThreeDistance_t & op ) const {
+        bool operator < ( const ThreeDistance & op ) const {
 
             return value() < op.value();
         }
@@ -113,7 +113,7 @@ private :
 /* template method implementation */
 
 template <class InputIterator>
-void PointCloud_t::insert ( iterator position, InputIterator first,
+void PointCloud::insert ( iterator position, InputIterator first,
                             InputIterator last ) {
 
     for ( InputIterator it = first; it < last; it++ )
