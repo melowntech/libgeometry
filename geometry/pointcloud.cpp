@@ -9,24 +9,24 @@
 namespace geometry {
 
 
-void PointCloud::push_back( const ublas::vector<double> & x ) {
+void PointCloud::push_back( const math::Point3 & x ) {
 
     updateExtents( x );
-    std::vector<ublas::vector<double> >::push_back( x );
+    std::vector<math::Point3>::push_back( x );
 }
 
 PointCloud::iterator PointCloud::insert( iterator position,
-    const ublas::vector<double> & x ) {
+    const math::Point3 & x ) {
 
     updateExtents( x );
-    return std::vector<ublas::vector<double> >::insert( position, x );
+    return std::vector<math::Point3>::insert( position, x );
 }
 
 void PointCloud::insert( iterator position, size_type n,
-    const ublas::vector<double> & x ) {
+    const math::Point3 & x ) {
 
     updateExtents( x );
-    std::vector<ublas::vector<double> >::insert( position, n, x );
+    std::vector<math::Point3>::insert( position, n, x );
 }
 
 void PointCloud::clear() {
@@ -56,7 +56,7 @@ void PointCloud::dump( const std::string & path ) {
     }
 }
 
-void PointCloud::updateExtents( const ublas::vector<double> & x ) {
+void PointCloud::updateExtents( const math::Point3 & x ) {
 
     if ( empty() ) {
 
@@ -101,7 +101,7 @@ double PointCloud::samplingDelta( float bulkThreshold ) const {
 
 /* PointCloud::ThreeDistance */
 
-void PointCloud::ThreeDistance::update( const ublas::vector<double> diff ) {
+void PointCloud::ThreeDistance::update( const math::Point3 diff ) {
 
     double dist = ublas::norm_2( diff );
 

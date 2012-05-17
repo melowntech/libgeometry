@@ -13,6 +13,8 @@
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/io.hpp>
 
+#include "math/geometry.hpp"
+
 namespace ublas = boost::numeric::ublas;
 
 namespace geometry {
@@ -22,7 +24,7 @@ namespace geometry {
  * maintenance and sampling density computation.
  */
 
-class PointCloud: public std::vector<ublas::vector<double> > {
+class PointCloud: public std::vector<math::Point3> {
 
 public :
 
@@ -32,14 +34,14 @@ public :
         _upper( ublas::zero_vector<double>( 3 ) ) {};
 
     /** push_back */
-    void push_back ( const ublas::vector<double> & x );
+    void push_back ( const math::Point3 & x );
 
     /** insert */
-    iterator insert ( iterator position, const ublas::vector<double> & x );
+    iterator insert ( iterator position, const math::Point3 & x );
 
     /** insert */
     void insert ( iterator position, size_type n,
-                  const ublas::vector<double> & x );
+                  const math::Point3 & x );
 
     /** insert */
     template <class InputIterator>
@@ -62,10 +64,10 @@ public :
     double samplingDelta ( float bulkThreshold = 0.5 ) const;
 
     /** Upper bound of all points */
-    ublas::vector<double> upper() const { assert( ! empty() ); return _upper; }
+    math::Point3 upper() const { assert( ! empty() ); return _upper; }
 
     /** Upper bound of all points. */
-    ublas::vector<double> lower() const { assert( ! empty() ); return _lower; }
+    math::Point3 lower() const { assert( ! empty() ); return _lower; }
 
 private :
 
@@ -84,7 +86,7 @@ private :
         (void) vec;
         assert( false ); }
 
-    void updateExtents( const ublas::vector<double> & x );
+    void updateExtents( const math::Point3 & x );
 
     class ThreeDistance {
 
@@ -93,7 +95,7 @@ private :
         ThreeDistance( double value = 0.0 )
             : distX( value ), distY( value ), distZ( value ) {}
 
-        void update( const ublas::vector<double> diff );
+        void update( const math::Point3 diff );
 
         double value() const;
 
@@ -106,7 +108,7 @@ private :
         double distX, distY, distZ;
     };
 
-    ublas::vector<double> _lower, _upper;
+    math::Point3 _lower, _upper;
 };
 
 
@@ -119,7 +121,7 @@ void PointCloud::insert ( iterator position, InputIterator first,
     for ( InputIterator it = first; it < last; it++ )
         updateExtents( *it );
 
-    std::vector<ublas::vector<double > >::insert( position, first, last );
+    std::vector<math::Point3>::insert( position, first, last );
 }
 
 
