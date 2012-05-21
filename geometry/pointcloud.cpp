@@ -56,6 +56,31 @@ void PointCloud::dump( const std::string & path ) {
     }
 }
 
+
+void PointCloud::load( const std::string & path ) {
+
+    std::ifstream f;
+    f.exceptions( std::ios::badbit );
+
+    try {
+
+        f.open( path );
+        clear();
+
+        double x, y, z;
+        while (f >> x >> y >> z) {
+            push_back( math::Point3(x, y, z) );
+        }
+
+    } catch ( std::ios_base::failure & e ) {
+
+        LOG( err2 ) << "Failed to read '" << path
+                    << "', error: " << e.what();
+        throw;
+    }
+}
+
+
 void PointCloud::updateExtents( const math::Point3 & x ) {
 
     if ( empty() ) {

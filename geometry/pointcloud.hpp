@@ -57,6 +57,11 @@ public :
     void dump( const std::string & path );
 
     /**
+     * Load a file saved with "dump".
+     */
+    void load( const std::string & path );
+
+    /**
      * Return a measure of euclidian distance to a nearest point.
      * Sampling delta * 100 % point are at most as far from a nearest point as
      * the return value.
