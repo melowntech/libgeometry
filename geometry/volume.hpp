@@ -14,6 +14,8 @@
 #define GEOMETRY_VOLUME_HPP
 
 #include <math/math_all.hpp>
+#include <dbglog/dbglog.hpp>
+
 #include <boost/foreach.hpp>
 #include <set>
 #include <vector>
@@ -93,10 +95,17 @@ template <typename E, typename T>
 std::basic_ostream<E, T> & operator << (
     std::basic_ostream<E,T> & os, const VolumeBase_t::FPosition_s & pos ) {
 
-    os << "[" << pos.x << ", " << pos.y << ", " << pos.z << "]";
+    os << "[" << pos.x << "," << pos.y << "," << pos.z << "]";
     return os;
 }
 
+template <typename E, typename T>
+std::basic_ostream<E, T> & operator << (
+    std::basic_ostream<E,T> & os, const VolumeBase_t::Displacement_s & pos ) {
+
+    os << "[" << pos.x << "," << pos.y << "," << pos.z << "]";
+    return os;
+}
 
 
 template <typename Value_t>
