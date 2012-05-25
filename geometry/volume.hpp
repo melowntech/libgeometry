@@ -15,6 +15,7 @@
 
 #include <math/math_all.hpp>
 #include <dbglog/dbglog.hpp>
+#include <geometry/pointcloud.hpp>
 
 #include <boost/foreach.hpp>
 #include <set>
@@ -86,7 +87,7 @@ public:
         FPosition_s( const double x = 0.0, const double y = 0.0,
                      const double z = 0.0 ) : x( x ), y( y ), z( z ) {}
 
-        FPosition_s( const ublas::vector<double> & op ) :
+        FPosition_s( const math::Point3 & op ) :
             x( op[0] ), y( op[1] ), z( op[2] ) {};
     };
 };
@@ -266,8 +267,16 @@ public :
 
 protected :
 
+    /** Find corresponding grid position. Default rounding (0) is closest
+     * grid point (0), -1 specifies floor, 1 ceiling */
     typename VolumeBase_t::Position_s geo2grid(
+        const VolumeBase_t::FPosition_s & gpos,
+        const int roundingX = 0, const int roundingY = 0,
+        const int roundingZ = 0 );
+
+    typename VolumeBase_t::FPosition_s geo2gridf(
         const VolumeBase_t::FPosition_s & gpos );
+
     VolumeBase_t::FPosition_s grid2geo(
         const typename VolumeBase_t::Position_s & pos );
     VolumeBase_t::FPosition_s grid2geo( const VolumeBase_t::FPosition_s & pos );
@@ -359,17 +368,24 @@ public:
      */
     DistanceMap_t( const Bitfield_t & bitfield, const Value_t initValue );
 
+    /**
+     * Create distance map from a pointcloud. InitValue corresponds to the
+     * maximum distance (infty). The lower this value, the more efficient
+     * the memory representation.
+     */
+    DistanceMap_t( const PointCloud & cloud, float voxelSize,
+                   const Value_t initValue );
 
 
 private:
     struct DistVector_s {
-        unsigned short distX, distY, distZ;
+        float distX, distY, distZ;
 
-        DistVector_s( const unsigned short infty ) :
+        DistVector_s( const float infty ) :
             distX( infty ), distY( infty ), distZ( infty ) {};
 
-        DistVector_s( const unsigned short distX, const unsigned short distY,
-            const unsigned short distZ ) :
+        DistVector_s( const float distX, const float distY,
+            const float distZ ) :
             distX( distX ), distY( distY ), distZ( distZ ) {};
 
         DistVector_s operator + ( const DistVector_s & op2 ) {
@@ -448,6 +464,12 @@ public :
     BitfieldReconstruction_t( const Bitfield_t & from,
         double delta, double filterCutoffPeriod = 3.0 );
 
+    BitfieldReconstruction_t( const PointCloud & cloud,
+        double voxelSize,
+        double delta,
+        double filterCutoffPeriod = 3.0 );
+
+    
 protected :
 
     struct Poll_s {
@@ -467,7 +489,8 @@ protected :
     class VotingField_t: public Volume_t<Poll_s> {
 
     public:
-        VotingField_t( const Bitfield_t & from )
+        template <class T>
+        VotingField_t( const ScalarField_t<T> & from )
             : Volume_t<Poll_s>( from.sizeX(), from.sizeY(), from.sizeZ(),
                 Poll_s() ) {}
     };
@@ -789,14 +812,58 @@ void GeoVolume_t<Value_t>::fset( const double x, const double y,
 
 template <class Value_t>
 typename VolumeBase_t::Position_s GeoVolume_t<Value_t>::geo2grid(
-    const VolumeBase_t::FPosition_s & gpos ) {
-    return typename Volume_t<Value_t>::Position_s(
-        round( ( gpos.x - _lower.x ) / ( _upper.x - _lower.x )
-            * this->_sizeX - 0.5 ),
-        round( ( gpos.y - _lower.y ) / ( _upper.y - _lower.y )
-            * this->_sizeY - 0.5 ),
-        round( ( gpos.z - _lower.z ) / ( _upper.z - _lower.z )
-            * this->_sizeZ - 0.5 ) );
+    const VolumeBase_t::FPosition_s & gpos,
+    const int roundingX, const int roundingY,
+    const int roundingZ  ) {
+    
+    typename VolumeBase_t::FPosition_s fpos = geo2gridf( gpos );
+
+    typename VolumeBase_t::Position_s retval;
+
+    switch ( roundingX ) {
+        case 0:
+            retval.x = round( fpos.x ); break;
+        case -1:
+            retval.x = round( floor( fpos.x ) ); break;
+        case 1:
+            retval.x = round( ceil( fpos.x ) ); break;            
+    }
+
+    switch ( roundingY ) {
+        case 0:
+            retval.y = round( fpos.y ); break;
+        case -1:
+            retval.y = round( floor( fpos.y ) ); break;
+        case 1:
+            retval.y = round( ceil( fpos.y ) ); break;
+    }
+
+    switch ( roundingZ ) {
+        case 0:
+            retval.z = round( fpos.z ); break;
+        case -1:
+            retval.z = round( floor( fpos.z ) ); break;
+        case 1:
+            retval.z = round( ceil( fpos.z ) ); break;
+    }
+
+
+    return retval;
+        
+}
+
+
+template <class Value_t>
+typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t>::geo2gridf(
+        const VolumeBase_t::FPosition_s & gpos )
+{
+    return typename Volume_t<Value_t>::FPosition_s(
+        ( gpos.x - _lower.x ) / ( _upper.x - _lower.x )
+            * this->_sizeX - 0.5,
+        ( gpos.y - _lower.y ) / ( _upper.y - _lower.y )
+            * this->_sizeY - 0.5,
+        ( gpos.z - _lower.z ) / ( _upper.z - _lower.z )
+            * this->_sizeZ - 0.5 );
 }
 
 template <class Value_t>
@@ -1372,7 +1439,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const Bitfield_t & bitfield,
 
     // initialize vector distance field (Danielsson's 4SED algorithm)
     DistVectorField_t dvField( this->_sizeX, this->_sizeY, this->_sizeZ,
-        (unsigned short) ceil( initValue / this->_voxelSize ) );
+        initValue / this->_voxelSize );
 
     for ( int i = 0; i < dvField.sizeX(); i++ )
         for ( int j = 0; j < dvField.sizeY(); j++ )
@@ -1403,6 +1470,74 @@ DistanceMap_t<Value_t>::DistanceMap_t( const Bitfield_t & bitfield,
 
     // all done
 }
+
+
+template <typename Value_t>
+DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
+    float voxelSize, const Value_t initValue )
+    : ScalarField_t<Value_t>( cloud.lower(), cloud.upper(),
+      voxelSize, initValue ) {
+
+    LOG( info2 ) << "Corrected extents: "
+              << this->_lower << this->_upper;
+    LOG( info2 ) << "Volume is ( " << this->_sizeX << ", " << this->_sizeY
+                 << ", " << this->_sizeZ << " )";
+        
+    // initialize vector distance field (Danielsson's 4SED algorithm)
+    DistVectorField_t dvField( this->_sizeX, this->_sizeY, this->_sizeZ,
+        initValue / this->_voxelSize );
+
+    BOOST_FOREACH( math::Point3 point, cloud ) {
+
+            typename VolumeBase_t::FPosition_s fpos
+                = GeoVolume_t<Value_t>::geo2gridf( point );
+
+            for ( int i = -1; i <= 1; i += 2 )
+                for ( int j = -1; j <= 1; j += 2 )
+                    for ( int k = -1; k <= 1; k += 2 ) {
+
+                typename VolumeBase_t::Position_s
+                    pos = GeoVolume_t<Value_t>::geo2grid( point, i, j , k );
+
+                DistVector_s curVal = dvField.get( pos.x, pos.y, pos.z );
+
+                //LOG( debug ) << curVal.distX << " " << curVal.distY << " " << curVal.distZ;
+            
+                dvField.set( pos.x, pos.y, pos.z,
+                        DistVector_s(
+                            std::min( (float) fabs( pos.x - fpos.x )
+                                , curVal.distX ),
+                            std::min( (float) fabs( pos.y - fpos.y )
+                                , curVal.distY ),
+                            std::min( (float) fabs( pos.z - fpos.z )
+                                , curVal.distZ ) ) );
+            }
+    }
+    
+    // perform scanning
+    //std::cout << "Z ASC\n";
+    for ( int k = 1; k < dvField.sizeZ(); k++ )
+        scanXYPlane( dvField, k, ASC );
+    //std::cout << "Z DESC\n";
+    for ( int k = dvField.sizeZ() - 2; k >= 0; k-- )
+        scanXYPlane( dvField, k, DESC );
+
+    // compute distance map based on the vector field
+    for ( int i = 0; i < dvField.sizeX(); i++ )
+        for ( int j = 0; j < dvField.sizeY(); j++ )
+            for ( int k = 0; k < dvField.sizeZ(); k++ ) {
+
+                DistVector_s dv( dvField.get( i, j, k ) );
+                Value_t dist = this->_voxelSize * sqrt(
+                    math::sqr( dv.distX ) + math::sqr( dv.distY ) + math::sqr( dv.distZ ) );
+
+                if ( dist < initValue )
+                    set( i, j, k, dist );
+            }
+
+    // all done
+}
+
 
 template <typename Value_t>
 void DistanceMap_t<Value_t>::scanXYPlane( DistVectorField_t & dvField,

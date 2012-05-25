@@ -84,6 +84,83 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
     // all done
 }
 
+BitfieldReconstruction_t::BitfieldReconstruction_t( const PointCloud & cloud,
+        double voxelSize,
+        double delta,
+        double filterCutoffPeriod )
+    : ScalarField_t<float>( cloud.lower(), cloud.upper(),
+                            voxelSize, -1.0 ) {
+
+    // obtain distance field
+    LOG( info2 ) << "Obtaining distance map.";
+    DistanceMap_t<double> distanceMap( cloud, voxelSize, delta / 2.0 * 1.1 );
+    _lower = distanceMap.lower(); _upper = distanceMap.upper();
+    
+    // initialize voting field
+    LOG( info2 ) << "Creating voting field.";
+    VotingField_t vfield( *this );
+
+    // set the 13 scanning direcitons
+    std::vector<VolumeBase_t::Displacement_s> dspls;
+
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, 0, 0 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 0, 1, 0 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 0, 0, 1 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, 1, 0 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, -1, 0 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 0, 1, 1 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 0, 1, -1  ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, 0,  1 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, 0, -1  ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, 1, 1 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, 1, -1 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( 1, -1, 1 ) );
+    dspls.push_back( VolumeBase_t::Displacement_s( -1, 1, 1 ) );
+
+    // process all scanlines
+    BOOST_FOREACH( VolumeBase_t::Displacement_s diff, dspls ) {
+
+        LOG ( info1 ) << "Processing direction " << diff;
+
+        std::set<VolumeBase_t::Position_s> poss
+            = distanceMap.iteratorPositions( diff );
+
+        BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+
+            DistanceMap_t<double>::Giterator_t begin( distanceMap, pos, diff );
+            DistanceMap_t<double>::Giterator_t end = distanceMap.gend( begin );
+
+            scanline( begin, end, vfield, delta / 2.0 );
+       }
+    }
+
+    // iterate through voting field, evaluating polls
+    LOG( info2 ) << "Evaluating polls.";
+    ScalarField_t<float> rawfield( _lower, _upper, _voxelSize, -1.0 );
+
+    for ( int i = 0; i < sizeX(); i++ )
+        for (  int j = 0; j < sizeY(); j++ )
+            for ( int k = 0; k < sizeZ(); k++ )
+                rawfield.set( i, j, k, pollResult( vfield.get( i, j, k ) ) );
+
+    // perform filtering
+    LOG( info2 ) << "Filtering output.";
+    math::LowPassFilter_t filter( filterCutoffPeriod * delta / _voxelSize,
+        uint( filterCutoffPeriod * ceil( delta / _voxelSize ) ) );
+
+    LOG( info1 ) << "Filtering in x.";
+    rawfield.filter( filter, Displacement_s( 1, 0, 0 ), *this );
+
+    LOG( info1 ) << "Filtering in y.";
+    this->filter( filter, Displacement_s( 0, 1, 0 ), rawfield );
+
+    LOG( info1 ) << "Filtering in z.";
+    rawfield.filter( filter, Displacement_s( 0, 0, 1 ), *this );
+
+    // all done
+}
+
+
 void BitfieldReconstruction_t::scanline(
     const DistanceMap_t<double>::Giterator_t & begin,
     const DistanceMap_t<double>::Giterator_t & end,
