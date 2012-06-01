@@ -2,6 +2,7 @@
 set(geometry_SOURCES
 	pointcloud.cpp
 	volume.cpp
+    parse-obj.cpp
 )
 
 # This magic either creates (static) library or assigns all sources to variable
