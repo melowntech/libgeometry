@@ -28,41 +28,69 @@ namespace geometry { namespace detail {
 
 struct Vertex : ObjParserBase::Vector3d {};
 struct Normal : ObjParserBase::Vector3d {};
+struct Texture : ObjParserBase::Vector3d {};
+
 typedef ObjParserBase::Facet Facet;
 
 class Obj {
 public:
     Obj(ObjParserBase &p)
-        : p_(&p)
+        : p_(&p), vCount_(), tCount_(), nCount_()
     {}
 
     Obj& operator+=(const detail::Vertex &v) {
+        ++vCount_;
         p_->addVertex(v);
         return *this;
     }
 
+    Obj& operator+=(const detail::Texture &t) {
+        ++tCount_;
+        p_->addTexture(t);
+        return *this;
+    }
+
     Obj& operator+=(const detail::Normal &n) {
+        ++nCount_;
         p_->addNormal(n);
         return *this;
     }
 
     Obj& operator+=(Facet f) {
-        // fix indices from one-based to zero-based
-        --f.va, --f.vb, --f.vc;
-        --f.na, --f.nb, --f.nc;
-        --f.ta, --f.tb, --f.tc;
+        for (auto &v : f.v) {
+            if (v < 0) { v = vCount_ + v + 1; }
+        }
+
+        for (auto &t : f.t) {
+            if (t < 0) { t = tCount_ + t + 1; }
+        }
+
+        for (auto &n : f.n) {
+            if (n < 0) { n = nCount_ + n + 1; }
+        }
+
         p_->addFacet(f);
         return *this;
     }
 
 private:
     ObjParserBase *p_;
+    int vCount_;
+    int tCount_;
+    int nCount_;
 };
 
 } } // namespace geometry::detail
 
 BOOST_FUSION_ADAPT_STRUCT(
     geometry::detail::Vertex,
+    (double, x)
+    (double, y)
+    (double, z)
+)
+
+BOOST_FUSION_ADAPT_STRUCT(
+    geometry::detail::Texture,
     (double, x)
     (double, y)
     (double, z)
@@ -77,9 +105,9 @@ BOOST_FUSION_ADAPT_STRUCT(
 
 BOOST_FUSION_ADAPT_STRUCT(
     geometry::detail::Facet,
-    (int, va)(int, ta)(int, na)
-    (int, vb)(int, tb)(int, nb)
-    (int, vc)(int, tc)(int, nc)
+    (int, v[0])(int, t[0])(int, n[0])
+    (int, v[1])(int, t[1])(int, n[1])
+    (int, v[2])(int, t[2])(int, n[2])
 )
 
 namespace geometry { namespace detail {
@@ -100,6 +128,19 @@ struct vertex_parser : qi::grammar<Iterator, Vertex(), Skipper>
 };
 
 template <typename Iterator, typename Skipper>
+struct texture_parser : qi::grammar<Iterator, Texture(), Skipper>
+{
+    texture_parser() : texture_parser::base_type(start)  {
+        using qi::lit;
+        using qi::auto_;
+
+        start %= lit("vt") >> auto_ >> -auto_ >> -auto_;
+    }
+
+    qi::rule<Iterator, Texture(), Skipper> start;
+};
+
+template <typename Iterator, typename Skipper>
 struct normal_parser : qi::grammar<Iterator, Normal(), Skipper>
 {
     normal_parser() : normal_parser::base_type(start)  {
@@ -117,11 +158,16 @@ struct facet_parser : qi::grammar<Iterator, Facet(), Skipper>
 {
     facet_parser() : facet_parser::base_type(start)  {
         using qi::auto_;
+        using qi::omit;
+        using qi::no_skip;
+        using qi::lexeme;
 
         start %= 'f'
-            >> -auto_ >> '/' >> -auto_ >> '/' >> -auto_
-            >> -auto_ >> '/' >> -auto_ >> '/' >> -auto_
-            >> -auto_ >> '/' >> -auto_ >> '/' >> -auto_;
+            >> lexeme[auto_ >> '/' >> -auto_ >> '/' >> -auto_
+                      >> omit[+ascii::space]
+                      >> auto_ >> '/' >> -auto_ >> '/' >> -auto_
+                      >> omit[+ascii::space]
+                      >> auto_ >> '/' >> -auto_ >> '/' >> -auto_];
     }
 
     qi::rule<Iterator, Facet(), Skipper> start;
@@ -134,10 +180,12 @@ struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
         using qi::omit;
 
         vertex %= vertex_parser<Iterator, Skipper>();
+        texture %= texture_parser<Iterator, Skipper>();
         normal %= normal_parser<Iterator, Skipper>();
         facet %= facet_parser<Iterator, Skipper>();
 
         start %= omit[*(vertex[qi::_val += qi::_1]
+                        | texture[qi::_val += qi::_1]
                         | normal[qi::_val += qi::_1]
                         | facet[qi::_val += qi::_1])]
             [qi::_val];
@@ -146,6 +194,7 @@ struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
     qi::rule<Iterator, Obj(), Skipper> start;
 
     vertex_parser<Iterator, Skipper> vertex;
+    texture_parser<Iterator, Skipper> texture;
     normal_parser<Iterator, Skipper> normal;
     facet_parser<Iterator, Skipper> facet;
 };

@@ -27,11 +27,11 @@ public:
     };
 
     struct Facet {
-        int va, vb, vc;
-        int na, nb, nc;
-        int ta, tb, tc;
+        int v[3];
+        int n[3];
+        int t[3];
 
-        Facet() : va(), vb(), vc(), na(), nb(), nc(), ta(), tb(), tc() {}
+        Facet() : v{0}, n{0}, t{0} {}
 
         typedef std::vector<Facet> list;
     };
@@ -39,6 +39,7 @@ public:
     virtual ~ObjParserBase() {}
 
     virtual void addVertex(const Vector3d&) = 0;
+    virtual void addTexture(const Vector3d&) = 0;
     virtual void addNormal(const Vector3d&) = 0;
     virtual void addFacet(const Facet&) = 0;
 
@@ -55,6 +56,8 @@ struct Obj : public ObjParserBase {
         vertices.push_back(v);
     }
 
+    void addTexture(const Vector3d &) {}
+
     void addNormal(const Vector3d &n) {
         normals.push_back(n);
     }
@@ -63,6 +66,32 @@ struct Obj : public ObjParserBase {
         facets.push_back(f);
     }
 };
+
+template <typename E, typename T>
+std::basic_ostream<E, T>&
+operator<<(std::basic_ostream<E,T> &os
+           , const geometry::ObjParserBase::Vector3d &v)
+{
+    return os << '[' << v.x << ' ' << v.y << ' ' << v.z << ']';
+}
+
+template <typename E, typename T>
+std::basic_ostream<E, T>&
+operator<<(std::basic_ostream<E,T> &os
+           , const geometry::ObjParserBase::Facet &f)
+{
+    os << "f ";
+    for (auto i : {0, 1, 2}) {
+        if (i) os << ' ';
+        if (f.v[i]) os << f.v[i];
+        os << '/';
+        if (f.t[i]) os << f.t[i];
+        os << '/';
+        if (f.n[i]) os << f.n[i];
+    }
+
+    return os;
+}
 
 } // namespace geometry
 
