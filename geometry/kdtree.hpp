@@ -21,9 +21,7 @@ namespace geometry {
  *  more details.
  *
  *  The type T is a point in space and K is the number of dimensions.
- *  The coordinates of T must be accessible with operator(). There must be
- *  a function called inner_prod() which calculates the dot product of two
- *  points (vectors).
+ *  The coordinates of T must be accessible with operator().
  */
 
 template<typename T, int K = 3>
@@ -164,6 +162,15 @@ public:
     }
 
 protected:
+
+    static double inner_prod( const T & op1, const T & op2 ) {
+        
+        double retval( 0.0 );
+        for ( int i = 0; i < K; i++ )
+            retval += op1(i) * op2(i);
+        return retval;
+    };
+    
 
     iterator point;
     KdTree* sons[2];

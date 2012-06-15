@@ -12,6 +12,7 @@
 
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/io.hpp>
+#include <boost/foreach.hpp>
 
 #include "math/geometry.hpp"
 
@@ -74,6 +75,12 @@ public :
     /** Upper bound of all points. */
     math::Point3 lower() const { assert( ! empty() ); return _lower; }
 
+
+    /* trasnform pointcloud via matrix4 */
+    template <class Matrix>
+    PointCloud transform( const Matrix & trafo ) const;
+
+    
 private :
 
     /* forbidden modifiers */
@@ -128,6 +135,21 @@ void PointCloud::insert ( iterator position, InputIterator first,
 
     std::vector<math::Point3>::insert( position, first, last );
 }
+
+
+template <class Matrix>
+PointCloud PointCloud::transform( const Matrix & trafo ) const {
+
+    PointCloud retval;
+    
+    BOOST_FOREACH( math::Point3 point, *this ) {
+        retval.push_back( math::euclidian(
+            prod( trafo, math::homogeneous( point ) ) ) );
+    }
+
+    return retval;
+}
+
 
 
 } // namespace geometry
