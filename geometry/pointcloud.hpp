@@ -34,6 +34,13 @@ public :
         _lower( ublas::zero_vector<double>( 3 ) ),
         _upper( ublas::zero_vector<double>( 3 ) ) {};
 
+    PointCloud( const std::vector<math::Point3> & in ) {
+
+        BOOST_FOREACH( math::Point3 point, in ) {
+            push_back( point );
+        }
+    }
+
     /** push_back */
     void push_back ( const math::Point3 & x );
 
