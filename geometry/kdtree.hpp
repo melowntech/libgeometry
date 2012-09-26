@@ -39,9 +39,8 @@ public:
      *  be modified (sorted) by this constructor. "depth" must be zero.
      */
     KdTree(iterator beg, iterator end, int depth = 0)
+        : sons({ nullptr, nullptr })
     {
-        sons[0] = sons[1] = 0;
-
         // trivial case - just one point
         if (beg+1 >= end)
         {
@@ -125,6 +124,14 @@ public:
         }
 
         return result;
+    }
+
+    template<int IgnoreEqual = false>
+    std::pair<T, double> nearest(const T& query) const
+    {
+        std::pair<T, double> res;
+        res.first = *nearest<IgnoreEqual>(query, res.second);
+        return res;
     }
 
     /**
