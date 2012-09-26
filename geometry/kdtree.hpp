@@ -11,6 +11,8 @@
 #include <vector>
 #include <algorithm>
 
+#include <boost/noncopyable.hpp>
+
 namespace geometry {
 
 
@@ -25,7 +27,7 @@ namespace geometry {
  */
 
 template<typename T, int K = 3>
-class KdTree
+class KdTree : boost::noncopyable
 {
 public:
 
