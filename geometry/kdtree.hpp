@@ -129,7 +129,7 @@ public:
     template<int IgnoreEqual = false>
     std::pair<iterator, double> nearest(const T& query) const
     {
-        std::pair<T, double> res;
+        std::pair<iterator, double> res;
         res.first = nearest<IgnoreEqual>(query, res.second);
         return res;
     }
