@@ -12,7 +12,6 @@
 
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/io.hpp>
-#include <boost/foreach.hpp>
 
 #include "math/geometry.hpp"
 
@@ -36,8 +35,8 @@ public :
 
     PointCloud( const std::vector<math::Point3> & in ) {
 
-        BOOST_FOREACH( math::Point3 point, in ) {
-            push_back( point );
+        for (const auto &point : in) {
+            push_back(point);
         }
     }
 
@@ -87,7 +86,14 @@ public :
     template <class Matrix>
     PointCloud transform( const Matrix & trafo ) const;
 
-    
+    void swap(PointCloud &other);
+
+    void swap(std::vector<math::Point3> &other);
+
+    const std::vector<math::Point3>& asVector() const {
+        return *this;
+    }
+
 private :
 
     /* forbidden modifiers */
@@ -134,7 +140,7 @@ private :
 /* template method implementation */
 
 template <class InputIterator>
-void PointCloud::insert ( iterator position, InputIterator first,
+inline void PointCloud::insert ( iterator position, InputIterator first,
                             InputIterator last ) {
 
     for ( InputIterator it = first; it < last; it++ )
@@ -145,11 +151,11 @@ void PointCloud::insert ( iterator position, InputIterator first,
 
 
 template <class Matrix>
-PointCloud PointCloud::transform( const Matrix & trafo ) const {
+inline PointCloud PointCloud::transform( const Matrix & trafo ) const {
 
     PointCloud retval;
-    
-    BOOST_FOREACH( math::Point3 point, *this ) {
+
+    for(const auto &point : *this) {
         retval.push_back( math::euclidian(
             prod( trafo, math::homogeneous( point ) ) ) );
     }
@@ -157,6 +163,25 @@ PointCloud PointCloud::transform( const Matrix & trafo ) const {
     return retval;
 }
 
+inline void PointCloud::swap(PointCloud &other)
+{
+    std::swap(static_cast<std::vector<math::Point3>&>(*this)
+              , static_cast<std::vector<math::Point3>&>(other));
+    std::swap(_lower, other._lower);
+    std::swap(_upper, other._upper);
+}
+
+inline void PointCloud::swap(std::vector<math::Point3> &other)
+{
+    std::swap(static_cast<std::vector<math::Point3>&>(*this), other);
+
+    _lower = math::Point3();
+    _upper = math::Point3();
+
+    for (const auto &p : *this) {
+        updateExtents(p);
+    }
+}
 
 
 } // namespace geometry
