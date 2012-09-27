@@ -32,6 +32,7 @@ class KdTree : boost::noncopyable
 public:
 
     typedef typename std::vector<T>::iterator iterator;
+    typedef typename std::vector<T>::const_iterator const_iterator;
 
     /**
      *  Builds the tree from a vector of points. You need to pass the beginning
