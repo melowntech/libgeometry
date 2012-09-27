@@ -34,9 +34,14 @@ public :
         _upper( ublas::zero_vector<double>( 3 ) ) {};
 
     PointCloud( const std::vector<math::Point3> & in ) {
+        assign(in);
+    }
 
-        for (const auto &point : in) {
-            push_back(point);
+    void assign( const std::vector<math::Point3> & in ) {
+        std::vector<math::Point3>::assign(in.begin(), in.end());
+
+        for (const auto &p : *this) {
+            updateExtents(p);
         }
     }
 
@@ -99,7 +104,7 @@ private :
     /* forbidden modifiers */
     template <class InputIterator>
     void assign ( InputIterator first, InputIterator last ) {
-        assert( false ); }
+        (void) first; (void) last; assert( false ); }
     void pop_back ( ) { assert( false); }
     iterator erase ( iterator position ) {
         (void) position; assert( false ); return position; }
