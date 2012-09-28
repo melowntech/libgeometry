@@ -1,10 +1,11 @@
 /**
  *  @file kdtree.hpp
  *  @author Jakub Cerveny <jakub.cerveny@ext.citationtech.net>
- *  @author Vaclav Blazek <vaclav.blazek@ext.citationtech.net>
+ *  @author Vaclav Blazek <vaclav.blazek@citationtech.net>
  *
  *  The k-d tree data structure for fast nearest neighbor search.
- *  2011-09-28    refactored
+ *
+ *  2011-09-28 (vasek)    refactored
  */
 
 #ifndef KDTREE_HPP_INCLUDED
@@ -65,7 +66,7 @@ public:
         if (median > beg) {
             sons[0] = new KdTreeNode(beg, median, depth + 1);
         }
-        if (median+1 < end) {
+        if (median + 1 < end) {
             sons[1] = new KdTreeNode(median + 1, end, depth + 1);
         }
     }
