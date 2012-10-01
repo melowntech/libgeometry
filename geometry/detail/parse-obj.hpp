@@ -1,6 +1,6 @@
 /**
  *  @file geometry/detail/parse-obj.hpp
- *  @author Vaclav Blazek <vaclav.blazek@ext.citationtech.net>
+ *  @author Vaclav Blazek <vaclav.blazek@citationtech.net>
  *
  *  Boost.Spirit-based OBJ file format parser (implementation).
  */
@@ -192,9 +192,9 @@ struct materialLibrary_parser
 {
     materialLibrary_parser() : materialLibrary_parser::base_type(start)  {
         using qi::char_;
-        using qi::no_skip;
+        using qi::lexeme;
 
-        start %= "mtllib" >> qi::lexeme[+(char_ - ascii::space)];
+        start %= "mtllib" >> lexeme[+(char_ - ascii::space)];
     }
 
     qi::rule<Iterator, MaterialLibrary(), Skipper> start;

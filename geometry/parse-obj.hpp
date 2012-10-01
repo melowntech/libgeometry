@@ -1,6 +1,6 @@
 /**
  *  @file geometry/parse-obj.hpp
- *  @author Vaclav Blazek <vaclav.blazek@ext.citationtech.net>
+ *  @author Vaclav Blazek <vaclav.blazek@citationtech.net>
  *
  *  Boost.Spirit-based OBJ file format parser.
  */
