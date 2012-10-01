@@ -29,6 +29,8 @@ namespace geometry { namespace detail {
 struct Vertex : ObjParserBase::Vector3d {};
 struct Normal : ObjParserBase::Vector3d {};
 struct Texture : ObjParserBase::Vector3d {};
+struct MaterialLibrary : std::string {};
+struct UseMaterial : std::string {};
 
 typedef ObjParserBase::Facet Facet;
 
@@ -70,6 +72,16 @@ public:
         }
 
         p_->addFacet(f);
+        return *this;
+    }
+
+    Obj& operator+=(const detail::MaterialLibrary &l) {
+        p_->materialLibrary(l);
+        return *this;
+    }
+
+    Obj& operator+=(const detail::UseMaterial &m) {
+        p_->useMaterial(m);
         return *this;
     }
 
@@ -163,14 +175,43 @@ struct facet_parser : qi::grammar<Iterator, Facet(), Skipper>
         using qi::lexeme;
 
         start %= 'f'
-            >> lexeme[auto_ >> '/' >> -auto_ >> '/' >> -auto_
+            >> lexeme[auto_ >> '/' >> -auto_ >> -('/' >> -auto_)
                       >> omit[+ascii::space]
-                      >> auto_ >> '/' >> -auto_ >> '/' >> -auto_
+                      >> auto_ >> '/' >> -auto_ >> -('/' >> -auto_)
                       >> omit[+ascii::space]
-                      >> auto_ >> '/' >> -auto_ >> '/' >> -auto_];
+                      >> auto_ >> '/' >> -auto_ >> -('/' >> -auto_)
+                      ];
     }
 
     qi::rule<Iterator, Facet(), Skipper> start;
+};
+
+template <typename Iterator, typename Skipper>
+struct materialLibrary_parser
+    : qi::grammar<Iterator, MaterialLibrary(), Skipper>
+{
+    materialLibrary_parser() : materialLibrary_parser::base_type(start)  {
+        using qi::char_;
+        using qi::no_skip;
+
+        start %= "mtllib" >> qi::lexeme[+(char_ - ascii::space)];
+    }
+
+    qi::rule<Iterator, MaterialLibrary(), Skipper> start;
+};
+
+template <typename Iterator, typename Skipper>
+struct useMaterial_parser
+    : qi::grammar<Iterator, UseMaterial(), Skipper>
+{
+    useMaterial_parser() : useMaterial_parser::base_type(start)  {
+        using qi::char_;
+        using qi::no_skip;
+
+        start %= "usemtl" >> qi::lexeme[+(char_ - ascii::space)];
+    }
+
+    qi::rule<Iterator, UseMaterial(), Skipper> start;
 };
 
 template <typename Iterator, typename Skipper>
@@ -183,11 +224,16 @@ struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
         texture %= texture_parser<Iterator, Skipper>();
         normal %= normal_parser<Iterator, Skipper>();
         facet %= facet_parser<Iterator, Skipper>();
+        materialLibrary %= materialLibrary_parser<Iterator, Skipper>();
+        useMaterial %= useMaterial_parser<Iterator, Skipper>();
 
         start %= omit[*(vertex[qi::_val += qi::_1]
                         | texture[qi::_val += qi::_1]
                         | normal[qi::_val += qi::_1]
-                        | facet[qi::_val += qi::_1])]
+                        | facet[qi::_val += qi::_1]
+                        | materialLibrary[qi::_val += qi::_1]
+                        | useMaterial[qi::_val += qi::_1]
+                        )]
             [qi::_val];
     }
 
@@ -197,6 +243,8 @@ struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
     texture_parser<Iterator, Skipper> texture;
     normal_parser<Iterator, Skipper> normal;
     facet_parser<Iterator, Skipper> facet;
+    materialLibrary_parser<Iterator, Skipper> materialLibrary;
+    useMaterial_parser<Iterator, Skipper> useMaterial;
 };
 
 template <typename Iterator>

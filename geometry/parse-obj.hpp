@@ -13,6 +13,8 @@
 
 #include <math/geometry_core.hpp>
 
+#include <dbglog/dbglog.hpp>
+
 namespace geometry {
 
 class ObjParserBase {
@@ -43,6 +45,10 @@ public:
     virtual void addNormal(const Vector3d&) = 0;
     virtual void addFacet(const Facet&) = 0;
 
+    virtual void materialLibrary(const std::string&) = 0;
+
+    virtual void useMaterial(const std::string&) = 0;
+
     bool parse(std::istream &is);
 };
 
@@ -64,6 +70,16 @@ struct Obj : public ObjParserBase {
 
     void addFacet(const Facet &f) {
         facets.push_back(f);
+    }
+
+    void materialLibrary(const std::string &l) {
+        LOG(warn2) << "OBJ file contains material reference (mtllib " << l
+                   << "); ignored by this simple reader.";
+    }
+
+    void useMaterial(const std::string &m) {
+        LOG(warn2) << "OBJ file contains material reference (usemtl " << m
+                   << "); ignored by this simple reader.";
     }
 };
 

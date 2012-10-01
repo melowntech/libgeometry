@@ -180,8 +180,13 @@ inline void PointCloud::swap(std::vector<math::Point3> &other)
 {
     std::swap(static_cast<std::vector<math::Point3>&>(*this), other);
 
-    _lower = math::Point3();
-    _upper = math::Point3();
+    if (empty()) {
+        _lower = math::Point3();
+        _upper = math::Point3();
+        return;
+    }
+
+    _lower = _upper = front();
 
     for (const auto &p : *this) {
         updateExtents(p);
