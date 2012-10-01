@@ -15,30 +15,41 @@
 #include <algorithm>
 
 #include <boost/noncopyable.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace geometry {
 
 
-/**
- *  KdTree -- implementation of a k-d tree. The k-d tree is a generalization of
- *  the binary search tree which enables fast nearest neighbor searches in
- *  more dimensions (k > 1). See http://en.wikipedia.org/wiki/K-d_tree for
- *  more details.
- *
- *  The type T is a point in space and K is the number of dimensions.
- *  The coordinates of T must be accessible with operator().
- *
- *  NB: Associated vector must outlive this tree!
- *  Associated vector is not modified by any means.
- */
+template <typename T>
+struct GetCoordinate {
+    typename T::value_type operator()(const T &value, unsigned int axis) const
+    {
+        return value(axis);
+    }
+};
+
+struct IntrusiveKdTree {};
 
 namespace detail {
 
-template<typename T, unsigned int K = 3>
-class KdTreeNode : boost::noncopyable
+/**
+ *  KdTreeNode: Actual tree node implementation.
+ *
+ *  typename T:     point in space
+ *  unsinged int K: number of dimensions
+ *  typename G:     dimension value getter (defaults to T::operator())
+ *  typaneme C:     associated container type (defaults to std::vector)
+ *
+ *  NB: Associated iterators must not be invalidated/modified.
+ *      Associated iterators are not modified by any means.
+ */
+template<typename T, unsigned int K, typename G, typename C>
+class KdTreeNode : boost::noncopyable, G
 {
 public:
-    typedef typename std::vector<T>::const_iterator iterator;
+    typedef C container_type;
+    typedef typename container_type::iterator mutable_iterator;
+    typedef typename container_type::const_iterator iterator;
 
     typedef std::vector<iterator> Indirect;
 
@@ -54,8 +65,9 @@ public:
 
         // sort points by one of the coordinates
         unsigned int axis = depth % K;
-        std::sort(beg, end, [axis](const iterator& a, const iterator& b)
-                  { return (*a)(axis) < (*b)(axis); } );
+        std::sort(beg, end, [axis, this](const iterator& a, const iterator& b)
+                  { return (this->G::operator()(*a, axis)
+                            < this->G::operator()(*b, axis)); } );
 
         // the median will be the content (and boundary) of this node
         auto count(std::distance(beg, end));
@@ -68,6 +80,36 @@ public:
         }
         if (median + 1 < end) {
             sons[1] = new KdTreeNode(median + 1, end, depth + 1);
+        }
+    }
+
+    KdTreeNode(mutable_iterator beg, mutable_iterator end
+               , const IntrusiveKdTree &intrusive, int depth = 0)
+        : sons({ nullptr, nullptr })
+    {
+        // trivial case - just one point
+        if (beg + 1 >= end) {
+            point = beg;
+            return;
+        }
+
+        // sort points by one of the coordinates
+        unsigned int axis = depth % K;
+        std::sort(beg, end, [axis, this](const T &a, const T &b)
+                  { return (this->G::operator()(a, axis)
+                            < this->G::operator()(b, axis)); } );
+
+        // the median will be the content (and boundary) of this node
+        auto count(std::distance(beg, end));
+        auto median(beg + count / 2);
+        point = median;
+
+        // create two subtrees (points smaller and larger than the median)
+        if (median > beg) {
+            sons[0] = new KdTreeNode(beg, median, intrusive, depth + 1);
+        }
+        if (median + 1 < end) {
+            sons[1] = new KdTreeNode(median + 1, end, intrusive, depth + 1);
         }
     }
 
@@ -97,7 +139,7 @@ public:
         }
 
         // perpendicular distance to node boundary
-        double perp = query(axis) - (*point)(axis);
+        double perp = query(axis) - G::operator()(*point, axis);
 
         // change axis
         if (++axis >= K) {
@@ -150,7 +192,7 @@ public:
         }
 
         // perpendicular distance to node boundary
-        double perp = query(axis) - (*point)(axis);
+        double perp = query(axis) - G::operator()(*point, axis);
 
         // change axis
         if (++axis >= K) {
@@ -191,23 +233,51 @@ protected:
 
 } // namespace detail
 
-template<typename T, unsigned int K = 3>
-class KdTree : boost::noncopyable
-{
-public:
-    typedef typename std::vector<T>::const_iterator iterator;
+/**
+ *  KdTree -- implementation of a k-d tree. The k-d tree is a generalization of
+ *  the binary search tree which enables fast nearest neighbor searches in
+ *  more dimensions (k > 1). See http://en.wikipedia.org/wiki/K-d_tree for
+ *  more details.
+ *
+ *  typename T:     point in space
+ *  unsinged int K: number of dimensions
+ *  typename G:     dimension value getter (defaults to T::operator())
+ *  typaneme C:     associated container type (defaults to std::vector)
+ *
+ *  NB: Associated container must outlive this tree (tree holds iterators to it)
+ *      Associated container is not modified by any means.
+ */
+template<typename T, unsigned int K = 3, typename G = GetCoordinate<T>
+         , typename C = std::vector<T>>
+class KdTree {
+private:
+    typedef detail::KdTreeNode<T, K, G, C> node_type;
+    typedef typename C::iterator mutable_iterator;
 
-    KdTree(iterator beg, iterator end)
-        : root_(nullptr)
+public:
+    typedef typename C::const_iterator iterator;
+
+    KdTree(const iterator &beg, const iterator &end)
+        : begin_(beg), end_(end)
     {
-        typename detail::KdTreeNode<T, K>::Indirect indirect;
+        typename node_type::Indirect indirect;
         indirect.reserve(std::distance(beg, end));
-        for ( ; beg != end; ++beg) {
-            indirect.push_back(beg);
+        for (iterator i(beg) ; i != end; ++i) {
+            indirect.push_back(i);
         }
 
-        root_ = new detail::KdTreeNode<T, K>(indirect.begin(), indirect.end());
+        root_.reset(new node_type(indirect.begin(), indirect.end()));
     }
+
+    KdTree(const mutable_iterator &beg, const mutable_iterator &end
+           , const IntrusiveKdTree &intrusive)
+        : begin_(beg), end_(end)
+    {
+        root_.reset(new node_type(beg, end, intrusive));
+    }
+
+    iterator begin() const { return begin_; }
+    iterator end() const { return end_; }
 
     template<bool IgnoreEqual = false>
     iterator nearest(const T& query, double& dist2) const
@@ -235,12 +305,10 @@ public:
         return root_->range<IgnoreEqual>(query, radius, result);
     }
 
-    ~KdTree() {
-        delete root_;
-    }
-
 private:
-    detail::KdTreeNode<T, K> *root_;
+    boost::shared_ptr<node_type> root_;
+    iterator begin_;
+    iterator end_;
 };
 
 } // namespace geometry
