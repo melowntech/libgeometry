@@ -22,9 +22,13 @@ namespace geometry {
 
 template <typename T>
 struct GetCoordinate {
-    typename T::value_type operator()(const T &value, unsigned int axis) const
+    typename T::value_type get(const T &value, unsigned int axis) const
     {
         return value(axis);
+    }
+
+    T diff(const T &op1, const T &op2) const {
+        return op1 - op2;
     }
 };
 
@@ -66,8 +70,8 @@ public:
         // sort points by one of the coordinates
         unsigned int axis = depth % K;
         std::sort(beg, end, [axis, this](const iterator& a, const iterator& b)
-                  { return (this->G::operator()(*a, axis)
-                            < this->G::operator()(*b, axis)); } );
+                  { return (this->G::get(*a, axis)
+                            < this->G::get(*b, axis)); } );
 
         // the median will be the content (and boundary) of this node
         auto count(std::distance(beg, end));
@@ -96,8 +100,8 @@ public:
         // sort points by one of the coordinates
         unsigned int axis = depth % K;
         std::sort(beg, end, [axis, this](const T &a, const T &b)
-                  { return (this->G::operator()(a, axis)
-                            < this->G::operator()(b, axis)); } );
+                  { return (this->G::get(a, axis)
+                            < this->G::get(b, axis)); } );
 
         // the median will be the content (and boundary) of this node
         auto count(std::distance(beg, end));
@@ -124,7 +128,7 @@ public:
         const
     {
         // calculate the squared distance between query and us
-        T diff(query - *point);
+        T diff(G::diff(query, *point));
         dist2 = inner_prod(diff, diff);
 
         // if a point already in the tree is queried we may want to ignore it
@@ -139,7 +143,7 @@ public:
         }
 
         // perpendicular distance to node boundary
-        double perp = query(axis) - G::operator()(*point, axis);
+        double perp = query(axis) - G::get(*point, axis);
 
         // change axis
         if (++axis >= K) {
@@ -184,7 +188,7 @@ public:
                std::vector<T>& result, unsigned int axis = 0) const
     {
         // return point if it is within radius
-        T diff(query - *point);
+        T diff(G::diff(query, *point));
         double dist2 = inner_prod(diff, diff);
         if (dist2 <= radius*radius) {
             if (!IgnoreEqual || dist2 > 0.0)
@@ -192,7 +196,7 @@ public:
         }
 
         // perpendicular distance to node boundary
-        double perp = query(axis) - G::operator()(*point, axis);
+        double perp = query(axis) - G::get(*point, axis);
 
         // change axis
         if (++axis >= K) {
@@ -214,10 +218,10 @@ public:
     }
 
 protected:
-    static double inner_prod(const T &op1, const T &op2) {
+    double inner_prod(const T &op1, const T &op2) const {
         double retval( 0.0 );
         for (unsigned int i = 0; i < K; i++) {
-            retval += op1(i) * op2(i);
+            retval += G::get(op1, i) * G::get(op2, i);
         }
         return retval;
     };
