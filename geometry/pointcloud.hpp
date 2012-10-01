@@ -29,21 +29,18 @@ class PointCloud: public std::vector<math::Point3> {
 public :
 
     /** Initialize */
-    PointCloud() :
-        _lower( ublas::zero_vector<double>( 3 ) ),
-        _upper( ublas::zero_vector<double>( 3 ) ) {};
+    PointCloud() {};
 
     PointCloud( const std::vector<math::Point3> & in ) {
-        assign(in);
+        assign(in.begin(), in.end());
     }
 
     void assign( const std::vector<math::Point3> & in ) {
-        std::vector<math::Point3>::assign(in.begin(), in.end());
-
-        for (const auto &p : *this) {
-            updateExtents(p);
-        }
+        assign(in.begin(), in.end());
     }
+
+    template <class InputIterator>
+    void assign(InputIterator first, InputIterator last);
 
     /** push_back */
     void push_back ( const math::Point3 & x );
@@ -102,9 +99,6 @@ public :
 private :
 
     /* forbidden modifiers */
-    template <class InputIterator>
-    void assign ( InputIterator first, InputIterator last ) {
-        (void) first; (void) last; assert( false ); }
     void pop_back ( ) { assert( false); }
     iterator erase ( iterator position ) {
         (void) position; assert( false ); return position; }
@@ -143,6 +137,24 @@ private :
 
 
 /* template method implementation */
+
+template <class InputIterator>
+void PointCloud::assign(InputIterator first, InputIterator last)
+{
+    std::vector<math::Point3>::assign(first, last);
+
+    if (empty()) {
+        _lower = math::Point3();
+        _upper = math::Point3();
+        return;
+    }
+
+    _lower = _upper = front();
+
+    for (const auto &p : *this) {
+        updateExtents(p);
+    }
+}
 
 template <class InputIterator>
 inline void PointCloud::insert ( iterator position, InputIterator first,
