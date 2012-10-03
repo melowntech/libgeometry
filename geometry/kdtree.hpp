@@ -286,7 +286,7 @@ public:
     template<bool IgnoreEqual = false>
     iterator nearest(const T& query, double& dist2) const
     {
-        return root_->nearest(query, dist2);
+        return root_->nearest<IgnoreEqual>(query, dist2);
     }
 
     template<bool IgnoreEqual = false>
