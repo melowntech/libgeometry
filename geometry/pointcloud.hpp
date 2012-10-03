@@ -78,11 +78,13 @@ public :
     double samplingDelta ( float bulkThreshold = 0.5 ) const;
 
     /** Upper bound of all points */
-    math::Point3 upper() const { assert( ! empty() ); return _upper; }
+    math::Point3 upper() const { assert( ! empty() ); return extents_.ur; }
 
     /** Upper bound of all points. */
-    math::Point3 lower() const { assert( ! empty() ); return _lower; }
+    math::Point3 lower() const { assert( ! empty() ); return extents_.ll; }
 
+    /** Extents of all points. */
+    math::Extents3 extents() const { assert( ! empty() ); return extents_; }
 
     /* trasnform pointcloud via matrix4 */
     template <class Matrix>
@@ -132,7 +134,7 @@ private :
         double distX, distY, distZ;
     };
 
-    math::Point3 _lower, _upper;
+    math::Extents3 extents_;
 };
 
 
@@ -143,17 +145,7 @@ void PointCloud::assign(InputIterator first, InputIterator last)
 {
     std::vector<math::Point3>::assign(first, last);
 
-    if (empty()) {
-        _lower = math::Point3();
-        _upper = math::Point3();
-        return;
-    }
-
-    _lower = _upper = front();
-
-    for (const auto &p : *this) {
-        updateExtents(p);
-    }
+    extents_ = math::computeExtents(first, last);
 }
 
 template <class InputIterator>
@@ -184,25 +176,14 @@ inline void PointCloud::swap(PointCloud &other)
 {
     std::swap(static_cast<std::vector<math::Point3>&>(*this)
               , static_cast<std::vector<math::Point3>&>(other));
-    std::swap(_lower, other._lower);
-    std::swap(_upper, other._upper);
+    std::swap(extents_, other.extents_);
 }
 
 inline void PointCloud::swap(std::vector<math::Point3> &other)
 {
     std::swap(static_cast<std::vector<math::Point3>&>(*this), other);
 
-    if (empty()) {
-        _lower = math::Point3();
-        _upper = math::Point3();
-        return;
-    }
-
-    _lower = _upper = front();
-
-    for (const auto &p : *this) {
-        updateExtents(p);
-    }
+    extents_ = math::computeExtents(begin(), end());
 }
 
 

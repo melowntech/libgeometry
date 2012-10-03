@@ -19,18 +19,31 @@
 
 namespace geometry {
 
+/** Default coordination accessor.
+ */
+template <typename T> struct GetCoordinate;
 
-template <typename T>
-struct GetCoordinate {
-    typename T::value_type get(const T &value, unsigned int axis) const
-    {
-        return value(axis);
-    }
+/**
+ *  KdTree -- implementation of a k-d tree. The k-d tree is a generalization of
+ *  the binary search tree which enables fast nearest neighbor searches in
+ *  more dimensions (k > 1). See http://en.wikipedia.org/wiki/K-d_tree for
+ *  more details.
+ *
+ *  typename T:     point in space
+ *  unsinged int K: number of dimensions
+ *  typename G:     dimension value getter (defaults to T::operator())
+ *  typaneme C:     associated container type (defaults to std::vector)
+ *
+ *  NB: Associated container must outlive this tree (tree holds iterators to it)
+ *      Associated container is not modified by any means.
+ */
+template<typename T, unsigned int K = 3, typename G = GetCoordinate<T>
+         , typename C = std::vector<T>>
+class KdTree;
 
-    T diff(const T &op1, const T &op2) const {
-        return op1 - op2;
-    }
-};
+template<typename T, unsigned int K, typename G, typename C>
+double samplingDelta(const KdTree<T, K, G, C> &tree
+                     , double bulkThreshold = .5);
 
 struct IntrusiveKdTree {};
 
@@ -237,6 +250,18 @@ protected:
 
 } // namespace detail
 
+template <typename T>
+struct GetCoordinate {
+    typename T::value_type get(const T &value, unsigned int axis) const
+    {
+        return value(axis);
+    }
+
+    T diff(const T &op1, const T &op2) const {
+        return op1 - op2;
+    }
+};
+
 /**
  *  KdTree -- implementation of a k-d tree. The k-d tree is a generalization of
  *  the binary search tree which enables fast nearest neighbor searches in
@@ -251,8 +276,7 @@ protected:
  *  NB: Associated container must outlive this tree (tree holds iterators to it)
  *      Associated container is not modified by any means.
  */
-template<typename T, unsigned int K = 3, typename G = GetCoordinate<T>
-         , typename C = std::vector<T>>
+template<typename T, unsigned int K, typename G, typename C>
 class KdTree {
 private:
     typedef detail::KdTreeNode<T, K, G, C> node_type;
@@ -264,6 +288,9 @@ public:
     KdTree(const iterator &beg, const iterator &end)
         : begin_(beg), end_(end)
     {
+        if (!std::distance(beg, end)) {
+            return;
+        }
         typename node_type::Indirect indirect;
         indirect.reserve(std::distance(beg, end));
         for (iterator i(beg) ; i != end; ++i) {
@@ -277,6 +304,9 @@ public:
            , const IntrusiveKdTree &intrusive)
         : begin_(beg), end_(end)
     {
+        if (!std::distance(beg, end)) {
+            return;
+        }
         root_.reset(new node_type(beg, end, intrusive));
     }
 
@@ -286,12 +316,18 @@ public:
     template<bool IgnoreEqual = false>
     iterator nearest(const T& query, double& dist2) const
     {
+        if (!root_) {
+            dist2 = .0;
+            return end_;
+        }
         return root_->nearest<IgnoreEqual>(query, dist2);
     }
 
     template<bool IgnoreEqual = false>
     std::vector<T> range(const T& query, double radius) const {
         std::vector<T> result;
+        if (!root_) { return result; }
+
         root_->range<IgnoreEqual>(query, radius, result);
         return result;
     }
@@ -299,13 +335,15 @@ public:
     template<bool IgnoreEqual = false>
     std::pair<iterator, double> nearest(const T& query) const
     {
-        std::pair<iterator, double> res;
+        std::pair<iterator, double> res(end_, 0);
+        if (!root_) { return res; }
         res.first = root_->nearest<IgnoreEqual>(query, res.second);
         return res;
     }
 
     template<bool IgnoreEqual = false>
     void range(const T& query, double radius, std::vector<T>& result) const {
+        if (!root_) { return; }
         return root_->range<IgnoreEqual>(query, radius, result);
     }
 
@@ -314,6 +352,22 @@ private:
     iterator begin_;
     iterator end_;
 };
+
+template<typename T, unsigned int K, typename G, typename C>
+inline double samplingDelta(const KdTree<T, K, G, C> &tree
+                            , double bulkThreshold)
+{
+    std::vector<double> distances;
+    distances.reserve(std::distance(tree.begin(), tree.end()));
+    for (const auto &point
+             : boost::make_iterator_range(tree.begin(), tree.end()))
+    {
+        distances.push_back(tree.template nearest<true>(point).second);
+    }
+
+    std::sort(distances.begin(), distances.end());
+    return std::sqrt(distances[distances.size() * bulkThreshold]);
+}
 
 } // namespace geometry
 

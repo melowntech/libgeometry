@@ -30,9 +30,8 @@ void PointCloud::insert( iterator position, size_type n,
 }
 
 void PointCloud::clear() {
-    _upper = _lower = ublas::zero_vector<double>(3);
+    extents_ = math::Extents3();
 }
-
 
 void PointCloud::dump( const std::string & path ) {
 
@@ -82,18 +81,12 @@ void PointCloud::load( const std::string & path ) {
 
 
 void PointCloud::updateExtents( const math::Point3 & x ) {
-
     if ( empty() ) {
-
-        _lower = _upper = x; return;
+        extents_ = math::Extents3(x, x);
+        return;
     }
 
-    if ( x[0] < _lower[0] ) _lower[0] = x[0];
-    if ( x[1] < _lower[1] ) _lower[1] = x[1];
-    if ( x[2] < _lower[2] ) _lower[2] = x[2];
-    if ( x[0] > _upper[0] ) _upper[0] = x[0];
-    if ( x[1] > _upper[1] ) _upper[1] = x[1];
-    if ( x[2] > _upper[2] ) _upper[2] = x[2];
+    update(extents_, x);
 }
 
 double PointCloud::samplingDelta( float bulkThreshold ) const {
@@ -104,7 +97,7 @@ double PointCloud::samplingDelta( float bulkThreshold ) const {
     assert( ! empty() );
 
     // obtain array of closest neighbour distances
-    double maxDist = ublas::norm_2( _upper - _lower );
+    double maxDist = ublas::norm_2( extents_.ur - extents_.ll );
     for ( uint i = 0; i < size(); i++ )
         distArray[i] = ThreeDistance( maxDist );
 
