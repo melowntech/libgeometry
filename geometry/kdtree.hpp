@@ -123,7 +123,7 @@ public:
      *  the tree and "dist2" is filled with the square of the distance.
      *  "axis" must be zero.
      */
-    template<bool IgnoreEqual = false>
+    template<bool IgnoreEqual>
     iterator nearest(const T& query, double& dist2, unsigned int axis = 0)
         const
     {
@@ -183,7 +183,7 @@ public:
     /**
      *  Returns all points that are within "radius" from "query".
      */
-    template<bool IgnoreEqual = false>
+    template<bool IgnoreEqual>
     void range(const T& query, double radius,
                std::vector<T>& result, unsigned int axis = 0) const
     {
