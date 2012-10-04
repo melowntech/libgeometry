@@ -1,12 +1,12 @@
+#include <boost/test/unit_test.hpp>
+
 #include <math/math_all.hpp>
 #include <geometry/kdtree.hpp>
 
-
-
-int main(int argc, char* argv[])
+BOOST_AUTO_TEST_CASE(geometry_kdtree_nearest)
 {
     const int N = 1000;
-    std::cout << "Testing kd-tree on " << N << " points\n";
+    BOOST_TEST_MESSAGE("* Testing kd-tree on " << N << " points");
 
     // generate random points in the unit cube
     srand(0);
@@ -43,17 +43,11 @@ int main(int argc, char* argv[])
         }
 
         // test
-        if (dist2 != bfDist2 || neigh != *bfNeigh)
-        {
-            std::cout << "TEST FAILED (on point " << i << " of " << N << ")\n";
-            return EXIT_SUCCESS;
-        }
+        BOOST_REQUIRE((dist2 == bfDist2) && (neigh == *bfNeigh));
     }
+}
+
 
 
     // TODO: test kdtree.nearest<false>
     // TODO: test const iterator version
-
-    return EXIT_SUCCESS;
-}
-
