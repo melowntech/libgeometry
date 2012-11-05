@@ -8,12 +8,12 @@
 #ifndef GEOMETRY_POINTCLOUD_HPP
 #define GEOMETRY_POINTCLOUD_HPP
 
-#include <set>
+#include <math/geometry.hpp>
 
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/numeric/ublas/io.hpp>
 
-#include "math/geometry.hpp"
+#include <set>
 
 namespace ublas = boost::numeric::ublas;
 
@@ -138,6 +138,12 @@ private :
 };
 
 
+template <typename E, typename T>
+std::basic_ostream<E, T> & operator << (
+    std::basic_ostream<E,T> & os,
+    const PointCloud & cloud );
+
+
 /* template method implementation */
 
 template <class InputIterator>
@@ -184,6 +190,17 @@ inline void PointCloud::swap(std::vector<math::Point3> &other)
     std::swap(static_cast<std::vector<math::Point3>&>(*this), other);
 
     extents_ = math::computeExtents(begin(), end());
+}
+
+
+template <typename E, typename T>
+std::basic_ostream<E, T> & operator << (
+    std::basic_ostream<E,T> & os, const PointCloud & cloud ) {
+
+    BOOST_FOREACH( math::Point3 point, cloud )
+        os << point(0) << "\t" << point(1) << "\t" << point(2) << "\n";
+        
+    return os;
 }
 
 
