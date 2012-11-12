@@ -72,7 +72,7 @@ public:
 
     KdTreeNode(typename Indirect::iterator beg, typename Indirect::iterator end
                , int depth = 0)
-        : sons({ nullptr, nullptr })
+        : sons { nullptr, nullptr }
     {
         // trivial case - just one point
         if (beg + 1 >= end) {
@@ -102,7 +102,7 @@ public:
 
     KdTreeNode(mutable_iterator beg, mutable_iterator end
                , const IntrusiveKdTree &intrusive, int depth = 0)
-        : sons({ nullptr, nullptr })
+        : sons { nullptr, nullptr }
     {
         // trivial case - just one point
         if (beg + 1 >= end) {

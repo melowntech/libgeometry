@@ -904,7 +904,7 @@ template <typename DstVolume_t>
         BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
 
             typename ScalarField_t<Value_t>::Giterator_t sit( *this, pos, diff );
-            typename ScalarField_t<Value_t>::Giterator_t send = gend( sit );
+            typename ScalarField_t<Value_t>::Giterator_t send = this->gend( sit );
             typename DstVolume_t::Giterator_t dit( dstVolume, pos, diff );
 
             int rowSize = send - sit;
@@ -1465,7 +1465,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const Bitfield_t & bitfield,
                     math::sqr( dv.distX ) + math::sqr( dv.distY ) + math::sqr( dv.distZ ) );
 
                 if ( dist < initValue )
-                    set( i, j, k, dist );
+                    this->set( i, j, k, dist );
             }
 
     // all done
@@ -1532,7 +1532,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
                     math::sqr( dv.distX ) + math::sqr( dv.distY ) + math::sqr( dv.distZ ) );
 
                 if ( dist < initValue )
-                    set( i, j, k, dist );
+                    this->set( i, j, k, dist );
             }
 
     // all done
