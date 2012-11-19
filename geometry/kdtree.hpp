@@ -13,6 +13,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <utility>
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
@@ -225,6 +226,40 @@ public:
         }
     }
 
+    /**
+     *  Returns all points that are within "radius" from "query".
+     *  Returns points and their distance^2.
+     */
+    template<bool IgnoreEqual>
+    void range(const T& query, double radius
+               , std::vector<std::pair<T, double> > &result
+               , unsigned int axis = 0) const
+    {
+        // return point if it is within radius
+        T diff(G::diff(query, *point));
+        double dist2 = inner_prod(diff, diff);
+        if (dist2 <= radius*radius) {
+            if (!IgnoreEqual || dist2 > 0.0)
+                result.push_back(std::make_pair(*point, dist2));
+        }
+
+        // perpendicular distance to node boundary
+        double perp = query(axis) - G::get(*point, axis);
+
+        // change axis
+        if (++axis >= K) {
+            axis = 0;
+        }
+
+        // recurse to sub-trees if they are within radius
+        if (sons[0] && perp <= +radius) {
+            sons[0]->range<IgnoreEqual>(query, radius, result, axis);
+        }
+        if (sons[1] && perp >= -radius) {
+            sons[1]->range<IgnoreEqual>(query, radius, result, axis);
+        }
+    }
+
     ~KdTreeNode() {
         delete sons[0];
         delete sons[1];
@@ -343,6 +378,14 @@ public:
 
     template<bool IgnoreEqual = false>
     void range(const T& query, double radius, std::vector<T>& result) const {
+        if (!root_) { return; }
+        return root_->range<IgnoreEqual>(query, radius, result);
+    }
+
+    template<bool IgnoreEqual = false>
+    void range(const T& query, double radius
+               , std::vector<std::pair<T, double> > &result) const
+    {
         if (!root_) { return; }
         return root_->range<IgnoreEqual>(query, radius, result);
     }
