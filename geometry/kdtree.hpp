@@ -169,7 +169,7 @@ public:
         // search the near side of the tree first
         unsigned int side = (perp < 0) ? 0 : 1;
         if (sons[side]) {
-            iterator it = sons[side]->nearest<IgnoreEqual>(query, sub2, axis);
+            iterator it = sons[side]->template nearest<IgnoreEqual>(query, sub2, axis);
             if (sub2 < dist2) {
                 result = it;
                 dist2 = sub2;
@@ -184,7 +184,7 @@ public:
         // we have to search the other side too
         side ^= 1;
         if (sons[side]) {
-            iterator it = sons[side]->nearest<IgnoreEqual>(query, sub2, axis);
+            iterator it = sons[side]->template nearest<IgnoreEqual>(query, sub2, axis);
             if (sub2 < dist2) {
                 result = it;
                 dist2 = sub2;
@@ -219,10 +219,10 @@ public:
 
         // recurse to sub-trees if they are within radius
         if (sons[0] && perp <= +radius) {
-            sons[0]->range<IgnoreEqual>(query, radius, result, axis);
+            sons[0]->template range<IgnoreEqual>(query, radius, result, axis);
         }
         if (sons[1] && perp >= -radius) {
-            sons[1]->range<IgnoreEqual>(query, radius, result, axis);
+            sons[1]->template range<IgnoreEqual>(query, radius, result, axis);
         }
     }
 
@@ -253,10 +253,10 @@ public:
 
         // recurse to sub-trees if they are within radius
         if (sons[0] && perp <= +radius) {
-            sons[0]->range<IgnoreEqual>(query, radius, result, axis);
+            sons[0]->template range<IgnoreEqual>(query, radius, result, axis);
         }
         if (sons[1] && perp >= -radius) {
-            sons[1]->range<IgnoreEqual>(query, radius, result, axis);
+            sons[1]->template range<IgnoreEqual>(query, radius, result, axis);
         }
     }
 
@@ -355,7 +355,7 @@ public:
             dist2 = .0;
             return end_;
         }
-        return root_->nearest<IgnoreEqual>(query, dist2);
+        return root_->template nearest<IgnoreEqual>(query, dist2);
     }
 
     template<bool IgnoreEqual = false>
@@ -363,7 +363,7 @@ public:
         std::vector<T> result;
         if (!root_) { return result; }
 
-        root_->range<IgnoreEqual>(query, radius, result);
+        root_->template range<IgnoreEqual>(query, radius, result);
         return result;
     }
 
@@ -372,14 +372,14 @@ public:
     {
         std::pair<iterator, double> res(end_, 0);
         if (!root_) { return res; }
-        res.first = root_->nearest<IgnoreEqual>(query, res.second);
+        res.first = root_->template nearest<IgnoreEqual>(query, res.second);
         return res;
     }
 
     template<bool IgnoreEqual = false>
     void range(const T& query, double radius, std::vector<T>& result) const {
         if (!root_) { return; }
-        return root_->range<IgnoreEqual>(query, radius, result);
+        return root_->template range<IgnoreEqual>(query, radius, result);
     }
 
     template<bool IgnoreEqual = false>
@@ -387,7 +387,7 @@ public:
                , std::vector<std::pair<T, double> > &result) const
     {
         if (!root_) { return; }
-        return root_->range<IgnoreEqual>(query, radius, result);
+        return root_->template range<IgnoreEqual>(query, radius, result);
     }
 
 private:
