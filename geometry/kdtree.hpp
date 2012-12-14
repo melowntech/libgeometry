@@ -17,6 +17,8 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/range/iterator_range.hpp>
+
 
 namespace geometry {
 
@@ -210,7 +212,7 @@ public:
         }
 
         // perpendicular distance to node boundary
-        double perp = query(axis) - G::get(*point, axis);
+        double perp = G::get(query, axis) - G::get(*point, axis);
 
         // change axis
         if (++axis >= K) {
@@ -224,6 +226,39 @@ public:
         if (sons[1] && perp >= -radius) {
             sons[1]->template range<IgnoreEqual>(query, radius, result, axis);
         }
+    }
+
+    /**
+     *  Returns all points that are within "radius" from "query".
+     *  The points are returned indirectly through iterators.
+     */
+    template<bool IgnoreEqual>
+    void range(const T& query, double radius,
+              std::vector<iterator>& result, unsigned int axis = 0) const
+    {
+       // return point if it is within radius
+       T diff(G::diff(query, *point));
+       double dist2 = inner_prod(diff, diff);
+       if (dist2 <= radius*radius) {
+           if (!IgnoreEqual || dist2 > 0.0)
+               result.push_back(point);
+       }
+
+       // perpendicular distance to node boundary
+       double perp = G::get(query, axis) - G::get(*point, axis);
+
+       // change axis
+       if (++axis >= K) {
+           axis = 0;
+       }
+
+       // recurse to sub-trees if they are within radius
+       if (sons[0] && perp <= +radius) {
+           sons[0]->template range<IgnoreEqual>(query, radius, result, axis);
+       }
+       if (sons[1] && perp >= -radius) {
+           sons[1]->template range<IgnoreEqual>(query, radius, result, axis);
+       }
     }
 
     /**
@@ -244,7 +279,7 @@ public:
         }
 
         // perpendicular distance to node boundary
-        double perp = query(axis) - G::get(*point, axis);
+        double perp = G::get(query, axis) - G::get(*point, axis);
 
         // change axis
         if (++axis >= K) {
@@ -378,6 +413,12 @@ public:
 
     template<bool IgnoreEqual = false>
     void range(const T& query, double radius, std::vector<T>& result) const {
+        if (!root_) { return; }
+        return root_->template range<IgnoreEqual>(query, radius, result);
+    }
+
+    template<bool IgnoreEqual = false>
+    void range(const T& query, double radius, std::vector<iterator>& result) const {
         if (!root_) { return; }
         return root_->template range<IgnoreEqual>(query, radius, result);
     }
