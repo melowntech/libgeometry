@@ -5,7 +5,7 @@
  *
  *  The k-d tree data structure for fast nearest neighbor search.
  *
- *  2011-09-28 (vasek)    refactored
+ *  2012-09-28 (vasek)    refactored
  */
 
 #ifndef KDTREE_HPP_INCLUDED
