@@ -2,7 +2,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "geometry/polyclip.hpp"
+#include "geometry/polygon.hpp"
 
 #include "dbglog/dbglog.hpp"
 

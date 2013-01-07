@@ -9,7 +9,7 @@
 
 #include "dbglog/dbglog.hpp"
 
-#include "polyclip.hpp"
+#include "polygon.hpp"
 
 
 namespace geometry { namespace detail {
