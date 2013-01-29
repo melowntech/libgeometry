@@ -14,6 +14,11 @@
 
 namespace geometry {
 
+/** Compute polygon area (via shoelace formula)
+ */
+template <typename T>
+double area( const std::vector<math::Point2_<T> > & polygon  );
+    
 /** Clip polygon by provided viewport.
  *
  *  Returns polygon of same type as is input. Internally works with double
@@ -31,6 +36,23 @@ template <typename T>
 bool convex(const std::vector<math::Point2_<T> > &polygon);
 
 // implementation
+
+template <typename T>
+double area( const std::vector<math::Point2_<T> > & polygon  ) {
+
+    uint n = polygon.size();
+    double retval( 0.0 );
+    
+    for ( uint i = 0; i < n; i++ ) {
+
+        retval += polygon[i](0) * (
+            polygon[ ( i + 1 ) % n ](1)
+            - polygon[ ( i + n - 1 ) % n ](1) );
+    }
+
+    return 0.5 * retval;
+}
+
 
 namespace detail {
     math::Points2 clip(const math::Viewport2f &viewport
