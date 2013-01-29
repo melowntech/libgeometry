@@ -5,7 +5,10 @@ set(geometry_SOURCES
 	volume.cpp
     parse-obj.cpp
 
+    polygon.hpp
     polyclip.cpp
+
+    mesh.hpp
 )
 
 add_library(geometry STATIC ${geometry_SOURCES})
