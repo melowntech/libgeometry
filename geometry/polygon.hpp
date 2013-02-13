@@ -18,7 +18,7 @@ namespace geometry {
  */
 template <typename T>
 double area( const std::vector<math::Point2_<T> > & polygon  );
-    
+
 /** Clip polygon by provided viewport.
  *
  *  Returns polygon of same type as is input. Internally works with double
@@ -29,20 +29,30 @@ std::vector<math::Point2_<T> >
 clip(const math::Viewport2_<U> &viewport
      , const std::vector<math::Point2_<T> > &polygon);
 
+/** Clip polygon by provided viewport.
+ *
+ *  Returns vector of same points as has input polygon. Internally works with
+ *  double precision, though.
+ */
+template <typename Iterator, typename U>
+std::vector<typename std::iterator_traits<Iterator>::value_type>
+clip(const math::Viewport2_<U> &viewport, Iterator begin, Iterator end);
+
 
 /** Determine whether polygon is convex.
  */
 template <typename T>
 bool convex(const std::vector<math::Point2_<T> > &polygon);
 
-// implementation
+
+/****** implementation ******/
 
 template <typename T>
 double area( const std::vector<math::Point2_<T> > & polygon  ) {
 
     uint n = polygon.size();
     double retval( 0.0 );
-    
+
     for ( uint i = 0; i < n; i++ ) {
 
         retval += polygon[i](0) * (
@@ -66,6 +76,16 @@ clip(const math::Viewport2_<U> &viewport
 {
     auto res(detail::clip(math::Viewport2f(viewport)
                           , math::Points2(polygon.begin(), polygon.end())));
+    return { res.begin(), res.end() };
+}
+
+template <typename Iterator, typename U>
+std::vector<typename std::iterator_traits<Iterator>::value_type>
+clip(const math::Viewport2_<U> &viewport
+     , Iterator begin, Iterator end)
+{
+    auto res(detail::clip(math::Viewport2f(viewport)
+                          , math::Points2(begin, end)));
     return { res.begin(), res.end() };
 }
 
