@@ -1,4 +1,4 @@
-define_module(LIBRARY geometry DEPENDS dbglog)
+define_module(LIBRARY geometry DEPENDS math dbglog)
 
 set(geometry_SOURCES
 	pointcloud.cpp
