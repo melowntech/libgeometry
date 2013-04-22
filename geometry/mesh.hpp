@@ -43,7 +43,7 @@ struct Face {
     }
 };
 
-struct Mesh : boost::noncopyable {
+struct Mesh {
     typedef boost::shared_ptr<Mesh> pointer;
 
     /** vertices */
