@@ -159,7 +159,7 @@ public:
         }
 
         // perpendicular distance to node boundary
-        double perp = query(axis) - G::get(*point, axis);
+        double perp = G::get(query, axis) - G::get(*point, axis);
 
         // change axis
         if (++axis >= K) {
