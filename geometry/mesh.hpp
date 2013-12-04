@@ -79,6 +79,12 @@ struct Mesh {
                 || (b(face) == c(face)) || (c(face) == a(face)));
     }
 
+    bool good(const Face &face) const {
+        return face.a < vertices.size() &&
+               face.b < vertices.size() &&
+               face.c < vertices.size();
+    }
+
     void sortFacesByImageId();
 
     struct FaceVertexConstIterator;
