@@ -53,16 +53,18 @@ public:
 };
 
 struct Obj : public ObjParserBase {
-    typedef std::vector<math::Point3d> point_list;
-    point_list vertices;
-    point_list normals;
+    math::Points3d vertices;
+    math::Points3d texcoords;
+    math::Points3d normals;
     Facet::list facets;
 
     void addVertex(const Vector3d &v) {
         vertices.push_back(v);
     }
 
-    void addTexture(const Vector3d &) {}
+    void addTexture(const Vector3d &t) {
+        texcoords.push_back(t);
+    }
 
     void addNormal(const Vector3d &n) {
         normals.push_back(n);
@@ -73,12 +75,12 @@ struct Obj : public ObjParserBase {
     }
 
     void materialLibrary(const std::string &l) {
-        LOG(warn2) << "OBJ file contains material reference (mtllib " << l
+        LOG(warn1) << "OBJ file contains material reference (mtllib " << l
                    << "); ignored by this simple reader.";
     }
 
     void useMaterial(const std::string &m) {
-        LOG(warn2) << "OBJ file contains material reference (usemtl " << m
+        LOG(warn1) << "OBJ file contains material reference (usemtl " << m
                    << "); ignored by this simple reader.";
     }
 };
