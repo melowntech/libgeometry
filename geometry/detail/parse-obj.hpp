@@ -59,16 +59,17 @@ public:
     }
 
     Obj& operator+=(Facet f) {
+        // convert to zero-based indices, also support negative indices
         for (auto &v : f.v) {
-            if (v < 0) { v = vCount_ + v + 1; }
+            v = (v < 0) ? (vCount_ + v) : (v - 1);
         }
 
         for (auto &t : f.t) {
-            if (t < 0) { t = tCount_ + t + 1; }
+            t = (t < 0) ? (tCount_ + t) : (t - 1);
         }
 
         for (auto &n : f.n) {
-            if (n < 0) { n = nCount_ + n + 1; }
+            n = (n < 0) ? (nCount_ + n) : (n - 1);
         }
 
         p_->addFacet(f);
