@@ -9,6 +9,7 @@
 #include <boost/filesystem.hpp>
 
 #include "math/geometry.hpp"
+#include "geometry/parse-obj.hpp"
 
 namespace geometry {
 
@@ -44,7 +45,7 @@ struct Face {
 };
 
 struct Mesh {
-    typedef boost::shared_ptr<Mesh> pointer;
+    typedef std::shared_ptr<Mesh> pointer;
 
     /** vertices */
     math::Points3 vertices;
@@ -85,6 +86,9 @@ struct Mesh {
                face.c < vertices.size();
     }
 
+    
+    pointer simplify(int faceCount);
+    
     void sortFacesByImageId();
 
     struct FaceVertexConstIterator;
@@ -92,6 +96,9 @@ struct Mesh {
     FaceVertexConstIterator begin(const Face &face) const;
 
     FaceVertexConstIterator end(const Face&) const;
+    
+    void saveObj(const boost::filesystem::path &filepath
+                   , const std::string &mtlName) const;
 };
 
 inline void Mesh::addFace(math::Points3::size_type a

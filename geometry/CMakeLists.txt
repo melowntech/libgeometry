@@ -1,4 +1,4 @@
-define_module(LIBRARY geometry DEPENDS math dbglog)
+define_module(LIBRARY geometry DEPENDS math dbglog OPENMESH)
 
 set(geometry_SOURCES
 	pointcloud.cpp
@@ -9,6 +9,7 @@ set(geometry_SOURCES
     polyclip.cpp
 
     mesh.hpp
+    mesh.cpp
 )
 
 add_library(geometry STATIC ${geometry_SOURCES})
