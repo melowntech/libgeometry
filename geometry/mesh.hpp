@@ -42,6 +42,14 @@ struct Face {
 
     /** Calculate normal of this face.
      */
+    Face(math::Points3::size_type a, math::Points3::size_type b
+         , math::Points3::size_type c, math::Points2::size_type ta
+         , math::Points2::size_type tb, math::Points2::size_type tc)
+        : imageId(), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
+    {}
+      
+      
+      
     math::Point3 normal(const math::Points3 &vertices) const {
         return math::normalize
             (math::crossProduct(vertices[b] - vertices[a]
@@ -89,8 +97,12 @@ struct Mesh {
     void addFace(math::Points3::size_type a, math::Points3::size_type b
                  , math::Points3::size_type c);
 
+    void addFace(math::Points3::size_type a, math::Points3::size_type b
+                 , math::Points3::size_type c, math::Points2::size_type ta
+                 , math::Points2::size_type tb, math::Points2::size_type tc );
+
     /** First face point.
-     */
+    */ 
     const math::Point3& a(const Face &face) const {
         return vertices[face.a];
     }
@@ -137,6 +149,11 @@ struct Mesh {
 
     void saveObj(const boost::filesystem::path &filepath
                    , const std::string &mtlName) const;
+                
+    /** 
+     * @brief remove this once geometry::Obj is no longer used for modeling.
+     */
+    void convertTo( geometry::Obj & obj ) const;
 };
 
 inline void Mesh::addFace(math::Points3::size_type a
@@ -145,6 +162,14 @@ inline void Mesh::addFace(math::Points3::size_type a
 {
     faces.emplace_back(a, b, c);
 }
+
+inline void Mesh::addFace(math::Points3::size_type a, math::Points3::size_type b
+                 , math::Points3::size_type c, math::Points2::size_type ta
+                 , math::Points2::size_type tb, math::Points2::size_type tc)
+{
+    faces.emplace_back(a, b, c, ta, tb, tc);
+}
+
 
 inline void Mesh::sortFacesByImageId()
 {

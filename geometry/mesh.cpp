@@ -258,4 +258,37 @@ Mesh::pointer Mesh::simplify(int faceCount)
 }
 
 
+void Mesh::convertTo( geometry::Obj & obj ) const {
+    
+    for ( math::Point3 vertex : vertices ) {
+        
+        geometry::Obj::Vector3d overtex;
+        overtex.x = vertex[0]; overtex.y = vertex[1]; overtex.z = vertex[2];
+        
+        obj.addVertex( overtex );
+        
+        //LOG( info1 ) << "[" << overtex.x << ", " << overtex.y << ", " 
+        //    << overtex.z << "]";
+    }
+
+    for ( math::Point2 texture : tCoords ) {
+        
+        geometry::Obj::Vector3d otexture;
+        otexture.x = texture[0]; otexture.y = texture[1]; otexture.z = 0.0;
+        
+        obj.addTexture( otexture );
+    }
+    
+    for ( geometry::Face face : faces ) {
+        
+        geometry::Obj::Facet facet;
+        
+        facet.v[0] = face.a; facet.v[1] = face.b; facet.v[2] = face.c;
+        facet.t[0] = face.ta; facet.t[1] = face.tb; facet.t[2] = face.tc;
+        
+        obj.addFacet( facet );
+    }
+}
+
+
 } //namespace geometry
