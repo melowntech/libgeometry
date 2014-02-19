@@ -1,6 +1,14 @@
-#ifndef mesh_hpp_included_
-#define mesh_hpp_included_
+/**
+ * @file math.hpp
+ * @author Vaclav Blazek <vaclav.blazek@citationtech.net>
+ *
+ * 3D mesh representation and operations.
+ */
 
+#ifndef geometry_mesh_hpp_included_
+#define geometry_mesh_hpp_included_
+
+#include <memory>
 #include <vector>
 #include <string>
 
@@ -13,12 +21,16 @@
 
 namespace geometry {
 
+/** Face in a mesh.
+ */
 struct Face {
     typedef std::vector<Face> list;
 
     unsigned int imageId;
 
+    // Indices of vertices.
     math::Points3::size_type a, b, c;
+    // Indices of texture coordinates.
     math::Points2::size_type ta, tb, tc;
 
     Face() : a(), b(), c(), ta(), tb(), tc() {}
@@ -28,6 +40,8 @@ struct Face {
         : imageId(), a(a), b(b), c(c), ta(), tb(), tc()
     {}
 
+    /** Calculate normal of this face.
+     */
     math::Point3 normal(const math::Points3 &vertices) const {
         return math::normalize
             (math::crossProduct(vertices[b] - vertices[a]
@@ -39,11 +53,20 @@ struct Face {
         ta = tb = tc = 0;
     }
 
+    /** Is this face not a triangle?
+     */
     bool degenerate() const {
         return ((a == b) || (b == c) || (c == a));
     }
 };
 
+/** Textured 3D mesh representation.
+ *
+ * Vertices and texture coordinates are held in two arrays. Vertex at index I
+ * has vertex coordinates at vertices[I] and texture coordinates at tCoords[I].
+ *
+ * Faces are defined as 3 indices to vertices and 3 indices to tCoords.
+ */
 struct Mesh {
     typedef std::shared_ptr<Mesh> pointer;
 
@@ -56,47 +79,62 @@ struct Mesh {
     /** Faces (triplets of indices to vertices and texture coordinates) */
     Face::list faces;
 
+    /** Face normal. */
     math::Point3 normal(const Face &face) const {
         return face.normal(vertices);
     }
 
+    /** Add new face.
+     */
     void addFace(math::Points3::size_type a, math::Points3::size_type b
                  , math::Points3::size_type c);
 
+    /** First face point.
+     */
     const math::Point3& a(const Face &face) const {
         return vertices[face.a];
     }
 
+    /** Second face point.
+     */
     const math::Point3& b(const Face &face) const {
         return vertices[face.b];
     }
 
+    /** Third face point.
+     */
     const math::Point3& c(const Face &face) const {
         return vertices[face.c];
     }
 
+    /** Is given face not a triangle?
+     */
     bool degenerate(const Face &face) const {
         return (face.degenerate() || (a(face) == b(face))
                 || (b(face) == c(face)) || (c(face) == a(face)));
     }
 
+    /** Are face indices ok?
+     */
     bool good(const Face &face) const {
         return face.a < vertices.size() &&
                face.b < vertices.size() &&
                face.c < vertices.size();
     }
 
-    
+
     pointer simplify(int faceCount);
-    
+
     void sortFacesByImageId();
 
+    /** Iterator that iteratex over face points (a->b->c->end)
+     */
     struct FaceVertexConstIterator;
 
     FaceVertexConstIterator begin(const Face &face) const;
 
     FaceVertexConstIterator end(const Face&) const;
-    
+
     void saveObj(const boost::filesystem::path &filepath
                    , const std::string &mtlName) const;
 };
@@ -176,4 +214,4 @@ inline Mesh::FaceVertexConstIterator Mesh::end(const Face&) const {
 }
 
 } // namespace geometry
-#endif // mesh_hpp_included_
+#endif // geometry_mesh_hpp_included_
