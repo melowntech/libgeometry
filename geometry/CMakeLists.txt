@@ -1,4 +1,4 @@
-define_module(LIBRARY geometry DEPENDS math utility dbglog OPENMESH)
+set(geometry_EXTRA_DEPENDS)
 
 if (OPENMESH_FOUND)
   message(STATUS "geometry: compiling in OpenMesh support")
@@ -8,9 +8,14 @@ if (OPENMESH_FOUND)
   set(geometry_OPENMESH_SOURCES
     meshop-openmesh.cpp
     )
+
+  list(APPEND geometry_EXTRA_DEPENDS OPENMESH)
 else()
   message(STATUS "geometry: compiling without OpenMesh support")
 endif()
+
+define_module(LIBRARY geometry DEPENDS math utility dbglog
+  ${geometry_EXTRA_DEPENDS})
 
 set(geometry_SOURCES
 	pointcloud.cpp
