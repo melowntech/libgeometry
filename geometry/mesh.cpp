@@ -5,11 +5,6 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#include <OpenMesh/Core/IO/MeshIO.hh>
-#include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
-#include <OpenMesh/Tools/Decimater/DecimaterT.hh>
-#include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
-
 #include <dbglog/dbglog.hpp>
 
 #include "mesh.hpp"
@@ -39,47 +34,6 @@ inline void serialize(Archive &ar, Point2 &p, const unsigned int version)
 namespace geometry {
 
 const unsigned int DATA_DUMP_VERSION(1);
-
-void Mesh::saveObj(const boost::filesystem::path &filepath
-                   , const std::string &mtlName) const
-{
-    LOG(info4) << "Saving mesh to file <" << filepath << ">.";
-
-    std::ofstream out(filepath.string().c_str());
-    out.setf(std::ios::scientific, std::ios::floatfield);
-
-    out << "mtllib " << mtlName << '\n';
-
-    for (const auto &vertex : vertices) {
-        out << "v " << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2)
-            << '\n';
-    }
-
-    for (const auto &tCoord : tCoords) {
-        out << "vt " << tCoord(0) << ' ' << tCoord(1) << '\n';
-    }
-
-    unsigned int currentImageId(static_cast<unsigned int>(-1));
-
-    for (const auto &face : faces) {
-        if (face.degenerate()) {
-            continue;
-        }
-        if (face.imageId != currentImageId) {
-            out << "usemtl " << face.imageId << '\n';
-            currentImageId = face.imageId;
-        }
-
-        out << "f " << face.a + 1 << '/' << face.ta + 1 << "/ "
-            << face.b + 1 << '/' << face.tb + 1 << "/ "
-            << face.c + 1 << '/' << face.tc + 1 << "/\n";
-    }
-
-    if (!out) {
-        LOGTHROW(err3, std::runtime_error)
-            << "Unable to save mesh to <" << filepath << ">.";
-    }
-}
 
 template<class Archive>
 inline void serialize(Archive &ar, Face &f, const unsigned int version)
@@ -132,129 +86,6 @@ void load(const fs::path &path, std::vector<std::string> &imagePaths
     mesh.faces.clear();
 
     ia & imagePaths & mesh.vertices & mesh.tCoords & mesh.faces;
-}
-
-
-/* code moved from the window-mesh utility */
-
-namespace {
-
-typedef OpenMesh::TriMesh_ArrayKernelT<> OMMesh;
-typedef OpenMesh::Decimater::DecimaterT<OMMesh> Decimator;
-typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;    
-    
-void toOpenMesh(const geometry::Mesh &mesh, OMMesh& omMesh)
-{
-    // create OpenMesh vertices
-    std::vector<OMMesh::VertexHandle> handles;
-    handles.reserve(mesh.vertices.size());
-    for (const auto& v : mesh.vertices)
-        handles.emplace_back(
-            omMesh.add_vertex(OMMesh::Point(v(0), v(1), v(2))) );
-
-    // create OpenMesh faces
-    for (const geometry::Face& face : mesh.faces)
-    {
-        OMMesh::VertexHandle face_handles[3] = {
-            handles[face.a], handles[face.b], handles[face.c]
-        };
-        omMesh.add_face(face_handles, 3);
-    }
-}
-
-void fromOpenMesh(const OMMesh& omMesh, geometry::Mesh& mesh)
-{
-    // create our vertices
-    for (auto v_it = omMesh.vertices_begin();
-              v_it != omMesh.vertices_end();
-              ++v_it)
-    {
-        const auto& pt = omMesh.point(v_it.handle());
-        mesh.vertices.emplace_back(pt[0], pt[1], pt[2]);
-    }
-
-    // create our faces
-    for (auto f_it = omMesh.faces_begin();
-              f_it != omMesh.faces_end();
-              ++f_it)
-    {
-        auto fv_it(omMesh.cfv_iter(f_it.handle()));
-        int index[3], *p = index;
-        for ( ; fv_it; ++fv_it) {
-            *p++ = fv_it.handle().idx();
-        }
-        mesh.faces.emplace_back(index[0], index[1], index[2]);
-    }
-}
-
-void lockCorners(OMMesh &omMesh)
-{
-    // get bounding box
-    double box[2][2] = { {INFINITY, -INFINITY}, {INFINITY, -INFINITY} };
-
-    for (auto v_it = omMesh.vertices_begin();
-              v_it != omMesh.vertices_end();  ++v_it)
-    {
-        const auto& pt = omMesh.point(v_it.handle());
-        for (int i = 0; i < 2; i++) {
-            if (pt[i] < box[i][0]) box[i][0] = pt[i];
-            if (pt[i] > box[i][1]) box[i][1] = pt[i];
-        }
-    }
-
-    // find vertices nearest to the four corners of the bounding box
-    struct { double dist; OMMesh::VertexHandle handle; } corners[2][2]
-        = {{{INFINITY, {}}, {INFINITY, {}}}, {{INFINITY, {}}, {INFINITY, {}}}};
-
-    omMesh.request_vertex_status();
-    for (auto v_it = omMesh.vertices_begin();
-              v_it != omMesh.vertices_end();  ++v_it)
-    {
-        const auto& pt = omMesh.point(v_it.handle());
-
-        for (int i = 0; i < 2; i++)
-        for (int j = 0; j < 2; j++)
-        {
-            double dist = std::hypot(pt[0] - box[0][i], pt[1] - box[1][j]);
-            if (dist < corners[i][j].dist) {
-                corners[i][j].dist = dist;
-                corners[i][j].handle = v_it.handle();
-            }
-        }
-    }
-
-    // lock the corners
-    for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++)
-    {
-        auto handle = corners[i][j].handle;
-        if (handle == OMMesh::VertexHandle()) continue;
-        LOG(info2) << "Locking corner vertex " << handle.idx();
-        omMesh.status(handle).set_locked(true);
-    }
-}
-
-} // namespace
-
-Mesh::pointer Mesh::simplify( int faceCount ) const
-{
-    OMMesh omMesh;
-    toOpenMesh(*this, omMesh);
-
-    // lock the corner vertices of the window to prevent simplifying the corners
-    lockCorners(omMesh);
-
-    Decimator decimator(omMesh);
-    HModQuadric hModQuadric; // collapse priority based on vertex error quadric
-    decimator.add(hModQuadric);
-    decimator.initialize();
-
-    decimator.decimate_to_faces(0, faceCount);
-    omMesh.garbage_collection();
-
-    auto newMesh(std::make_shared<geometry::Mesh>());
-    fromOpenMesh(omMesh, *newMesh);
-    return newMesh;
 }
 
 void Mesh::skirt( const math::Point3 & down ) {
@@ -361,40 +192,5 @@ void Mesh::skirt( const math::Point3 & down ) {
     
     LOG( info1 ) << evenc << " even, " << oddc << " odd.";
 }
-
-
-
-void Mesh::convertTo( geometry::Obj & obj ) const {
-    
-    for ( math::Point3 vertex : vertices ) {
-        
-        geometry::Obj::Vector3d overtex;
-        overtex.x = vertex[0]; overtex.y = vertex[1]; overtex.z = vertex[2];
-        
-        obj.addVertex( overtex );
-        
-        //LOG( info1 ) << "[" << overtex.x << ", " << overtex.y << ", " 
-        //    << overtex.z << "]";
-    }
-
-    for ( math::Point2 texture : tCoords ) {
-        
-        geometry::Obj::Vector3d otexture;
-        otexture.x = texture[0]; otexture.y = texture[1]; otexture.z = 0.0;
-        
-        obj.addTexture( otexture );
-    }
-    
-    for ( geometry::Face face : faces ) {
-        
-        geometry::Obj::Facet facet;
-        
-        facet.v[0] = face.a; facet.v[1] = face.b; facet.v[2] = face.c;
-        facet.t[0] = face.ta; facet.t[1] = face.tb; facet.t[2] = face.tc;
-        
-        obj.addFacet( facet );
-    }
-}
-
 
 } //namespace geometry

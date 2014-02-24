@@ -134,19 +134,13 @@ struct Mesh {
                face.c < vertices.size();
     }
 
-
     /**
-     * @brief simplify mesh to a given number of facing, locking corners.
-     */
-    pointer simplify( int faceCount ) const;
-    
-    /**
-     * @brief provide mesh with skirt 
+     * @brief provide mesh with skirt
      * @details skirt is a set quads pointing in the direction of the given
      * vector and attached to odd edges (edges adjacent to a single face).
      */
     void skirt( const math::Point3 & down = math::Point3( 0.0, 0.0, -1.0 ) );
-    
+
     void sortFacesByImageId();
 
     /** Iterator that iteratex over face points (a->b->c->end)
@@ -156,14 +150,6 @@ struct Mesh {
     FaceVertexConstIterator begin(const Face &face) const;
 
     FaceVertexConstIterator end(const Face&) const;
-
-    void saveObj(const boost::filesystem::path &filepath
-                   , const std::string &mtlName) const;
-                
-    /** 
-     * @brief remove this once geometry::Obj is no longer used for modeling.
-     */
-    void convertTo( geometry::Obj & obj ) const;
 };
 
 inline void Mesh::addFace(math::Points3::size_type a
