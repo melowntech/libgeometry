@@ -21,6 +21,8 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount)
 #endif
     ;
 
+Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount);
+
 /** Function that tells how many faces should given cell have.
  */
 typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
@@ -42,7 +44,10 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
 #endif
     ;
 
-Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount);
+Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
+                             , const math::Point2 &alignment
+                             , double cellSize
+                             , const FacesPerCell &facesPerCell);
 
 /** TODO: remove this once geometry::Obj is no longer used for modeling.
 */
@@ -65,6 +70,14 @@ void saveAsObj(const Mesh::pointer &mesh
 inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount)
 {
     return simplify(*mesh, faceCount);
+}
+
+inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
+                                    , const math::Point2 &alignment
+                                    , double cellSize
+                                    , const FacesPerCell &facesPerCell)
+{
+    return simplifyInGrid(*mesh, alignment, cellSize, facesPerCell);
 }
 
 inline Obj asObj(const Mesh::pointer &mesh)
