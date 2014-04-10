@@ -17,7 +17,28 @@ namespace geometry {
 
 Mesh::pointer simplify(const Mesh &mesh, int faceCount)
 #ifndef GEOMETRY_HAS_OPENMESH
-    UTILITY_FUNCTION_ERROR("Mesh simplify is available only when compiled with OpenMesh.")
+    UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
+#endif
+    ;
+
+/** Function that tells how many faces should given cell have.
+ */
+typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
+
+/** Simplify mesh with custom number of faces in cell.
+ *
+ * \param mesh mesh to simplify
+ * \param alignment corner of arbitrary cell in cell grid
+ *                  (in mesh-local coordinates)
+ * \param cellSize size of cell in cell grid
+ * \param facesPerCell assigns face count to cells
+ * \return simplified mesh
+ */
+Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
+                             , double cellSize
+                             , const FacesPerCell &facesPerCell)
+#ifndef GEOMETRY_HAS_OPENMESH
+    UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
 #endif
     ;
 
