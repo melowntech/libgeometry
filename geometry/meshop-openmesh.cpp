@@ -372,6 +372,10 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
                              , double cellSize
                              , const FacesPerCell &facesPerCell)
 {
+    LOG(info2) << "[simplify] alignment: "
+               << std::setprecision(15) << alignment;
+    LOG(info2) << "[simplify] cellSize: " << cellSize;
+
     // convert tom openmehs structure
     OMMesh omMesh;
     const auto me(toOpenMesh(mesh, omMesh));
@@ -387,10 +391,11 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
         (long((ge.ur(0) - ge.ll(0)) / cellSize)
          , long((ge.ur(1) - ge.ll(1)) / cellSize));
 
-    LOG(debug) << "mesh extents: " << me;
-    LOG(debug) << "gridded mesh extents: " << std::setprecision(15) << ge;
-    LOG(debug) << "grid size: " << gsize;
-    LOG(debug) << "grid origin: " << gorigin;
+    LOG(info2) << "[simplify] mesh extents: " << me;
+    LOG(info2) << "[simplify] gridded mesh extents: "
+               << std::setprecision(15) << ge;
+    LOG(info2) << "[simplify] grid size: " << gsize;
+    LOG(info2) << "[simplify] grid origin: " << gorigin;
 
     // lock the corner vertices of the window to prevent simplifying the corners
     lockCorners(omMesh);
@@ -413,7 +418,7 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     decimator.initialize();
 
     auto fc(decimator.module(hModGrid).desiredCount());
-    LOG(debug) << "Simplifying mesh to " << fc << " faces.";
+    LOG(info2) << "[simplify] Simplifying mesh to " << fc << " faces.";
     decimator.decimate_to_faces(0, fc);
 
     omMesh.garbage_collection();
