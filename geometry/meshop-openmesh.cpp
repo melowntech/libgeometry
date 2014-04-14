@@ -180,19 +180,25 @@ struct Tiling {
         return xx + yy * size.width;
     };
 
-    /** Calculate maximum face count in all cells of grid
+    /** Calculate maximum face count in all cells of grid. If real value is
+     *  lower than maximum, set maximum to real value.
      */
-    std::vector<std::size_t> getMax() const {
+    std::vector<std::size_t> getMax(const std::vector<std::size_t> &real)
+        const
+    {
         std::vector<std::size_t> max;
 
+        auto ireal(real.begin());
         for (long j(0); j < size.height; ++j) {
-            for (long i(0); i < size.width; ++i) {
+            for (long i(0); i < size.width; ++i, ++ireal) {
                 max.push_back
-                    (facesPerCell
-                     (math::Extents2(origin(0) + i * tileSize
-                                     , origin(1) + j * tileSize
-                                     , origin(0) + (i + 1) * tileSize
-                                     , origin(1) + (j + 1) * tileSize)));
+                    (std::min
+                     (facesPerCell
+                      (math::Extents2(origin(0) + i * tileSize
+                                      , origin(1) + j * tileSize
+                                      , origin(0) + (i + 1) * tileSize
+                                      , origin(1) + (j + 1) * tileSize))
+                      , *ireal));
             }
         }
 
@@ -279,7 +285,8 @@ private:
             ++current_[cellIndex];
         }
 
-        max_ = tiling_->getMax();
+        // get face count limits
+        max_ = tiling_->getMax(current_);
     }
 
     inline std::size_t barycenterCell(FaceHandle f) const {
