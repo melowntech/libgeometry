@@ -435,4 +435,5 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     return newMesh;
 }
 
+
 } // namespace geometry
