@@ -14,6 +14,22 @@ else()
   message(STATUS "geometry: compiling without OpenMesh support")
 endif()
 
+if (CGAL_FOUND)
+  message(STATUS "geometry: compiling in CGAL support")
+  append_parent_directory_list_property(COMPILE_DEFINITIONS
+    "GEOMETRY_HAS_CGAL=1")
+
+  set(geometry_CGAL_SOURCES
+    delaunay2d.cpp delaunay2d.hpp
+    )
+
+  list(APPEND CGAL_LIBRARIES ${CGAL_LIBRARY} ${GMP_LIBRARIES}) # TODO: hide
+  list(APPEND geometry_EXTRA_DEPENDS CGAL)
+else()
+  message(STATUS "geometry: compiling without CGAL support")
+endif()
+
+
 define_module(LIBRARY geometry DEPENDS math utility dbglog
   ${geometry_EXTRA_DEPENDS})
 
@@ -29,6 +45,7 @@ set(geometry_SOURCES
     meshop.hpp meshop.cpp
 
     ${geometry_OPENMESH_SOURCES}
+    ${geometry_CGAL_SOURCES}
 )
 
 add_library(geometry STATIC ${geometry_SOURCES})
