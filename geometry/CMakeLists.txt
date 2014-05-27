@@ -1,9 +1,11 @@
 set(geometry_EXTRA_DEPENDS)
+set(geometry_EXTRA_DEFINITIONS)
 
 if (OPENMESH_FOUND)
   message(STATUS "geometry: compiling in OpenMesh support")
-  append_parent_directory_list_property(COMPILE_DEFINITIONS
-    "GEOMETRY_HAS_OPENMESH=1")
+
+  # add definitions
+  list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_OPENMESH=1)
 
   set(geometry_OPENMESH_SOURCES
     meshop-openmesh.cpp
@@ -16,8 +18,9 @@ endif()
 
 if (CGAL_FOUND)
   message(STATUS "geometry: compiling in CGAL support")
-  append_parent_directory_list_property(COMPILE_DEFINITIONS
-    "GEOMETRY_HAS_CGAL=1")
+
+  # add definitions
+  list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_CGAL=1)
 
   set(geometry_CGAL_SOURCES
     delaunay2d.cpp delaunay2d.hpp
@@ -31,7 +34,8 @@ endif()
 
 
 define_module(LIBRARY geometry DEPENDS math utility dbglog
-  ${geometry_EXTRA_DEPENDS})
+  ${geometry_EXTRA_DEPENDS}
+  DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
 set(geometry_SOURCES
 	pointcloud.cpp
@@ -51,3 +55,4 @@ set(geometry_SOURCES
 add_library(geometry STATIC ${geometry_SOURCES})
 buildsys_library(geometry)
 target_link_libraries(geometry ${MODULE_LIBRARIES})
+target_compile_definitions(geometry PRIVATE ${MODULE_DEFINITIONS})
