@@ -65,6 +65,11 @@ void saveAsObj(const Mesh::pointer &mesh
                , const boost::filesystem::path &filepath
                , const std::string &mtlName);
 
+void saveAsPly( const Mesh::pointer &mesh
+              , const boost::filesystem::path &filepath);
+
+Mesh loadPly(const boost::filesystem::path &filepath);
+
 // inline stuff
 
 inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount)

@@ -7,6 +7,8 @@
 
 #include "./meshop.hpp"
 
+#include "utility/expect.hpp"
+
 namespace geometry {
 
 Obj asObj(const Mesh &mesh)
@@ -83,6 +85,50 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
         LOGTHROW(err3, std::runtime_error)
             << "Unable to save mesh to <" << filepath << ">.";
     }
+}
+
+Mesh loadPly( const boost::filesystem::path &filename )
+{
+    std::ifstream f(filename.native());
+    if (!f.good()) {
+        LOGTHROW(err2, std::runtime_error)
+                << "Can't open " << filename;
+    }
+
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+
+    // read header
+    std::string line;
+    int nvert = -1, ntris = -1;
+    do {
+        if (getline(f, line).eof()) break;
+        sscanf(line.c_str(), "element vertex %d", &nvert);
+        sscanf(line.c_str(), "element face %d", &ntris);
+    } while (line != "end_header");
+
+    if (nvert < 0 || ntris < 0) {
+        LOGTHROW(err2, std::runtime_error)
+                << filename << ": unknown PLY format.";
+    }
+
+    Mesh mesh;
+
+    // load points
+    for (int i = 0; i < nvert; i++) {
+        double x, y, z;
+        f >> x >> y >> z;
+        mesh.vertices.emplace_back(x, y, z);
+    }
+
+    // load triangles
+    for (int i = 0; i < ntris; i++) {
+        int n, a, b, c;
+        f >> n >> a >> b >> c;
+        utility::expect(n == 3, "Only triangles are supported in PLY files.");
+        mesh.faces.emplace_back(a, b, c);
+    }
+
+    return mesh;
 }
 
 } // namespace geometry
