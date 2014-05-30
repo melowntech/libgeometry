@@ -26,7 +26,6 @@ if (CGAL_FOUND)
     delaunay2d.cpp delaunay2d.hpp
     )
 
-  list(APPEND CGAL_LIBRARIES ${CGAL_LIBRARY} ${GMP_LIBRARIES}) # TODO: hide
   list(APPEND geometry_EXTRA_DEPENDS CGAL)
 else()
   message(STATUS "geometry: compiling without CGAL support")
