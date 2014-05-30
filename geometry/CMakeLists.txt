@@ -54,4 +54,4 @@ set(geometry_SOURCES
 add_library(geometry STATIC ${geometry_SOURCES})
 buildsys_library(geometry)
 target_link_libraries(geometry ${MODULE_LIBRARIES})
-target_compile_definitions(geometry PRIVATE ${MODULE_DEFINITIONS})
+buildsys_target_compile_definitions(geometry ${MODULE_DEFINITIONS})
