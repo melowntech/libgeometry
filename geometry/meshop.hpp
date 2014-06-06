@@ -68,7 +68,9 @@ void saveAsObj(const Mesh::pointer &mesh
 void saveAsPly( const Mesh::pointer &mesh
               , const boost::filesystem::path &filepath);
 
-Mesh loadPly(const boost::filesystem::path &filepath);
+Mesh loadPly( const boost::filesystem::path &filepath );
+
+Mesh loadObj( const boost::filesystem::path &filepath );
 
 // inline stuff
 

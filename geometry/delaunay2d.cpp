@@ -1,3 +1,11 @@
+/**
+ * This is workaround for CGAL Assertions currently ruining debug mode because
+ * CGAL expects flags which are not currently set
+ */
+#ifndef NDEBUG
+#  define NDEBUG
+#endif
+
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Delaunay_triangulation_2.h>
 #include <CGAL/Triangulation_vertex_base_with_info_2.h>

@@ -6,6 +6,7 @@
  */
 
 #include "./meshop.hpp"
+#include "./parse-obj.hpp"
 
 #include "utility/expect.hpp"
 
@@ -129,6 +130,38 @@ Mesh loadPly( const boost::filesystem::path &filename )
     }
 
     return mesh;
+}
+
+Mesh loadObj( const boost::filesystem::path &filename )
+{
+    struct Obj2MeshParser : public ObjParserBase {
+        void addVertex( const Vector3d &v ) {
+            mesh.vertices.push_back(v);
+        }
+
+        void addTexture( const Vector3d &t ) {
+            mesh.tCoords.emplace_back(t.x, t.y);
+        }
+
+        void addFacet( const Facet &f ) {
+            mesh.addFace( f.v[0], f.v[1], f.v[2]
+                        , f.t[0], f.t[1], f.t[2] );
+        }
+
+        void addNormal( const Vector3d& ) { }
+        void materialLibrary(const std::string&) { }
+        void useMaterial(const std::string&) { }
+
+        Mesh mesh;
+    } parser_;
+
+    std::ifstream file;
+    file.exceptions(std::ios::badbit | std::ios::failbit);
+    file.open(filename.string());
+
+    parser_.parse(file);
+
+    return parser_.mesh;
 }
 
 } // namespace geometry
