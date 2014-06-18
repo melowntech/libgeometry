@@ -16,10 +16,13 @@
 #include <math/math_all.hpp>
 #include <dbglog/dbglog.hpp>
 #include <geometry/pointcloud.hpp>
+#include <geometry/mesh.hpp>
+#include <geometry/kdtree.hpp>
 
 #include <boost/foreach.hpp>
 #include <set>
 #include <vector>
+#include <opencv2/opencv.hpp>
 
 namespace geometry {
 
@@ -92,6 +95,35 @@ public:
     };
 };
 
+template <>
+struct GetCoordinate<VolumeBase_t::FPosition_s> {
+    double get(const VolumeBase_t::FPosition_s &value, unsigned int axis) const
+    {
+        if(axis==0)
+            return value.x;
+        if(axis==1)
+            return value.y;
+        return value.z;
+    }
+
+    VolumeBase_t::FPosition_s diff( const VolumeBase_t::FPosition_s &op1
+                                   , const VolumeBase_t::FPosition_s &op2) const {
+        return {op1.x - op2.x, op1.y - op2.y, op1.z - op2.z};
+    }
+};
+
+template<typename T>
+struct IteratorComparator{
+    IteratorComparator(T &begin):begin(begin){};
+
+    inline bool operator() (const T it1, const T it2)
+    {
+        return (std::distance(begin,it1) < std::distance(begin,it2));
+    }
+
+    T begin;
+};
+
 template <typename E, typename T>
 std::basic_ostream<E, T> & operator << (
     std::basic_ostream<E,T> & os, const VolumeBase_t::FPosition_s & pos ) {
@@ -114,16 +146,26 @@ class Volume_t : public VolumeBase_t {
 
 public:
 
-
     /** Construct a volume and initialize it to a given value. */
     Volume_t( const int sizeX, const int sizeY, const int sizeZ,
               const Value_t & initValue );
+
+    Volume_t( const Volume_t&) = delete;
+
+    Volume_t & operator=(const Volume_t&) = delete;
+
+    Volume_t( Volume_t && other);
+
+    Volume_t& operator=(Volume_t &&other);
 
     /** Volume destruction. */
     ~Volume_t();
 
     /** Value getter. */
     Value_t get( int i, int j, int k ) const;
+
+    /** Interpolated value getter. */
+    Value_t get( double i, double j, double k) const;
 
     /** Value setter. */
     void set( int i, int j, int k, const Value_t & value );
@@ -182,6 +224,8 @@ public:
 
         bool operator < ( const Giterator_t & s );
         bool operator <= ( const Giterator_t & s );
+        bool operator == ( const Giterator_t & s );
+        bool operator != ( const Giterator_t & s );
     };
 
     /** Iterator initialization */
@@ -209,8 +253,6 @@ protected:
         const static unsigned char OCT_X = 0x04;
         const static unsigned char OCT_Y = 0x02;
         const static unsigned char OCT_Z = 0x01;
-
-
 
         typedef enum {
             LBB = 0x00,
@@ -257,6 +299,14 @@ public :
                  const VolumeBase_t::FPosition_s & upper,
                  const double voxelSize, const Value_t & initValue );
 
+    GeoVolume_t( const GeoVolume_t&) = delete;
+
+    GeoVolume_t & operator=(const GeoVolume_t&) = delete;
+
+    GeoVolume_t( GeoVolume_t && other);
+
+    GeoVolume_t& operator=(GeoVolume_t &&other);
+
     VolumeBase_t::FPosition_s lower() const { return _lower; }
     VolumeBase_t::FPosition_s upper() const { return _upper; }
     double voxelSize() const { return _voxelSize; }
@@ -264,8 +314,6 @@ public :
     Value_t fget( const double x, const double y, const double z );
     void fset( const double x, const double y, const double z,
         const Value_t & value );
-
-protected :
 
     /** Find corresponding grid position. Default rounding (0) is closest
      * grid point (0), -1 specifies floor, 1 ceiling */
@@ -281,6 +329,7 @@ protected :
         const typename VolumeBase_t::Position_s & pos );
     VolumeBase_t::FPosition_s grid2geo( const VolumeBase_t::FPosition_s & pos );
 
+protected :
     VolumeBase_t::FPosition_s _lower, _upper;
     double _voxelSize;
 };
@@ -299,22 +348,47 @@ public :
         const double voxelSize, const Value_t & initValue )
         : GeoVolume_t<Value_t>( lower, upper, voxelSize, initValue ) {};
 
+    ScalarField_t( const ScalarField_t&) = delete;
+
+    ScalarField_t & operator=(const ScalarField_t&) = delete;
+
+    ScalarField_t( ScalarField_t && other);
+
+    ScalarField_t& operator=(ScalarField_t &&other);
 
     template <typename DstVolume_t>
-    void filter( 
+    void filter(
         const math::FIRFilter_t & filter,
         const VolumeBase_t::Displacement_s & diff,
         DstVolume_t & dstVolume );
 
+    template<typename Filter1>
+    void filterInplace(double cutOffX = 4, double cutOffY = 4
+                       , double cutOffZ = 4);
+
+    void filterInplace(
+        const math::FIRFilter_t & filter,
+        const VolumeBase_t::Displacement_s & diff);
+
+    template<typename Filter1 = math::Box1>
+    void downscale( int factor );
+
     /**
      * Provide basic visualization of a scalar field isosurface as a set of
-     * quads, separating voxels on differnt sides of the isosurface.
+     * quads, separating voxels on different sides of the isosurface.
      * The output is a list of points, where each consequent quadruple defines
      * a quad.
      */
     std::vector<typename GeoVolume_t<Value_t>::FPosition_s>
         getQuads( const Value_t & threshold,
             const SurfaceOrientation_t orientation = TO_MIN );
+    /**
+     * Extract quads separating voxels on different sides of the isosurface.
+     * The output is geometry::mesh class.
+     */
+    geometry::Mesh getQuadsAsMesh( const Value_t & threshold,
+                       const SurfaceOrientation_t orientation = TO_MIN );
+
 
     /**
      * Extract isosurface with a marching tetrahedrons algorithm.
@@ -324,6 +398,14 @@ public :
     std::vector<typename VolumeBase_t::FPosition_s>
         isosurface( const Value_t & threshold,
             const SurfaceOrientation_t orientation = TO_MIN );
+
+    /**
+     * Extract isosurface with a marching tetrahedrons algorithm.
+     * The output is geometry::mesh class.
+     */
+    geometry::Mesh isosurfaceAsMesh( const Value_t & threshold
+                       ,const SurfaceOrientation_t orientation = TO_MIN
+                       ,const double mergeThreshold = 10E-6);
 
 private:
 
@@ -469,7 +551,7 @@ public :
         double delta,
         double filterCutoffPeriod = 3.0 );
 
-    
+
 protected :
 
     struct Poll_s {
@@ -514,6 +596,15 @@ protected :
     float pollResult( const Poll_s & poll );
 };
 
+/* additional functions */
+enum class SliceDirection{X,Y,Z};
+
+template<typename Value_t>
+void saveSliceAsImg( ScalarField_t<Value_t> &volume
+                    , const boost::filesystem::path &path
+                    , SliceDirection dir, int slice
+                    , float min = 0, float max = 1);
+
 /* implementation follows */
 
 /* class Volume_t<Value_t> */
@@ -536,6 +627,32 @@ Volume_t<Value_t>::~Volume_t() {
     delete _root;
 }
 
+
+template <typename Value_t>
+Volume_t<Value_t>::Volume_t( Volume_t<Value_t>&& other ):
+    _rootSize(other._rootSize), _initValue(other._initValue),
+    _sizeX(other._sizeX), _sizeY(other._sizeY), _sizeZ(other.sizeZ())
+{
+    std::swap(_root,other._root);
+}
+
+
+template <typename Value_t>
+Volume_t<Value_t>& Volume_t<Value_t>::operator=(Volume_t<Value_t> &&other)
+{
+    _rootSize = other._rootSize;
+    _initValue = other._initValue;
+    _sizeX = other._sizeX;
+    _sizeY = other._sizeY;
+    _sizeZ = other._sizeZ;
+    if(this != &other){
+        std::swap(_root,other._root);
+    }
+    return *this;
+}
+
+
+
 template <typename Value_t>
 Volume_t<Value_t>::Node_s::~Node_s() {
 
@@ -551,6 +668,15 @@ Value_t Volume_t<Value_t>::get( int i, int j, int k ) const {
         return _initValue;
 
     return _root->get( _rootSize, Position_s( i, j, k ) );
+}
+
+template <typename Value_t>
+Value_t Volume_t<Value_t>::get( double i, double j, double k ) const {
+
+    Value_t result;
+    double weight[3]={i-std::floor(i), j-std::floor(j), k-std::floor(k)};
+
+
 }
 
 template <typename Value_t>
@@ -579,11 +705,20 @@ bool Volume_t<Value_t>::Giterator_t::operator < ( const Giterator_t & s ) {
 
 template <typename Value_t>
 bool Volume_t<Value_t>::Giterator_t::operator <= ( const Giterator_t & s ) {
-
     assert( diff == s.diff );
     return ( *this < s ) || ( pos == s.pos );
 }
 
+template <typename Value_t>
+bool Volume_t<Value_t>::Giterator_t::operator == ( const Giterator_t & s ) {
+    assert( diff == s.diff );
+    return ( pos == s.pos );
+}
+
+template <typename Value_t>
+bool Volume_t<Value_t>::Giterator_t::operator != ( const Giterator_t & s ) {
+    return !( *this == s );
+}
 
 template <typename Value_t>
 typename Volume_t<Value_t>::Giterator_t Volume_t<Value_t>::gend(
@@ -779,9 +914,9 @@ GeoVolume_t<Value_t>::GeoVolume_t( const VolumeBase_t::FPosition_s & lower,
     const VolumeBase_t::FPosition_s & upper, const double voxelSize,
     const Value_t & initValue )
     : Volume_t<Value_t>(
-        int( round( ( upper.x - lower.x ) / voxelSize ) ),
-        int( round( ( upper.y - lower.y ) / voxelSize ) ),
-        int( round( ( upper.z - lower.z ) / voxelSize ) ), initValue ),
+        int( std::ceil( ( upper.x - lower.x ) / voxelSize ) ),
+        int( std::ceil( ( upper.y - lower.y ) / voxelSize ) ),
+        int( std::ceil( ( upper.z - lower.z ) / voxelSize ) ), initValue ),
      _lower( lower ), _upper( upper ), _voxelSize( voxelSize ) {
 
     // extents need to be modified to be voxelSize divisable
@@ -789,6 +924,29 @@ GeoVolume_t<Value_t>::GeoVolume_t( const VolumeBase_t::FPosition_s & lower,
     _upper.y = _lower.y + this->_sizeY * _voxelSize;
     _upper.z = _lower.z + this->_sizeZ * _voxelSize;
 }
+
+/*
+template <typename Value_t>
+GeoVolume_t<Value_t>( GeoVolume_t && other):
+    _rootSize(other._rootSize), _initValue(other._initValue)
+  , _sizeX(other._sizeX), _sizeY(other._sizeY), _sizeZ(other.sizeZ())
+  , _voxelSize(other._voxelSize), _lower(other._lower)
+  , _upper(other._upper)
+{
+    std::swap(_root,other._root);
+}
+
+
+template <typename Value_t>
+GeoVolume_t<Value_t>& operator=(GeoVolume_t &&other):
+    _rootSize(other._rootSize), _initValue(other._initValue)
+  , _sizeX(other._sizeX), _sizeY(other._sizeY), _sizeZ(other.sizeZ())
+  , _voxelSize(other._voxelSize), _lower(other._lower)
+  , _upper(other._upper)
+{
+    std::swap(_root,other._root);
+}
+*/
 
 template <class Value_t>
 Value_t GeoVolume_t<Value_t>::fget( const double x, const double y,
@@ -815,7 +973,7 @@ typename VolumeBase_t::Position_s GeoVolume_t<Value_t>::geo2grid(
     const VolumeBase_t::FPosition_s & gpos,
     const int roundingX, const int roundingY,
     const int roundingZ  ) {
-    
+
     typename VolumeBase_t::FPosition_s fpos = geo2gridf( gpos );
 
     typename VolumeBase_t::Position_s retval;
@@ -826,7 +984,7 @@ typename VolumeBase_t::Position_s GeoVolume_t<Value_t>::geo2grid(
         case -1:
             retval.x = round( floor( fpos.x ) ); break;
         case 1:
-            retval.x = round( ceil( fpos.x ) ); break;            
+            retval.x = round( ceil( fpos.x ) ); break;
     }
 
     switch ( roundingY ) {
@@ -849,7 +1007,7 @@ typename VolumeBase_t::Position_s GeoVolume_t<Value_t>::geo2grid(
 
 
     return retval;
-        
+
 }
 
 
@@ -884,12 +1042,43 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t>::grid2geo(
         _lower.z + ( pos.z + 0.5 ) / this->_sizeZ * ( _upper.z - _lower.z ) );
 }
 
-
 /* class ScalarField_t */
+/*
+template <typename Value_t>
+ScalarField_t<Value_t>::
+    ScalarField_t( ScalarField_t<Value_t> && other):
+    _rootSize(other._rootSize), _initValue(other._initValue)
+  , _sizeX(other._sizeX), _sizeY(other._sizeY), _sizeZ(other.sizeZ())
+  , _voxelSize(other._voxelSize), _lower(other._lower)
+  , _upper(other._upper)
+{
+    _root = other._root;
+    other._root = nullptr;
+}
+*/
+
+template <typename Value_t>
+ScalarField_t<Value_t>& ScalarField_t<Value_t>::
+    operator=(ScalarField_t<Value_t> &&other)
+{
+    if(this != &other){
+        this->_root = other._root;
+        this->_initValue = other._initValue;
+        this->_sizeX = other._sizeX;
+        this->_sizeY = other._sizeY;
+        this->_sizeZ = other._sizeZ;
+        this->_voxelSize = other._voxelSize;
+        this->_lower = other._lower;
+        this->_upper = other._upper;
+        this->_rootSize = other._rootSize;
+        other._root = nullptr;
+    }
+    return *this;
+}
 
 template <class Value_t>
 template <typename DstVolume_t>
-    void ScalarField_t<Value_t>::filter( 
+    void ScalarField_t<Value_t>::filter(
         const math::FIRFilter_t & filter,
         const VolumeBase_t::Displacement_s & diff,
         DstVolume_t & dstVolume ) {
@@ -917,7 +1106,118 @@ template <typename DstVolume_t>
 }
 
 template <class Value_t>
-    std::vector<typename GeoVolume_t<Value_t>::FPosition_s>
+template<typename Filter1>
+void ScalarField_t<Value_t>::filterInplace( double cutOffX, double cutOffY
+                                            , double cutOffZ){
+
+    typename Volume_t<Value_t>::Displacement_s directions[3];
+    directions[0] = typename Volume_t<Value_t>::Displacement_s(1,0,0);
+    directions[1] = typename Volume_t<Value_t>::Displacement_s(0,1,0);
+    directions[2] = typename Volume_t<Value_t>::Displacement_s(0,0,1);
+
+    double cutOffs[3] = {cutOffX, cutOffY, cutOffZ};
+
+    for(uint fAxis = 0; fAxis<3; ++fAxis){
+        math::FIRFilter_t filter(math::FilterTraits<Filter1>(),cutOffs[fAxis]);
+        filterInplace(filter,directions[fAxis]);
+    }
+}
+
+template <class Value_t>
+void ScalarField_t<Value_t>::filterInplace(
+        const math::FIRFilter_t & filter,
+        const VolumeBase_t::Displacement_s & diff){
+
+    std::set<VolumeBase_t::Position_s> poss = this->iteratorPositions( diff );
+
+    BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+        typename ScalarField_t<Value_t>::Giterator_t sit( *this, pos, diff );
+        typename ScalarField_t<Value_t>::Giterator_t send = this->gend( sit );
+
+        int rowSize = send - sit;
+
+        std::vector<Value_t> filtered(rowSize);
+        auto dit = filtered.begin();
+
+        for ( int x = 0; x < rowSize; x++ ) {
+
+            *dit=filter.convolute( sit, x, rowSize );
+            ++sit; ++dit;
+        }
+
+        //write filtered values into source volume
+        dit = filtered.begin();
+        sit.pos = pos;
+        for ( int x = 0; x < rowSize; x++ ) {
+            sit.setValue(*dit);
+            ++sit; ++dit;
+        }
+    }
+}
+
+template <class Value_t>
+template <typename Filter1>
+void ScalarField_t<Value_t>::downscale(int factor){
+    LOG( info2 )<<"Downscaling volume by factor "<<factor;
+    double filterCutoff = std::max(2,factor*2);
+    LOG( info2 )<<"Filtering volume";
+    this->filterInplace<Filter1>( filterCutoff
+                                , filterCutoff
+                                , filterCutoff);
+
+    LOG( info2 )<<"Collecting filtered data.";
+
+    ScalarField_t<Value_t> tmp(this->lower(), this->upper()
+                                         , this->voxelSize()*factor,0);
+
+    typedef typename Volume_t<Value_t>::Displacement_s Displacement_s;
+    typedef typename Volume_t<Value_t>::Giterator_t Giterator_t;
+
+    Displacement_s dispNew[3];
+
+    dispNew[0] = Displacement_s(1,0,0);
+    dispNew[1] = Displacement_s(0,1,0);
+    dispNew[2] = Displacement_s(0,0,1);
+    Displacement_s dispOrig[3];
+    dispOrig[0] = Displacement_s(factor,0,0);
+    dispOrig[1] = Displacement_s(0,factor,0);
+    dispOrig[2] = Displacement_s(0,0,factor);
+
+    typename Volume_t<Value_t>::Position_s pos(0,0,0);
+
+    Giterator_t xitN( tmp, pos, dispNew[0] );
+    Giterator_t xendN = tmp.gend( xitN );
+    Giterator_t xitO( *this, pos, dispOrig[0] );
+    Giterator_t xendO = this->gend( xitO );
+
+    while(xitN!=xendN && xitO!=xendO){
+        Giterator_t yitN( tmp, xitN.pos, dispNew[1] );
+        Giterator_t yendN = tmp.gend( yitN );
+        Giterator_t yitO( *this, xitO.pos, dispOrig[1] );
+        Giterator_t yendO = this->gend( yitO );
+
+        while(yitN!=yendN && yitO!=yendO){
+            Giterator_t zitN( tmp, yitN.pos, dispNew[2] );
+            Giterator_t zendN = tmp.gend( zitN );
+            Giterator_t zitO( *this, yitO.pos, dispOrig[2] );
+            Giterator_t zendO = this->gend( zitO );
+            while(zitN!=zendN && zitO!=zendO){
+                zitN.setValue(zitO.value());
+                ++zitN; ++zitO;
+            }
+            ++yitN; ++yitO;
+        }
+
+        ++xitN; ++xitO;
+    }
+
+
+
+    *this = std::move(tmp);
+}
+
+template <class Value_t>
+std::vector<typename GeoVolume_t<Value_t>::FPosition_s>
     ScalarField_t<Value_t>::getQuads( const Value_t & threshold,
         const SurfaceOrientation_t orientation ) {
 
@@ -1072,13 +1372,23 @@ typename GeoVolume_t<Value_t>::FPosition_s ScalarField_t<Value_t>::interpolate(
     const Value_t & value2,
     Value_t midval ) {
 
+    double alpha1,alpha2;
 
-    double alpha = ( midval - value1 ) / ( value2 - value1 );
+    if(value1>value2){
+        alpha1 = ((double)midval - (double)value2 )
+                  / ((double)value1 - (double)value2 );
+        alpha2 = (1.0 - alpha1);
+    }
+    else{
+        alpha2 = ((double)midval - (double)value1 )
+                  / ((double)value2 - (double)value1 );
+        alpha1 = (1.0 - alpha2);
+    }
 
     return typename GeoVolume_t<Value_t>::FPosition_s(
-        p1.x * ( 1.0 - alpha ) + p2.x * alpha,
-        p1.y * ( 1.0 - alpha ) + p2.y * alpha,
-        p1.z * ( 1.0 - alpha ) + p2.z * alpha );
+        p1.x * alpha1 + p2.x * alpha2,
+        p1.y * alpha1 + p2.y * alpha2,
+        p1.z * alpha1 + p2.z * alpha2 );
 
 }
 
@@ -1348,7 +1658,10 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
     for ( int i = -1; i < this->_sizeX; i++ )
         for ( int j = -1; j < this->_sizeY; j++ )
             for ( int k = -1; k < this->_sizeZ; k++ ) {
-
+/*
+                if(i!=23 || j!=26 || k!=3)
+                    continue;
+*/
 
                 struct {
                     typename GeoVolume_t<Value_t>::FPosition_s vertex;
@@ -1387,6 +1700,7 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
                     vertexes[7].vertex, vertexes[7].value,
                     vertexes[4].vertex, vertexes[4].value,
                     threshold, orientation );
+
                 isoFromTetrahedron(
                     retval,
                     vertexes[0].vertex, vertexes[0].value,
@@ -1394,6 +1708,7 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
                     vertexes[7].vertex, vertexes[7].value,
                     vertexes[5].vertex, vertexes[5].value,
                     threshold, orientation );
+
                 isoFromTetrahedron(
                     retval,
                     vertexes[0].vertex, vertexes[0].value,
@@ -1401,6 +1716,7 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
                     vertexes[3].vertex, vertexes[3].value,
                     vertexes[7].vertex, vertexes[7].value,
                     threshold, orientation );
+
                 isoFromTetrahedron(
                     retval,
                     vertexes[0].vertex, vertexes[0].value,
@@ -1408,7 +1724,7 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
                     vertexes[6].vertex, vertexes[6].value,
                     vertexes[4].vertex, vertexes[4].value,
                     threshold, orientation );
-                //if ( i == 0 && j == 0 && k == 1 )
+
                 isoFromTetrahedron(
                     retval,
                     vertexes[0].vertex, vertexes[0].value,
@@ -1416,6 +1732,7 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
                     vertexes[2].vertex, vertexes[2].value,
                     vertexes[6].vertex, vertexes[6].value,
                     threshold, orientation );
+
                 isoFromTetrahedron(
                     retval,
                     vertexes[0].vertex, vertexes[0].value,
@@ -1428,6 +1745,135 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
     return retval;
 }
 
+inline double roundNthPos( double &val, uint n){
+    int adjustment = std::pow(10,n);
+    return std::floor(val * adjustment+0.5)/adjustment;
+}
+
+template <typename Value_t>
+geometry::Mesh ScalarField_t<Value_t>::isosurfaceAsMesh( const Value_t & threshold
+            , const SurfaceOrientation_t orientation , const double mergeThreshold) {
+    (void) mergeThreshold;
+
+    typedef typename GeoVolume_t<Value_t>::FPosition_s FPosition_s;
+    std::vector<FPosition_s> vertices
+            = this->isosurface(threshold,orientation);
+
+    geometry::Mesh ret;
+
+    std::map<math::Point3,uint> vidMap;
+
+    //reconstruct faces
+    for(uint face = 0; face<vertices.size()/3;++face){
+        uint indices[3];
+        for(uint vertex = 0; vertex<3; ++vertex){
+            math::Point3 pVertex(
+                      vertices[face*3+vertex].x
+                    , vertices[face*3+vertex].y
+                    , vertices[face*3+vertex].z);
+
+            auto it = vidMap.find(pVertex);
+            if(it==vidMap.end()){
+                vidMap.insert(std::make_pair(pVertex,ret.vertices.size()));
+                indices[vertex]=ret.vertices.size();
+                ret.vertices.push_back(pVertex);
+                continue;
+            }
+            indices[vertex]=it->second;
+        }
+        if(indices[0] == indices[1]
+                || indices[0] == indices[2]
+                || indices[1] == indices[2] ){
+            continue;
+        }
+
+        ret.addFace(indices[0],indices[1],indices[2]);
+    }
+    return ret;
+}
+
+/*
+template <typename Value_t>
+geometry::Mesh ScalarField_t<Value_t>::isosurfaceAsMesh( const Value_t & threshold
+            , const SurfaceOrientation_t orientation , const double mergeThreshold) {
+    typedef typename GeoVolume_t<Value_t>::FPosition_s FPosition_s;
+    typedef typename std::vector<FPosition_s>::const_iterator FPosIterator;
+
+    typedef geometry::KdTree<FPosition_s, 3,
+            GetCoordinate<VolumeBase_t::FPosition_s>,
+            std::vector<FPosition_s> > KdTree;
+
+    std::vector<FPosition_s> vertices
+            = this->isosurface(threshold,orientation);
+
+    for(uint face = 0; face<vertices.size()/3;++face){
+        math::Point3 v1(
+                  vertices[face*3+0].x, vertices[face*3+0].y
+                , vertices[face*3+0].z);
+        math::Point3 v2(
+                  vertices[face*3+1].x, vertices[face*3+1].y
+                , vertices[face*3+1].z);
+        math::Point3 v3(
+                  vertices[face*3+2].x, vertices[face*3+2].y
+                , vertices[face*3+2].z);
+        ret.addFace(indices[face*3+0],indices[face*3+1],indices[face*3+2]);
+    }
+
+    KdTree kdTree(vertices.begin(), vertices.end());
+    geometry::Mesh ret;
+
+    //merge close vertices and construct indices map
+    std::vector<uint> indices(vertices.size());
+    for(uint v = 0; v<vertices.size();++v){
+
+        std::vector<FPosIterator> inRange;
+        kdTree.range(vertices[v],mergeThreshold,inRange);
+        FPosIterator begin = vertices.begin();
+        std::sort(inRange.begin(), inRange.end()
+                  , IteratorComparator<FPosIterator>(begin));
+
+        uint index = std::distance(vertices.cbegin(),inRange.front());
+
+        if(index<v){
+            indices[v] = indices[index];
+        }
+        else{
+            indices[v] = ret.vertices.size();
+            math::Point3 vertexPos(vertices[v].x, vertices[v].y, vertices[v].z);
+            ret.vertices.push_back(vertexPos);
+        }
+    }
+
+    //reconstruct faces
+    for(uint face = 0; face<vertices.size()/3;++face){
+        ret.addFace(indices[face*3+0],indices[face*3+1],indices[face*3+2]);
+    }
+
+    return ret;
+}
+*/
+
+template<typename Value_t>
+geometry::Mesh ScalarField_t<Value_t>::getQuadsAsMesh( const Value_t & threshold
+             , const SurfaceOrientation_t orientation){
+
+    std::vector<typename GeoVolume_t<Value_t>::FPosition_s> vertices
+            = this->getQuads(threshold,orientation);
+
+    geometry::Mesh ret;
+
+    for(const auto vertex : vertices){
+        ret.vertices.push_back(math::Point3(vertex.x, vertex.y, vertex.z));
+    }
+
+    for(uint quad = 0; quad<vertices.size()/4;++quad){
+        ret.addFace(quad*4,quad*4+1,quad*4+3);
+        ret.addFace(quad*4+1,quad*4+2,quad*4+3);
+    }
+
+    return ret;
+
+}
 
 /** Class DistanceMap_t */
 
@@ -1482,7 +1928,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
               << this->_lower << this->_upper;
     LOG( info2 ) << "Volume is ( " << this->_sizeX << ", " << this->_sizeY
                  << ", " << this->_sizeZ << " )";
-        
+
     // initialize vector distance field (Danielsson's 4SED algorithm)
     DistVectorField_t dvField( this->_sizeX, this->_sizeY, this->_sizeZ,
         initValue / this->_voxelSize );
@@ -1502,7 +1948,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
                 DistVector_s curVal = dvField.get( pos.x, pos.y, pos.z );
 
                 //LOG( debug ) << curVal.distX << " " << curVal.distY << " " << curVal.distZ;
-            
+
                 dvField.set( pos.x, pos.y, pos.z,
                         DistVector_s(
                             std::min( (float) fabs( pos.x - fpos.x )
@@ -1513,7 +1959,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
                                 , curVal.distZ ) ) );
             }
     }
-    
+
     // perform scanning
     //std::cout << "Z ASC\n";
     for ( int k = 1; k < dvField.sizeZ(); k++ )
@@ -1598,6 +2044,10 @@ void DistanceMap_t<Value_t>::scanXLine( DistVectorField_t & dvField,
             dvField.get( i + 1, j, k ) + DistVector_s( 1, 0, 0 ) ) );
 }
 
-} // namespace geometry
 
+#define GEOMETRY_VOLUME_HPP_UTILS_
+#include "detail/volume.utils.hpp"
+#undef GEOMETRY_VOLUME_HPP_UTILS_
+
+} // namespace geometry
 #endif

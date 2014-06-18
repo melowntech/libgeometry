@@ -8,7 +8,6 @@
 #include <boost/foreach.hpp>
 
 namespace geometry {
-
 /** class BitfieldReconstruction_t */
 
 BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
@@ -28,7 +27,7 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
     std::vector<VolumeBase_t::Displacement_s> dspls;
 
     dspls.push_back( VolumeBase_t::Displacement_s( 1, 0, 0 ) );
-    dspls.push_back( VolumeBase_t::Displacement_s( 0, 1, 0 ) ); 
+    dspls.push_back( VolumeBase_t::Displacement_s( 0, 1, 0 ) );
     dspls.push_back( VolumeBase_t::Displacement_s( 0, 0, 1 ) );
     dspls.push_back( VolumeBase_t::Displacement_s( 1, 1, 0 ) );
     dspls.push_back( VolumeBase_t::Displacement_s( 1, -1, 0 ) );
@@ -45,7 +44,7 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
     BOOST_FOREACH( VolumeBase_t::Displacement_s diff, dspls ) {
 
         LOG ( info1 ) << "Processing direction " << diff;
-        
+
         std::set<VolumeBase_t::Position_s> poss
             = distanceMap.iteratorPositions( diff );
 
@@ -95,7 +94,7 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const PointCloud & cloud,
     LOG( info2 ) << "Obtaining distance map.";
     DistanceMap_t<double> distanceMap( cloud, voxelSize, delta / 2.0 * 1.1 );
     _lower = distanceMap.lower(); _upper = distanceMap.upper();
-    
+
     // initialize voting field
     LOG( info2 ) << "Creating voting field.";
     VotingField_t vfield( *this );
