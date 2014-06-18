@@ -49,6 +49,9 @@ Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                              , double cellSize
                              , const FacesPerCell &facesPerCell);
 
+Mesh::pointer mergeCloseVertices( Mesh &mesh
+                                 , double mergeThreshold);
+
 /** TODO: remove this once geometry::Obj is no longer used for modeling.
 */
 Obj asObj(const Mesh &mesh);
@@ -67,6 +70,9 @@ void saveAsObj(const Mesh::pointer &mesh
 
 void saveAsPly( const Mesh::pointer &mesh
               , const boost::filesystem::path &filepath);
+
+void saveAsPly( const Mesh &mesh
+               , const boost::filesystem::path &filepath);
 
 Mesh loadPly( const boost::filesystem::path &filepath );
 
@@ -97,6 +103,11 @@ inline void saveAsObj(const Mesh::pointer &mesh
                       , const std::string &mtlName)
 {
     return saveAsObj(*mesh, filepath, mtlName);
+}
+
+inline void saveAsPly( const Mesh::pointer &mesh
+                      , const boost::filesystem::path &filepath){
+    return saveAsPly(*mesh, filepath);
 }
 
 } // namespace geometry
