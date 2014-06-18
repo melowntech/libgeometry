@@ -22,7 +22,7 @@
 #include <boost/foreach.hpp>
 #include <set>
 #include <vector>
-#include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
 
 namespace geometry {
 
@@ -2046,7 +2046,7 @@ void DistanceMap_t<Value_t>::scanXLine( DistVectorField_t & dvField,
 
 
 #define GEOMETRY_VOLUME_HPP_UTILS_
-#include "detail/volume.utils.hpp"
+//#include "detail/volume.utils.hpp"
 #undef GEOMETRY_VOLUME_HPP_UTILS_
 
 } // namespace geometry
