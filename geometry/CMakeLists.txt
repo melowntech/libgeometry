@@ -47,6 +47,10 @@ set(geometry_SOURCES
     mesh.hpp mesh.cpp
     meshop.hpp meshop.cpp
 
+    mesh-voxelizer.hpp mesh-voxelizer.cpp
+
+    detail/volume.mcubes.hpp detail/volume.mcubes.cpp
+
     ${geometry_OPENMESH_SOURCES}
     ${geometry_CGAL_SOURCES}
 )

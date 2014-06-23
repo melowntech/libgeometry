@@ -13,11 +13,20 @@
 #ifndef GEOMETRY_VOLUME_HPP
 #define GEOMETRY_VOLUME_HPP
 
+#ifdef _OPENMP
+# include <omp.h>
+#else
+# define omp_get_max_threads() 1
+# define omp_get_thread_num() 0
+#endif
+
 #include <math/math_all.hpp>
 #include <dbglog/dbglog.hpp>
 #include <geometry/pointcloud.hpp>
 #include <geometry/mesh.hpp>
 #include <geometry/kdtree.hpp>
+
+ #include "geometry/detail/volume.mcubes.hpp"
 
 #include <boost/foreach.hpp>
 #include <set>
@@ -292,9 +301,7 @@ protected:
 /** GeoVolume is a volume with defined floating point georeferencing. */
 template <typename Value_t>
 class GeoVolume_t : public Volume_t<Value_t> {
-
 public :
-
     GeoVolume_t( const VolumeBase_t::FPosition_s & lower,
                  const VolumeBase_t::FPosition_s & upper,
                  const double voxelSize, const Value_t & initValue );
@@ -341,6 +348,11 @@ class ScalarField_t : public GeoVolume_t<Value_t> {
 public :
 
     typedef enum { TO_MIN, TO_MAX } SurfaceOrientation_t;
+    typedef enum { M_CUBES, M_TETRAHEDRONS } IsosurfaceAlgorithm_t;
+
+    typedef typename GeoVolume_t<Value_t>::Position_s Position_s;
+    typedef typename GeoVolume_t<Value_t>::FPosition_s FPosition_s;
+    typedef typename GeoVolume_t<Value_t>::Displacement_s Displacement_s;
 
     ScalarField_t(
         const typename GeoVolume_t<Value_t>::FPosition_s & lower,
@@ -390,13 +402,22 @@ public :
                        const SurfaceOrientation_t orientation = TO_MIN );
 
 
-    /**
+        /**
      * Extract isosurface with a marching tetrahedrons algorithm.
      * The output is a list of points where each consequent triple defines a
      * triangle.
      */
-    std::vector<typename VolumeBase_t::FPosition_s>
-        isosurface( const Value_t & threshold,
+    std::vector<FPosition_s>
+        isosurfaceTetrahedrons( const Value_t & threshold,
+            const SurfaceOrientation_t orientation = TO_MIN );
+
+    /**
+     * Extract isosurface with a marching cubes algorithm.
+     * The output is a list of points where each consequent triple defines a
+     * triangle.
+     */
+    std::vector<FPosition_s>
+        isosurfaceCubes( const Value_t & threshold,
             const SurfaceOrientation_t orientation = TO_MIN );
 
     /**
@@ -405,28 +426,34 @@ public :
      */
     geometry::Mesh isosurfaceAsMesh( const Value_t & threshold
                        ,const SurfaceOrientation_t orientation = TO_MIN
-                       ,const double mergeThreshold = 10E-6);
+                       ,const IsosurfaceAlgorithm_t algorithm = M_CUBES );
 
 private:
+    void isoFromCube(
+            std::vector<FPosition_s> & retval
+            , const FPosition_s * vertices
+            , const Value_t * values
+            , const Value_t & threshold, const SurfaceOrientation_t orientation);
+
 
     /** Used for isosurface extraction */
     void isoFromTetrahedron(
-        std::vector<typename GeoVolume_t<Value_t>::FPosition_s> & retval,
-        const typename GeoVolume_t<Value_t>::FPosition_s & vx0,
+        std::vector<FPosition_s> & retval,
+        const FPosition_s & vx0,
         const Value_t & value0,
-        const typename GeoVolume_t<Value_t>::FPosition_s & vx1,
+        const FPosition_s & vx1,
         const Value_t & value1,
-        const typename GeoVolume_t<Value_t>::FPosition_s & vx2,
+        const FPosition_s & vx2,
         const Value_t & value2,
-        const typename GeoVolume_t<Value_t>::FPosition_s & vx3,
+        const FPosition_s & vx3,
         const Value_t & value3,
         const Value_t & threshold, const SurfaceOrientation_t orientation );
 
     /** used for isosurface extraction */
-    typename GeoVolume_t<Value_t>::FPosition_s interpolate(
-            const typename GeoVolume_t<Value_t>::FPosition_s & p1,
+    FPosition_s interpolate(
+            const FPosition_s & p1,
             const Value_t & value1,
-            const typename GeoVolume_t<Value_t>::FPosition_s & p2,
+            const FPosition_s & p2,
             const Value_t & value2,
             Value_t midval );
 
@@ -1130,7 +1157,10 @@ void ScalarField_t<Value_t>::filterInplace(
 
     std::set<VolumeBase_t::Position_s> poss = this->iteratorPositions( diff );
 
+    //uint progress = 0;
+
     BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+
         typename ScalarField_t<Value_t>::Giterator_t sit( *this, pos, diff );
         typename ScalarField_t<Value_t>::Giterator_t send = this->gend( sit );
 
@@ -1140,7 +1170,6 @@ void ScalarField_t<Value_t>::filterInplace(
         auto dit = filtered.begin();
 
         for ( int x = 0; x < rowSize; x++ ) {
-
             *dit=filter.convolute( sit, x, rowSize );
             ++sit; ++dit;
         }
@@ -1148,10 +1177,20 @@ void ScalarField_t<Value_t>::filterInplace(
         //write filtered values into source volume
         dit = filtered.begin();
         sit.pos = pos;
-        for ( int x = 0; x < rowSize; x++ ) {
-            sit.setValue(*dit);
-            ++sit; ++dit;
+        for ( int x = 0; x < rowSize; x++ )
+        {
+                sit.setValue(*dit);
+                ++sit; ++dit;
         }
+        /*
+        uint newProgress = std::ceil((float)off/poss.size() * 100);
+        if(newProgress>progress){
+            progress=newProgress;
+            LOG( info2 )<<"Filtering in dir ["
+                        <<diff.x<<", "<<diff.y<<", "<<diff.z
+                        <<"] progress: "<<progress;
+        }
+        */
     }
 }
 
@@ -1167,11 +1206,19 @@ void ScalarField_t<Value_t>::downscale(int factor){
 
     LOG( info2 )<<"Collecting filtered data.";
 
-    ScalarField_t<Value_t> tmp(this->lower(), this->upper()
-                                         , this->voxelSize()*factor,0);
-
     typedef typename Volume_t<Value_t>::Displacement_s Displacement_s;
     typedef typename Volume_t<Value_t>::Giterator_t Giterator_t;
+    typedef typename ScalarField_t<Value_t>::Position_s Position_s;
+    typedef typename ScalarField_t<Value_t>::FPosition_s FPosition_s;
+
+    float shift = ((factor-1)*this->voxelSize())/2;
+
+    FPosition_s ll( this->lower().x-shift
+                   , this->lower().y-shift
+                   , this->lower().z-shift);
+
+    ScalarField_t<Value_t> tmp(ll, this->upper()
+                                         , this->voxelSize()*factor,0);
 
     Displacement_s dispNew[3];
 
@@ -1187,6 +1234,7 @@ void ScalarField_t<Value_t>::downscale(int factor){
 
     Giterator_t xitN( tmp, pos, dispNew[0] );
     Giterator_t xendN = tmp.gend( xitN );
+
     Giterator_t xitO( *this, pos, dispOrig[0] );
     Giterator_t xendO = this->gend( xitO );
 
@@ -1211,8 +1259,34 @@ void ScalarField_t<Value_t>::downscale(int factor){
         ++xitN; ++xitO;
     }
 
+/*
+    math::Size3 scaledVolSize( (double)this->sizeX()/factor
+                , (double)this->sizeY()/factor
+                , (double)this->sizeZ()/factor);
+    math::Size3 origVolSize( this->sizeX() , this->sizeY(), this->sizeZ());
 
+    imgproc::Scaling3 scale(scaledVolSize,origVolSize);
 
+    while(xitN!=xendN){
+        Giterator_t yitN( tmp, xitN.pos, dispNew[1] );
+        Giterator_t yendN = tmp.gend( yitN );
+
+        while(yitN!=yendN){
+            Giterator_t zitN( tmp, yitN.pos, dispNew[2] );
+            Giterator_t zendN = tmp.gend( zitN );
+
+            while(zitN!=zendN){
+                math::Point3 pos(zitN.pos.x, zitN.pos.y, zitN.pos.z);
+                pos = scale.map(pos);
+                zitN.setValue(this->get(pos(0), pos(1), pos(2)));
+                ++zitN;
+            }
+            ++yitN;
+        }
+
+        ++xitN;
+    }
+*/
     *this = std::move(tmp);
 }
 
@@ -1648,9 +1722,144 @@ void ScalarField_t<Value_t>::isoFromTetrahedron(
 
 }
 
+template<typename Value_t>
+void ScalarField_t<Value_t>::isoFromCube(
+        std::vector<typename GeoVolume_t<Value_t>::FPosition_s> & retval
+        , const typename GeoVolume_t<Value_t>::FPosition_s * vertices
+        , const Value_t * values
+        , const Value_t & threshold, const SurfaceOrientation_t orientation){
+    typedef typename GeoVolume_t<Value_t>::FPosition_s FPosition_s;
+
+    int cubeIndex;
+    FPosition_s vertexList[12];
+
+    cubeIndex = 0;
+    if(orientation == TO_MIN){
+        if (values[0] < threshold) cubeIndex |= 1;
+        if (values[1] < threshold) cubeIndex |= 2;
+        if (values[2] < threshold) cubeIndex |= 4;
+        if (values[3] < threshold) cubeIndex |= 8;
+        if (values[4] < threshold) cubeIndex |= 16;
+        if (values[5] < threshold) cubeIndex |= 32;
+        if (values[6] < threshold) cubeIndex |= 64;
+        if (values[7] < threshold) cubeIndex |= 128;
+    }else{
+        if (values[0] > threshold) cubeIndex |= 1;
+        if (values[1] > threshold) cubeIndex |= 2;
+        if (values[2] > threshold) cubeIndex |= 4;
+        if (values[3] > threshold) cubeIndex |= 8;
+        if (values[4] > threshold) cubeIndex |= 16;
+        if (values[5] > threshold) cubeIndex |= 32;
+        if (values[6] > threshold) cubeIndex |= 64;
+        if (values[7] > threshold) cubeIndex |= 128;
+    }
+
+    if (marchingcubes::edgeTable[cubeIndex] == 0)
+        return;
+
+    if (marchingcubes::edgeTable[cubeIndex] & 1)
+        vertexList[0] =
+            interpolate(vertices[0],values[0],vertices[1],values[1],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 2)
+        vertexList[1] =
+            interpolate(vertices[1],values[1],vertices[2],values[2],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 4)
+        vertexList[2] =
+            interpolate(vertices[2],values[2],vertices[3],values[3],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 8)
+        vertexList[3] =
+            interpolate(vertices[3],values[3],vertices[0],values[0],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 16)
+        vertexList[4] =
+            interpolate(vertices[4],values[4],vertices[5],values[5],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 32)
+        vertexList[5] =
+            interpolate(vertices[5],values[5],vertices[6],values[6],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 64)
+        vertexList[6] =
+            interpolate(vertices[6],values[6],vertices[7],values[7],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 128)
+        vertexList[7] =
+            interpolate(vertices[7],values[7],vertices[4],values[4],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 256)
+        vertexList[8] =
+            interpolate(vertices[0],values[0],vertices[4],values[4],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 512)
+        vertexList[9] =
+            interpolate(vertices[1],values[1],vertices[5],values[5],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 1024)
+        vertexList[10] =
+            interpolate(vertices[2],values[2],vertices[6],values[6],threshold);
+    if (marchingcubes::edgeTable[cubeIndex] & 2048)
+        vertexList[11] =
+            interpolate(vertices[3],values[3],vertices[7],values[7],threshold);
+
+
+    for (uint i=0;marchingcubes::triTable[cubeIndex][i]!=-1;i+=3) {
+        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i+0]]);
+        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i+1]]);
+        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i+2]]);
+    }
+}
+
+
 template <typename Value_t>
-std::vector<typename VolumeBase_t::FPosition_s>
-ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
+std::vector<typename GeoVolume_t<Value_t>::FPosition_s>
+ScalarField_t<Value_t>::isosurfaceCubes( const Value_t & threshold,
+    const SurfaceOrientation_t orientation ){
+    typedef typename GeoVolume_t<Value_t>::FPosition_s FPosition_s;
+    typedef typename GeoVolume_t<Value_t>::Position_s Position_s;
+
+    std::vector<FPosition_s> retval;
+
+    std::vector<std::vector<FPosition_s>> tVertices(omp_get_max_threads());
+    #pragma omp parallel for schedule( dynamic, 5 )
+    for ( int i = -1; i < this->_sizeX; i++ )
+        for ( int j = -1; j < this->_sizeY; j++ )
+            for ( int k = -1; k < this->_sizeZ; k++ ) {
+                typename GeoVolume_t<Value_t>::FPosition_s vertices[8];
+                Value_t values[8];
+
+                vertices[0] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i, j, k ) );
+                values[0] = this->get( i, j, k );
+                vertices[1] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i + 1, j, k ) );
+                values[1] = this->get( i + 1, j, k );
+                vertices[2] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i+1, j + 1, k ) );
+                values[2] = this->get( i+1, j + 1, k );
+                vertices[3] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i, j + 1, k ) );
+                values[3] = this->get( i, j + 1, k );
+                vertices[4] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i, j, k + 1 ) );
+                values[4] = this->get( i, j, k + 1 );
+                vertices[5] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i + 1, j, k + 1 ) );
+                values[5] = this->get( i + 1, j, k + 1 );
+                vertices[6] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i+1, j + 1, k + 1 ) );
+                values[6] = this->get( i + 1, j + 1, k + 1 );
+                vertices[7] = grid2geo(
+                    typename Volume_t<Value_t>::Position_s( i, j + 1, k + 1 ) );
+                values[7] = this->get( i, j + 1 , k + 1 );
+
+                isoFromCube(tVertices[omp_get_thread_num()], vertices, values
+                            , threshold, orientation);
+
+            }
+
+    for(auto vec : tVertices){
+        retval.insert(retval.end(),vec.begin(), vec.end());
+    }
+
+    return retval;
+}
+
+template <typename Value_t>
+std::vector<typename GeoVolume_t<Value_t>::FPosition_s>
+ScalarField_t<Value_t>::isosurfaceTetrahedrons( const Value_t & threshold,
             const SurfaceOrientation_t orientation ) {
 
     std::vector<typename GeoVolume_t<Value_t>::FPosition_s> retval;
@@ -1658,11 +1867,6 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
     for ( int i = -1; i < this->_sizeX; i++ )
         for ( int j = -1; j < this->_sizeY; j++ )
             for ( int k = -1; k < this->_sizeZ; k++ ) {
-/*
-                if(i!=23 || j!=26 || k!=3)
-                    continue;
-*/
-
                 struct {
                     typename GeoVolume_t<Value_t>::FPosition_s vertex;
                     Value_t value;
@@ -1745,19 +1949,22 @@ ScalarField_t<Value_t>::isosurface( const Value_t & threshold,
     return retval;
 }
 
-inline double roundNthPos( double &val, uint n){
-    int adjustment = std::pow(10,n);
-    return std::floor(val * adjustment+0.5)/adjustment;
-}
-
 template <typename Value_t>
 geometry::Mesh ScalarField_t<Value_t>::isosurfaceAsMesh( const Value_t & threshold
-            , const SurfaceOrientation_t orientation , const double mergeThreshold) {
-    (void) mergeThreshold;
+            , const SurfaceOrientation_t orientation
+            , const IsosurfaceAlgorithm_t algorithm) {
 
     typedef typename GeoVolume_t<Value_t>::FPosition_s FPosition_s;
-    std::vector<FPosition_s> vertices
-            = this->isosurface(threshold,orientation);
+
+    std::vector<FPosition_s> vertices;
+    switch(algorithm){
+    case M_CUBES:
+        vertices = this->isosurfaceCubes(threshold,orientation);
+        break;
+    case M_TETRAHEDRONS:
+        vertices = this->isosurfaceTetrahedrons(threshold,orientation);
+        break;
+    }
 
     geometry::Mesh ret;
 
@@ -1791,67 +1998,6 @@ geometry::Mesh ScalarField_t<Value_t>::isosurfaceAsMesh( const Value_t & thresho
     }
     return ret;
 }
-
-/*
-template <typename Value_t>
-geometry::Mesh ScalarField_t<Value_t>::isosurfaceAsMesh( const Value_t & threshold
-            , const SurfaceOrientation_t orientation , const double mergeThreshold) {
-    typedef typename GeoVolume_t<Value_t>::FPosition_s FPosition_s;
-    typedef typename std::vector<FPosition_s>::const_iterator FPosIterator;
-
-    typedef geometry::KdTree<FPosition_s, 3,
-            GetCoordinate<VolumeBase_t::FPosition_s>,
-            std::vector<FPosition_s> > KdTree;
-
-    std::vector<FPosition_s> vertices
-            = this->isosurface(threshold,orientation);
-
-    for(uint face = 0; face<vertices.size()/3;++face){
-        math::Point3 v1(
-                  vertices[face*3+0].x, vertices[face*3+0].y
-                , vertices[face*3+0].z);
-        math::Point3 v2(
-                  vertices[face*3+1].x, vertices[face*3+1].y
-                , vertices[face*3+1].z);
-        math::Point3 v3(
-                  vertices[face*3+2].x, vertices[face*3+2].y
-                , vertices[face*3+2].z);
-        ret.addFace(indices[face*3+0],indices[face*3+1],indices[face*3+2]);
-    }
-
-    KdTree kdTree(vertices.begin(), vertices.end());
-    geometry::Mesh ret;
-
-    //merge close vertices and construct indices map
-    std::vector<uint> indices(vertices.size());
-    for(uint v = 0; v<vertices.size();++v){
-
-        std::vector<FPosIterator> inRange;
-        kdTree.range(vertices[v],mergeThreshold,inRange);
-        FPosIterator begin = vertices.begin();
-        std::sort(inRange.begin(), inRange.end()
-                  , IteratorComparator<FPosIterator>(begin));
-
-        uint index = std::distance(vertices.cbegin(),inRange.front());
-
-        if(index<v){
-            indices[v] = indices[index];
-        }
-        else{
-            indices[v] = ret.vertices.size();
-            math::Point3 vertexPos(vertices[v].x, vertices[v].y, vertices[v].z);
-            ret.vertices.push_back(vertexPos);
-        }
-    }
-
-    //reconstruct faces
-    for(uint face = 0; face<vertices.size()/3;++face){
-        ret.addFace(indices[face*3+0],indices[face*3+1],indices[face*3+2]);
-    }
-
-    return ret;
-}
-*/
 
 template<typename Value_t>
 geometry::Mesh ScalarField_t<Value_t>::getQuadsAsMesh( const Value_t & threshold
