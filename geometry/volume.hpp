@@ -1111,34 +1111,35 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
 
 
 template <class Container_t>
-template <typename DstVolume_t>
-    void filter(
-        const math::FIRFilter_t & filter,
-        const VolumeBase_t::Displacement_s & diff,
-        Container_t & container,
-        DstVolume_t & dstVolume ) {
-        typedef typename Container_t::ValueType ValueType;
+void filter(
+    const math::FIRFilter_t & filter,
+    const VolumeBase_t::Displacement_s & diff,
+    Container_t & container,
+    Container_t & dstVolume ) {
+    typedef typename Container_t::ValueType ValueType;
+    typedef Giterator_t<ValueType,Container_t> Giterator;
 
-        assert( this->sizeX() == dstVolume.sizeX() );
-        assert( this->sizeY() == dstVolume.sizeY() );
-        assert( this->sizeZ() == dstVolume.sizeZ() );
-        assert( diff != VolumeBase_t::Displacement_s( 0, 0, 0 ) );
+    assert( this->sizeX() == dstVolume.sizeX() );
+    assert( this->sizeY() == dstVolume.sizeY() );
+    assert( this->sizeZ() == dstVolume.sizeZ() );
+    assert( diff != VolumeBase_t::Displacement_s( 0, 0, 0 ) );
 
-        std::set<VolumeBase_t::Position_s> poss = this->iteratorPositions( diff );
+    std::set<VolumeBase_t::Position_s> poss
+        = Giterator::iteratorPositions( container, diff );
 
-        BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+    BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
 
-            typename ScalarField_t<ValueType,Container_t>::Giterator_t sit( *this, pos, diff );
-            typename ScalarField_t<ValueType,Container_t>::Giterator_t send = this->gend( sit );
-            typename DstVolume_t::Giterator_t dit( dstVolume, pos, diff );
+        Giterator sit( container, pos, diff );
+        Giterator send = Giterator::gend( sit );
+        Giterator dit( dstVolume, pos, diff );
 
-            int rowSize = send - sit;
+        int rowSize = send - sit;
 
-            for ( int x = 0; x < rowSize; x++ ) {
-                dit.setValue( filter.convolute( sit, x, rowSize ) );
-                ++sit; ++dit;
-            }
+        for ( int x = 0; x < rowSize; x++ ) {
+            dit.setValue( filter.convolute( sit, x, rowSize ) );
+            ++sit; ++dit;
         }
+    }
 }
 
 

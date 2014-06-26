@@ -9,7 +9,7 @@
 #include "math/geometry_core.hpp"
 #include "imgproc/scanconversion.hpp"
 
-#include <opencv2/opencv.hpp>
+//#include <opencv2/opencv.hpp>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/numeric/ublas/vector.hpp>
@@ -131,14 +131,7 @@ void MeshVoxelizer::voxelize(){
     LOG( info2 )<<"Memory consumption of volume: "
         << (long)vSize.width*vSize.height*vSize.depth*sizeof(unsigned short)
         /1024.0/1024.0/1024.0 << " GB.";
-/*
-    for(uint proj=0; proj<results.size(); ++proj){
-        results[proj].buffer.checkCells();
-        long mem=results[proj].buffer.mem();
-        LOG( info2 )<<"Memory consumption of buffer "<<proj<<": "
-                    << mem/1024.0/1024.0/1024.0 << " GB.";
-    }
-*/
+
 
     uint progress = 0;
     LOG( info2 )<<"Voxelization progress: "<<progress;
