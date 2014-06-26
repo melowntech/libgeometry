@@ -47,9 +47,9 @@ struct Face {
          , math::Points2::size_type tb, math::Points2::size_type tc)
         : imageId(), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
     {}
-      
-      
-      
+
+
+
     math::Point3 normal(const math::Points3 &vertices) const {
         return math::normalize
             (math::crossProduct(vertices[b] - vertices[a]
@@ -102,7 +102,7 @@ struct Mesh {
                  , math::Points2::size_type tb, math::Points2::size_type tc );
 
     /** First face point.
-    */ 
+    */
     const math::Point3& a(const Face &face) const {
         return vertices[face.a];
     }
@@ -150,6 +150,7 @@ struct Mesh {
     FaceVertexConstIterator begin(const Face &face) const;
 
     FaceVertexConstIterator end(const Face&) const;
+
 };
 
 inline void Mesh::addFace(math::Points3::size_type a

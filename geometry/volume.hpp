@@ -205,7 +205,7 @@ struct Giterator_t {
     /** Helper function used to provide, for a given displacement vector, a set
      * of iterator initial position such that iterators with such displacement
      * cover the entire volume. */
-    static std::set<Position_s> iteratorPositions (
+    static std::vector<VolumeBase_t::Position_s> iteratorPositions(
         Container_t & container, const Displacement_s & diff );
 
 };
@@ -216,6 +216,7 @@ struct Giterator_t {
  * template <typename Value_t>
  * class VolumeContainer<Value_t>{
  * public:
+ *      typedef Value_t ValueType
  *      VolumeContainer( const int sizeX, const int sizeY, const int sizeZ,
  *            const Value_t & initValue );
  *      Value_t get( int i, int j, int k ) const;
@@ -232,6 +233,7 @@ struct Giterator_t {
 template <typename Value_t>
 class VolumeArray{
 public:
+    typedef Value_t ValueType;
     typedef typename VolumeBase_t::Position_s Position_s;
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
 
@@ -257,6 +259,7 @@ private:
 template <typename Value_t>
 class Volume_t{
 public:
+    typedef Value_t ValueType;
     typedef typename VolumeBase_t::Position_s Position_s;
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
     /** Construct a volume and initialize it to a given value. */
@@ -411,22 +414,13 @@ public :
         const FPosition_s & lower,
         const FPosition_s & upper,
         const double voxelSize, const Value_t & initValue )
-        : GeoVolume_t<Value_t,Container_t>( lower, upper, voxelSize, initValue ) {};
+        : GeoVolume_t<Value_t,Container_t>( lower, upper
+                                          , voxelSize, initValue ) {};
 
     ScalarField_t( const ScalarField_t&) = delete;
     ScalarField_t & operator=(const ScalarField_t&) = delete;
     ScalarField_t( ScalarField_t &&) = default;
     ScalarField_t& operator=(ScalarField_t &&) = default;
-
-    template <typename DstVolume_t>
-    void filter(
-        const math::FIRFilter_t & filter,
-        const VolumeBase_t::Displacement_s & diff,
-        DstVolume_t & dstVolume );
-
-    void filterInplace(
-        const math::FIRFilter_t & filter,
-        const Displacement_s & diff);
 
     template<typename Filter1 = math::CatmullRom1>
     void downscale( int factor );
@@ -771,28 +765,28 @@ Giterator_t<Value_t,Container_t> Giterator_t<Value_t,Container_t>::gend(
 }
 
 template <typename Value_t, class Container_t>
-class std::set<typename VolumeBase_t::Position_s>
+class std::vector<typename VolumeBase_t::Position_s>
 Giterator_t<Value_t, Container_t>::iteratorPositions
     ( Container_t & container, const Displacement_s & diff ) {
-     std::set<VolumeBase_t::Position_s> retval;
+     std::vector<VolumeBase_t::Position_s> retval;
      if ( diff.x != 0 ) {
          for ( int i = 0; i < container.sizeY(); i++ )
              for ( int j = 0; j < container.sizeZ(); j++ )
-                 retval.insert( Position_s(
+                 retval.push_back( Position_s(
                      diff.x > 0 ? 0 : container.sizeX() - 1, i, j ) );
      }
 
      if ( diff.y != 0 ) {
          for ( int i = 0; i < container.sizeX(); i++ )
              for ( int j = 0; j < container.sizeZ(); j++ )
-                 retval.insert( Position_s(
+                 retval.push_back(Position_s(
                      i, diff.y > 0 ? 0 : container.sizeY() - 1, j ) );
      }
 
      if ( diff.z != 0 ) {
          for ( int i = 0; i < container.sizeX(); i++ )
              for ( int j = 0; j < container.sizeY(); j++ )
-                 retval.insert( Position_s(
+                 retval.push_back( Position_s(
                      i, j, diff.z > 0 ? 0 : container.sizeZ() - 1 ) );
      }
 
@@ -1116,26 +1110,14 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
 }
 
 
-template <class Value_t,class Container_t>
-ScalarField_t<Value_t, Container_t>& ScalarField_t<Value_t, Container_t>::
-    operator=(ScalarField_t<Value_t,Container_t> &&other)
-{
-    if(this == &other) { return *this;  }
-
-    this->container_ = std::move(other.container_);
-    std::swap(this->_voxelSize, other._voxelSize);
-    std::swap(this->_lower, other._lower);
-    std::swap(this->_upper, other._upper);
-
-    return *this;
-}
-
-template <class Value_t,class Container_t>
+template <class Container_t>
 template <typename DstVolume_t>
-    void ScalarField_t<Value_t, Container_t>::filter(
+    void filter(
         const math::FIRFilter_t & filter,
         const VolumeBase_t::Displacement_s & diff,
+        Container_t & container,
         DstVolume_t & dstVolume ) {
+        typedef typename Container_t::ValueType ValueType;
 
         assert( this->sizeX() == dstVolume.sizeX() );
         assert( this->sizeY() == dstVolume.sizeY() );
@@ -1146,8 +1128,8 @@ template <typename DstVolume_t>
 
         BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
 
-            typename ScalarField_t<Value_t,Container_t>::Giterator_t sit( *this, pos, diff );
-            typename ScalarField_t<Value_t,Container_t>::Giterator_t send = this->gend( sit );
+            typename ScalarField_t<ValueType,Container_t>::Giterator_t sit( *this, pos, diff );
+            typename ScalarField_t<ValueType,Container_t>::Giterator_t send = this->gend( sit );
             typename DstVolume_t::Giterator_t dit( dstVolume, pos, diff );
 
             int rowSize = send - sit;
@@ -1159,31 +1141,34 @@ template <typename DstVolume_t>
         }
 }
 
-template <class Value_t, class Container_t>
-void ScalarField_t<Value_t, Container_t>::filterInplace(
+
+template <class Container_t>
+void filterInplace(
         const math::FIRFilter_t & filter,
-        const VolumeBase_t::Displacement_s & diff){
+        const VolumeBase_t::Displacement_s & diff,
+        Container_t & container){
 
-    typedef Giterator_t<Value_t,Container_t> Giterator;
+    typedef typename Container_t::ValueType ValueType;
+    typedef Giterator_t<ValueType,Container_t> Giterator;
 
-    double max=std::numeric_limits<Value_t>::max();
-    double min=std::numeric_limits<Value_t>::lowest();
+    double max=std::numeric_limits<ValueType>::max();
+    double min=std::numeric_limits<ValueType>::lowest();
 
-    std::set<VolumeBase_t::Position_s> poss
-        = Giterator::iteratorPositions( this->container(), diff );
+    std::vector<VolumeBase_t::Position_s> poss
+        = Giterator::iteratorPositions( container, diff );
 
-    BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+    for( auto pos: poss ) {
 
-        Giterator sit( this->container_, pos, diff );
+        Giterator sit( container, pos, diff );
         Giterator send = Giterator::gend( sit );
 
         int rowSize = send - sit;
 
-        std::vector<Value_t> filtered(rowSize);
+        std::vector<ValueType> filtered(rowSize);
         auto dit = filtered.begin();
 
         for ( int x = 0; x < rowSize; x++ ) {
-            *dit=(Value_t)std::min(
+            *dit=(ValueType)std::min(
                     std::max(filter.convolute( sit, x, rowSize ),min),max);
             ++sit; ++dit;
         }
@@ -1199,31 +1184,38 @@ void ScalarField_t<Value_t, Container_t>::filterInplace(
     }
 }
 
-template <class Value_t, class Container_t>
-void ScalarField_t<Value_t, Container_t>::filterInplace(
+/*
+ * Specialized version of filtering used for VolumeArrays. The container
+ * representation allows to use multithreding
+ */
+template <class Value_t>
+void filterInplace(
         const math::FIRFilter_t & filter,
-        const VolumeBase_t::Displacement_s & diff){
+        const VolumeBase_t::Displacement_s & diff,
+        VolumeArray<Value_t> & container){
 
-    typedef Giterator_t<Value_t,Container_t> Giterator;
+    typedef Value_t ValueType;
+    typedef Giterator_t<Value_t,VolumeArray<Value_t>> Giterator;
 
-    double max=std::numeric_limits<Value_t>::max();
-    double min=std::numeric_limits<Value_t>::lowest();
+    double max=std::numeric_limits<ValueType>::max();
+    double min=std::numeric_limits<ValueType>::lowest();
 
-    std::set<VolumeBase_t::Position_s> poss
-        = Giterator::iteratorPositions( this->container(), diff );
+    std::vector<VolumeBase_t::Position_s> poss
+        = Giterator::iteratorPositions( container, diff );
 
-    BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
-
-        Giterator sit( this->container_, pos, diff );
+    #pragma omp parallel for schedule( dynamic, 100 )
+    for(uint p=0; p<poss.size(); ++p){
+        VolumeBase_t::Position_s pos = poss[p];
+        Giterator sit( container, pos, diff );
         Giterator send = Giterator::gend( sit );
 
         int rowSize = send - sit;
 
-        std::vector<Value_t> filtered(rowSize);
+        std::vector<ValueType> filtered(rowSize);
         auto dit = filtered.begin();
 
         for ( int x = 0; x < rowSize; x++ ) {
-            *dit=(Value_t)std::min(
+            *dit=(ValueType)std::min(
                     std::max(filter.convolute( sit, x, rowSize ),min),max);
             ++sit; ++dit;
         }
@@ -1254,7 +1246,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor){
     for(uint fAxis = 0; fAxis<3; ++fAxis){
         LOG( info2 )<<"Filtering volume in axis "<<fAxis;
         math::FIRFilter_t filter(math::FilterTraits<Filter1>(),filterCutoff);
-        filterInplace(filter,directions[fAxis]);
+        filterInplace(filter,directions[fAxis],this->container_);
     }
 
     LOG( info2 )<<"Collecting filtered data.";

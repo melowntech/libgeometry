@@ -231,10 +231,10 @@ private:
      */
     bool isInside(  const math::Point3 & position
                   , ProjectionResults & projectionResults);
-
+/*
     void visualizeDepthMap(const ProjectionResult &proj
                            , const math::Extents3 &extents, const fs::path &path);
-
+*/
 };
 
 } //namespace geometry

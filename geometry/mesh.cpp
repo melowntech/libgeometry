@@ -89,9 +89,9 @@ void load(const fs::path &path, std::vector<std::string> &imagePaths
 }
 
 void Mesh::skirt( const math::Point3 & down ) {
-    
+
     (void) down;
-    
+
     enum class Status {
             FW, BW, BI
     };
@@ -100,36 +100,36 @@ void Mesh::skirt( const math::Point3 & down ) {
         int v1, v2;
         int t1, t2;
         mutable Status status;
-        
-        Edge(int pv1, int pv2, int pt1, int pt2) 
+
+        Edge(int pv1, int pv2, int pt1, int pt2)
             : v1( std::min( pv1, pv2 ) ), v2( std::max( pv1, pv2 ) ),
               t1( pv1 <= pv2 ? pt1 : pt2 ), t2( pv1 <= pv2 ? pt2 : pt1 ),
               status( pv1 <= pv2 ? Status::FW : Status::BW ) {}
-            
+
         void update( int pv1, int pv2 ) const {
-            
+
             if ( pv1 <= pv2 && status == Status::BW ) status = Status::BI;
             if ( pv1 > pv2 && status == Status::FW ) status = Status::BI;
         }
-        
-        
+
+
         bool operator < ( const Edge & edge ) const {
-            
+
             return v1 < edge.v1 || ( v1 == edge.v1 && v2 < edge.v2 );
         }
-        
+
     };
-    
+
 
     typedef std::set<Edge> Edges;
     typedef std::map<int,int> DownMap;
-    
+
     Edges edges;
     DownMap vdownmap, tdownmap;
 
     // find odd edges
     for ( Face f : faces ) {
-        
+
         edges.insert( Edge(f.a,f.b,f.ta,f.tb) ).first->update(f.a,f.b);
         edges.insert( Edge(f.b,f.c,f.tb,f.tc) ).first->update(f.b,f.c);
         edges.insert( Edge(f.c,f.a,f.tc,f.ta) ).first->update(f.c,f.a);
@@ -137,59 +137,59 @@ void Mesh::skirt( const math::Point3 & down ) {
 
     // iterate through edges
     int evenc(0), oddc(0);
-    
-    for ( Edge edge : edges ) 
+
+    for ( Edge edge : edges )
         if ( edge.status != Status::BI ) {
-            
+
             // add new vertexes and tcoords
             if ( vdownmap.find( edge.v1 ) == vdownmap.end() ) {
-                
+
                 vertices.push_back( vertices[edge.v1]  + down );
                 vdownmap[edge.v1] = vertices.size()-1;
             }
 
             if ( tdownmap.find( edge.t1 ) == tdownmap.end() ) {
-                
+
                 tCoords.push_back( tCoords[edge.t1] );
                 tdownmap[edge.t1] = tCoords.size()-1;
             }
 
             if ( vdownmap.find( edge.v2 ) == vdownmap.end() ) {
-                
+
                 vertices.push_back( vertices[edge.v2]  + down );
                 vdownmap[edge.v2] = vertices.size()-1;
             }
 
             if ( tdownmap.find( edge.t2 ) == tdownmap.end() ) {
-                
+
                 tCoords.push_back( tCoords[edge.t2] );
                 tdownmap[edge.t2] = tCoords.size()-1;
             }
-            
+
             // add new faces
             if ( edge.status == Status::FW ) {
-                
+
                 faces.emplace_back( vdownmap[edge.v1], edge.v2, edge.v1,
                            tdownmap[edge.t1], edge.t2, edge.t1 );
                 faces.emplace_back( vdownmap[edge.v1], vdownmap[edge.v2], edge.v2,
                            tdownmap[edge.t1], tdownmap[edge.t2], edge.t2 );
             }
-            
+
             if ( edge.status == Status::BW ) {
-                
+
                 faces.emplace_back( vdownmap[edge.v1], edge.v1, edge.v2,
                            tdownmap[edge.t1], edge.t1, edge.t2 );
                 faces.emplace_back( vdownmap[edge.v1], edge.v2, vdownmap[edge.v2],
                            tdownmap[edge.t1], edge.t2, tdownmap[edge.t2] );
             }
-            
+
             oddc++;
-            
+
         } else {
-            
+
             evenc++;
         }
-    
+
     LOG( info1 ) << evenc << " even, " << oddc << " odd.";
 }
 
