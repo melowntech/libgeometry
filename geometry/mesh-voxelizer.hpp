@@ -36,6 +36,9 @@ namespace fs = boost::filesystem;
 class MeshVoxelizer{
 
 public:
+    typedef ScalarField_t<unsigned short, VolumeArray<unsigned short>> Volume;
+
+
     enum class Method{ PARITY_COUNT, RAY_STABING };
 
     struct Parameters {
@@ -64,13 +67,12 @@ public:
 
     void add( geometry::Mesh & mesh );
     void voxelize();
-    std::shared_ptr<ScalarField_t<float>> volume();
+    std::shared_ptr<Volume> volume();
     void reset();
-
-
 private:
     struct LayeredZBuffer{
-        typedef std::vector<std::vector<std::list<float>>> LZBData;
+        typedef std::vector<std::vector<std::vector<float>>> LZBData;
+        typedef std::vector<float>::iterator Iterator;
         math::Size2i size;
         LZBData data;
 
@@ -78,33 +80,137 @@ private:
             this->size = size;
             data = LZBData(size.width);
             for(int i=0;i<size.width; ++i){
-                data[i]= std::vector<std::list<float>>(size.height);
+                data[i]= std::vector<std::vector<float>>(size.height);
+                for(int j=0;j<size.height; ++j){
+                    data[i][j].reserve(0);
+                };
             };
-        };
+        }
+
+        void sortCells(){
+            for( auto &col : data){
+                for( auto &cell : col){
+                    std::sort(cell.begin(),cell.end());
+                }
+            }
+        }
+
+        void checkCells(){
+            for( uint col=0; col < data.size(); col++){
+                for( uint cell=0; cell < data[col].size(); cell++){
+                    if(data[col][cell].size()>100){
+                        std::cout << col<<" : "<<cell
+                                  <<" - " << data[col][cell].size()<<std::endl;
+                    }
+                }
+            }
+        }
+
+        long avgCellSize(){
+            long totalSize=0;
+            for( uint col=0; col < data.size(); col++){
+                for( uint cell=0; cell < data[col].size(); cell++){
+                    totalSize += data[col][cell].size();
+                }
+            }
+            return totalSize/(size.width*size.height);
+        }
+
+        long mem(){
+            long dataMem=0;
+            for( auto &col : data){
+                for( auto &cell : col){
+                    dataMem+= cell.size()*sizeof(float);
+                }
+            }
+
+            return sizeof(std::vector<float>)*(size.width*size.height+size.width)
+                     + dataMem;
+        }
+
+
+        Iterator begin(uint x, uint y){
+            return data[x][y].begin();
+        }
+
+        Iterator end(uint x, uint y){
+            return data[x][y].end();
+        }
+    };
+
+    struct CompressedLayeredZBuffer{
+        typedef std::vector<float>::iterator Iterator;
+        math::Size2i size;
+        std::vector<float> data;
+        std::vector<size_t> pos;
+        std::vector<unsigned short> count;
+
+        CompressedLayeredZBuffer():size(math::Size2(0,0)){}
+
+        CompressedLayeredZBuffer(LayeredZBuffer &lzBuffer){
+            this->size = lzBuffer.size;
+            pos.reserve(size.width*size.height);
+            count.reserve(size.width*size.height);
+
+            std::size_t size = 0;
+            for( auto &col : lzBuffer.data){
+                for( auto &cell : col){
+                    count.push_back(cell.size());
+                    pos.push_back(size);
+                    size+=cell.size();
+                }
+            }
+            data.reserve(size);
+            for( auto &col : lzBuffer.data){
+                for( auto &cell : col){
+                    for( auto &zval : cell){
+                        data.push_back(zval);
+                    }
+                }
+            }
+        }
+
+        Iterator begin(uint x, uint y){
+            return data.begin()+pos[(std::size_t)x*size.height+y];
+        }
+
+        Iterator end(uint x, uint y){
+            return data.begin()+pos[(std::size_t)x*size.height+y]
+                        +count[(std::size_t)x*size.height+y];
+        }
+
+    };
+
+    struct Projection{
+        math::Matrix4 transformation;
+        math::Size2 viewportSize;
+
+        Projection( math::Matrix4 transformation, math::Size2 viewportSize):
+                  transformation(transformation),viewportSize(viewportSize){}
     };
 
     struct ProjectionResult{
         math::Matrix4 transformation;
-        LayeredZBuffer buffer;
+        CompressedLayeredZBuffer buffer;
 
-        ProjectionResult(math::Matrix4 transformation, LayeredZBuffer buffer):
+        ProjectionResult( math::Matrix4 transformation
+                        , CompressedLayeredZBuffer buffer):
             transformation(transformation), buffer(buffer){};
     };
 
-
     typedef std::vector<ProjectionResult> ProjectionResults;
+    typedef std::vector<Projection> Projections;
+    typedef std::vector<CompressedLayeredZBuffer> CompLZBuffers;
 
     Parameters params_;
-    std::shared_ptr<ScalarField_t<float>> volume_;
-    std::vector<geometry::Mesh> meshes;
-    ProjectionResults projections;
+    std::shared_ptr<Volume> volume_;
+    std::vector<geometry::Mesh*> meshes;
 
-    math::Matrix4 orthoProjMat( const math::Point3 &direction
+    Projection orthoProj( const math::Point3 &direction
                                , const math::Extents3 &extents
-                               , const float &voxelSize
-                               , math::Size2 &viewport);
+                               , const float &voxelSize);
 
-    void addSealToMesh(geometry::Mesh & mesh);
+    geometry::Mesh sealOfMesh(geometry::Mesh & mesh);
     void fillVolumeFromSeal();
 
     /**
@@ -124,7 +230,7 @@ private:
      * @return True if the voxel is inside
      */
     bool isInside(  const math::Point3 & position
-                  , const ProjectionResults & projectionResults);
+                  , ProjectionResults & projectionResults);
 
     void visualizeDepthMap(const ProjectionResult &proj
                            , const math::Extents3 &extents, const fs::path &path);

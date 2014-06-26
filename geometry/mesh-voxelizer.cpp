@@ -1,3 +1,10 @@
+#ifdef _OPENMP
+# include <omp.h>
+#else
+# define omp_get_max_threads() 1
+# define omp_get_thread_num() 0
+#endif
+
 #include "geometry/mesh-voxelizer.hpp"
 #include "math/geometry_core.hpp"
 #include "imgproc/scanconversion.hpp"
@@ -7,8 +14,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 
-
-#define RASTERIZE_MESH_DEBUG
+#include <algorithm>
+//#define RASTERIZE_MESH_DEBUG
 
 
 
@@ -19,7 +26,7 @@ MeshVoxelizer::MeshVoxelizer(const Parameters &params){
 }
 
 void MeshVoxelizer::add( geometry::Mesh & mesh ){
-    meshes.push_back(mesh);
+    meshes.push_back(&mesh);
 }
 
 void MeshVoxelizer::voxelize(){
@@ -29,15 +36,20 @@ void MeshVoxelizer::voxelize(){
     }
 
     //add floor to mimic closed mesh
+    std::vector<geometry::Mesh> seals;
     if(params_.addFloor){
         for(auto & mesh: meshes){
-            addSealToMesh(mesh);
+            seals.push_back(sealOfMesh(*mesh));
         }
     }
 
+    //compute united extents
     math::Extents3 extents(math::InvalidExtents{});
-
     for(auto & mesh: meshes){
+        math::Extents3 meshExtents = math::computeExtents(mesh->vertices);
+        extents = math::unite(extents, meshExtents);
+    }
+    for(auto & mesh: seals){
         math::Extents3 meshExtents = math::computeExtents(mesh.vertices);
         extents = math::unite(extents, meshExtents);
     }
@@ -57,30 +69,12 @@ void MeshVoxelizer::voxelize(){
                              , extentsCenter+newExtentsSize/2);
     LOG( info2 )<<"Volumetric grid resolution: "<<volumeGridRes;
     LOG( info2 )<<"Volume extents: "<<extents;
-    volume_ = std::unique_ptr<ScalarField_t<float>>(
-        new ScalarField_t<float>( extents.ll, extents.ur, params_.voxelSize, 0));
 
-    //perform rasterization in several direction
+    //generate directions for 3 main axes + axes of icosahedron faces
     std::vector<math::Point3> directions;
-    //directions along three main axes
     directions.push_back(-math::Point3(1,0,0));
     directions.push_back(-math::Point3(0,1,0));
     directions.push_back(-math::Point3(0,0,1));
-
-    /*
-    //directions of icosahedron
-    float gr = (1 + std::sqrt(5))/2;
-    directions.push_back(-math::Point3((1+gr)/3,(1+gr)/3,(1+gr)/3));
-    directions.push_back(-math::Point3((1+gr)/3,-(1+gr)/3,(1+gr)/3));
-    directions.push_back(-math::Point3(-(1+gr)/3,(1+gr)/3,(1+gr)/3));
-    directions.push_back(-math::Point3(-(1+gr)/3,-(1+gr)/3,(1+gr)/3));
-    directions.push_back(-math::Point3((2+gr)/3,0,1/3.0));
-    directions.push_back(-math::Point3(-(2+gr)/3,0,1/3.0));
-    directions.push_back(-math::Point3(0,1/3.0,(2+gr)/3));
-    directions.push_back(-math::Point3(0,-1/3.0,(2+gr)/3));
-    directions.push_back(-math::Point3(1/3.0,(2+gr)/3,0));
-    directions.push_back(-math::Point3(1/3.0,-(2+gr)/3,0));
-    */
 
     directions.push_back(-math::Point3(1,1,1));
     directions.push_back(-math::Point3(1,-1, 1));
@@ -93,34 +87,29 @@ void MeshVoxelizer::voxelize(){
     directions.push_back(-math::Point3(1,1,0));
     directions.push_back(-math::Point3(1,-1,0));
 
+    //generate projection matrices and layered zbuffers
 
+    Projections projections;
+    ProjectionResults results;
     for(const auto & dir: directions){
-        math::Size2 size;
-        math::Matrix4 transformation = orthoProjMat( dir,extents
-                                                    , params_.voxelSize,size);
-        ProjectionResult pr(transformation,LayeredZBuffer(size));
-        projections.push_back(pr);
+        Projection projection = orthoProj( dir, extents, params_.voxelSize);
+        projections.push_back(projection);
     }
 
     LOG( info2 )<<"Rasterizing meshes";
-
     //rasterize mesh using generated projection matrices
-    for(auto & proj: projections){
+    for(uint p=0; p<projections.size(); ++p){
+        LayeredZBuffer buffer(projections[p].viewportSize);
         for(auto & mesh: meshes){
-            rasterizeMesh(mesh,proj.transformation, proj.buffer);
+            rasterizeMesh(*mesh, projections[p].transformation, buffer);
         }
-    }
-
-    LOG( info2 )<<"Sorting buffers";
-    //sort all the layered z buffers
-    for( auto &proj : projections){
-        for( auto &col : proj.buffer.data){
-            for( auto &cell : col){
-                cell.sort();
-            }
+        for(auto & mesh: seals){
+            rasterizeMesh(mesh, projections[p].transformation, buffer);
         }
+        buffer.sortCells();
+        results.push_back(ProjectionResult( projections[p].transformation
+                                      , CompressedLayeredZBuffer(buffer)));
     }
-    LOG( info2 )<<"Buffers sorted";
 
 #ifdef RASTERIZE_MESH_DEBUG
     uint i=0;
@@ -131,22 +120,44 @@ void MeshVoxelizer::voxelize(){
         visualizeDepthMap(proj, extents ,path);
     }
 #endif
+
+
+
+    //create new volume
+    volume_ = std::unique_ptr<Volume>(
+        new Volume( extents.ll, extents.ur, params_.voxelSize, 0));
+
+    math::Size3i vSize = volume_->cSize();
+    LOG( info2 )<<"Memory consumption of volume: "
+        << (long)vSize.width*vSize.height*vSize.depth*sizeof(unsigned short)
+        /1024.0/1024.0/1024.0 << " GB.";
+/*
+    for(uint proj=0; proj<results.size(); ++proj){
+        results[proj].buffer.checkCells();
+        long mem=results[proj].buffer.mem();
+        LOG( info2 )<<"Memory consumption of buffer "<<proj<<": "
+                    << mem/1024.0/1024.0/1024.0 << " GB.";
+    }
+*/
+
     uint progress = 0;
     LOG( info2 )<<"Voxelization progress: "<<progress;
-    for(int x=0; x< volume_->sizeX(); ++x){
-        for(int y=0; y< volume_->sizeY(); ++y){
-            for(int z=0; z< volume_->sizeZ(); ++z){
+    #pragma omp parallel for schedule( dynamic, 10 )
+    for(int x=0; x< vSize.width; ++x){
+        for(int y=0; y< vSize.height; ++y){
+            for(int z=0; z< vSize.depth; ++z){
                 //voxel center position
                 auto voxCenter
                         = volume_->grid2geo(math::Point3(x,y,z));
-
-                if(isInside({voxCenter.x, voxCenter.y, voxCenter.z}, projections)){
-                    volume_->set(x,y,z,1);
+                if(isInside({voxCenter.x, voxCenter.y, voxCenter.z}, results)){
+                        volume_->set( x, y, z
+                                     ,std::numeric_limits<unsigned short>::max());
                 }
+
             }
         }
         //voxelization progress
-        uint newProgress = std::ceil((float)x/volume_->sizeX() * 100);
+        uint newProgress = std::ceil((float)x/vSize.width * 100);
         if(newProgress>progress){
             progress=newProgress;
             LOG( info2 )<<"Voxelization progress: "<<progress;
@@ -157,19 +168,19 @@ void MeshVoxelizer::voxelize(){
     fillVolumeFromSeal();
 }
 
-std::shared_ptr<ScalarField_t<float>> MeshVoxelizer::volume(){
+std::shared_ptr<MeshVoxelizer::Volume> MeshVoxelizer::volume(){
     return volume_;
 }
 
 void MeshVoxelizer::reset(){
-    projections.clear();
+    std::vector<geometry::Mesh*>().swap(meshes);
 }
 
 
-math::Matrix4 MeshVoxelizer::orthoProjMat( const math::Point3 &direction
+MeshVoxelizer::Projection MeshVoxelizer::orthoProj(const math::Point3 &direction
                             , const math::Extents3 &extents
                             , const float &voxelSize
-                            , math::Size2 &viewport){
+                            ){
     LOG( debug )<<"Projection direction: "<<direction;
     LOG( debug )<<"Mesh extents: "<<extents;
 
@@ -198,17 +209,11 @@ math::Matrix4 MeshVoxelizer::orthoProjMat( const math::Point3 &direction
     auto c2 = ublas::row(rotation,1);
     auto c3 = ublas::row(rotation,2);
 
-    LOG( debug ) << "Up" << up;
-    LOG( debug ) << "Right" << right;
-    LOG( debug ) << "Forward" << normalizedDir;
-
     ublas::subrange(c1,0,3) = right;
     ublas::subrange(c2,0,3) = up;
     ublas::subrange(c3,0,3) = normalizedDir;
 
     projMat = prod(rotation,projMat);
-
-    LOG( debug )<<"Projection matrix - after rotation: "<<projMat;
 
     //find out extents images
     math::Extents2 viewExtents(math::InvalidExtents{});
@@ -228,7 +233,6 @@ math::Matrix4 MeshVoxelizer::orthoProjMat( const math::Point3 &direction
         viewExtents.ll[1] = std::min(pointImg[1],viewExtents.ll[1]);
         viewExtents.ur[0] = std::max(pointImg[0],viewExtents.ur[0]);
         viewExtents.ur[1] = std::max(pointImg[1],viewExtents.ur[1]);
-        LOG( debug ) << point <<" - "<< pointImg;
     }
 
     //scale scene so the extents fit to space < -1,1 > CC/NDC
@@ -238,8 +242,6 @@ math::Matrix4 MeshVoxelizer::orthoProjMat( const math::Point3 &direction
 
     projMat = prod(scaleMat, projMat);
 
-    LOG( debug )<<"Projection matrix - after CC scaling: "<<projMat;
-
     //scale and transform scene to VC
     math::Matrix4 transformMat = ublas::identity_matrix<double>(4);
     transformMat(0,3)=1;
@@ -248,60 +250,63 @@ math::Matrix4 MeshVoxelizer::orthoProjMat( const math::Point3 &direction
     //calculate viewport size
     LOG( debug ) << "View extents: "<< viewExtents;
 
-    viewport.width = std::ceil(size(viewExtents).width/voxelSize);
-    viewport.height = std::ceil(size(viewExtents).height/voxelSize);
+    math::Size2 viewport( std::ceil(size(viewExtents).width/voxelSize)
+                        , std::ceil(size(viewExtents).height/voxelSize));
 
     LOG( debug ) << "Viewport:" << viewport;
 
     scaleMat = ublas::identity_matrix<double>(4);
-    scaleMat(0,0) = std::ceil(viewport.width/2);
-    scaleMat(1,1) = std::ceil(viewport.height/2);
+    scaleMat(0,0) = viewport.width/2;
+    scaleMat(1,1) = viewport.height/2;
 
     projMat = prod(transformMat, projMat);
     projMat = prod(scaleMat, projMat);
 
     LOG( debug )<<"Projection matrix - final from WC to CC: "<<projMat;
 
-
     for(const auto &point : extPoints){
         math::Point3 pointImg = transform(projMat,point);
         LOG( debug ) << point <<" - "<< pointImg;
     }
 
-    return projMat;
+    return Projection(projMat, viewport);
 }
 
-void MeshVoxelizer::addSealToMesh(geometry::Mesh & mesh){
+geometry::Mesh MeshVoxelizer::sealOfMesh(geometry::Mesh & mesh){
 
     math::Extents3 extents = math::computeExtents(mesh.vertices);
 
     float offset = params_.voxelSize * params_.sealFactor;
 
-    std::size_t indicesStart = mesh.vertices.size();
-    mesh.vertices.push_back(
+    geometry::Mesh seal;
+    std::size_t indicesStart = 0;
+
+    seal.vertices.push_back(
                 math::Point3(extents.ll(0)-offset,extents.ll(1)-offset
                              ,extents.ll(2)-offset));
-    mesh.vertices.push_back(
+    seal.vertices.push_back(
                 math::Point3(extents.ll(0)-offset,extents.ur(1)+offset
                              ,extents.ll(2)-offset));
-    mesh.vertices.push_back(
+    seal.vertices.push_back(
                 math::Point3(extents.ur(0)+offset,extents.ll(1)-offset
                              ,extents.ll(2)-offset));
-    mesh.vertices.push_back(
+    seal.vertices.push_back(
                 math::Point3(extents.ur(0)+offset,extents.ur(1)+offset
                              ,extents.ll(2)-offset));
 
-    mesh.addFace(indicesStart,indicesStart+2,indicesStart+1);
-    mesh.addFace(indicesStart+1,indicesStart+2,indicesStart+3);
+    seal.addFace(indicesStart,indicesStart+2,indicesStart+1);
+    seal.addFace(indicesStart+1,indicesStart+2,indicesStart+3);
+
+    return seal;
 }
 
 void MeshVoxelizer::fillVolumeFromSeal(){
-
-    for(int x = 0;x<volume_->sizeX(); ++x){
-        for(int y = 0;y<volume_->sizeY(); ++y){
+    math::Size3i vSize = volume_->cSize();
+    for(int x = 0;x<vSize.width; ++x){
+        for(int y = 0;y<vSize.height; ++y){
             //find first full voxel from the direction of seal
             int full = -1;
-            for(int z = 0;z<volume_->sizeZ(); ++z){
+            for(int z = 0;z<vSize.depth; ++z){
                 if(volume_->get(x,y,z)>0){
                         full = z;
                         break;
@@ -349,34 +354,41 @@ void MeshVoxelizer::rasterizeMesh( const Mesh &mesh
 }
 
 bool MeshVoxelizer::isInside( const math::Point3 & position
-                      , const ProjectionResults & projectionResults){
+                      ,  ProjectionResults & projectionResults){
     uint inside=0;
     uint outside=0;
 
-    for(const auto & proj : projectionResults){
+    uint projId = 0;
+    for(auto & proj : projectionResults){
         math::Point3 projPos = math::transform(proj.transformation, position);
-
+        projId++;
         if(params_.method==Method::PARITY_COUNT){
             uint parity=0;
-            if(projPos[0]<proj.buffer.data.size()
-                    && projPos[1]<proj.buffer.data[projPos[0]].size())
-            for(const auto depth : proj.buffer.data[projPos[0]][projPos[1]]){
-                if(depth<projPos[2]){
-                    parity++;
+            if(projPos[0]<proj.buffer.size.width
+                    && projPos[1]<proj.buffer.size.height
+                    && projPos[0]>0 && projPos[1]>0){
+                //std::cout<<proj.buffer.data[projPos[0]][projPos[1]].size()<<std::endl;
+                for(auto dit = proj.buffer.begin(projPos[0],projPos[1]);
+                        dit != proj.buffer.end(projPos[0],projPos[1]); ++dit){
+
+                    if(*dit<projPos[2]){
+                        parity++;
+                    }
+                    else{
+                        break;
+                    }
                 }
-                else{
-                    break;
+                if(parity%2==1){
+                    inside++;
+                    continue;
                 }
+                outside++;
             }
-            if(parity%2==1){
-                inside++;
-                continue;
-            }
-            outside++;
         }
+
         if(params_.method==Method::RAY_STABING){
-            if( projPos[2]<proj.buffer.data[projPos[0]][projPos[1]].back()
-               && projPos[2]>proj.buffer.data[projPos[0]][projPos[1]].front()){
+            if( projPos[2]<*proj.buffer.begin(projPos[0],projPos[1])
+               && projPos[2]>*proj.buffer.end(projPos[0],projPos[1])){
                 inside++;
                 continue;
             }
@@ -394,7 +406,7 @@ bool MeshVoxelizer::isInside( const math::Point3 & position
     }
     return false;
 }
-
+/*
 void MeshVoxelizer::visualizeDepthMap( const ProjectionResult &proj
                                       , const math::Extents3 & extents
                                       , const fs::path & path){
@@ -478,5 +490,5 @@ void MeshVoxelizer::visualizeDepthMap( const ProjectionResult &proj
 
     cv::imwrite( path.native().c_str(), depthMapImg );
 }
-
+*/
 } //namespace geometry
