@@ -135,7 +135,7 @@ void MeshVoxelizer::voxelize(){
 
     uint progress = 0;
     LOG( info2 )<<"Voxelization progress: "<<progress;
-#ifdef OPENMP
+#ifdef _OPENMP
     #pragma omp parallel for schedule( dynamic, 10 )
 #endif
     for(int x=0; x< vSize.width; ++x){

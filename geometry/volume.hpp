@@ -1202,7 +1202,7 @@ void filterInplace(
 
     std::vector<VolumeBase_t::Position_s> poss
         = Giterator::iteratorPositions( container, diff );
-#ifdef OPENMP
+#ifdef _OPENMP
     #pragma omp parallel for schedule( dynamic, 100 )
 #endif
     for(uint p=0; p<poss.size(); ++p){
@@ -1828,7 +1828,7 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
     std::vector<FPosition_s> retval;
 
     std::vector<std::vector<FPosition_s>> tVertices(omp_get_max_threads());
-#ifdef OPENMP
+#ifdef _OPENMP
     #pragma omp parallel for schedule( dynamic, 5 )
 #endif
     for ( int i = -1; i < this->container_.sizeX(); i++ )
