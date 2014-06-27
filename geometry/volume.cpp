@@ -12,10 +12,10 @@ namespace geometry {
 /*
 BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
     const double delta, double filterCutoffPeriod  )
-    : ScalarField_t<float,Volume_t<float>>( from.lower(), from.upper(),
+    : ScalarField_t<float,VolumeOctree<float>>( from.lower(), from.upper(),
                             from.voxelSize(), -1.0 ) {
 
-    typedef Giterator_t<float,Volume_t<float>> Giterator;
+    typedef Giterator_t<float,VolumeOctree<float>> Giterator;
 
     // obtain distance field
     LOG( info2 ) << "Obtaining distance map.";
@@ -52,8 +52,8 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
 
         BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
 
-            Giterator_t<float, Volume_t<float>> begin( distanceMap, pos, diff );
-            Giterator_t<float, Volume_t<float>> end = distanceMap.gend( begin );
+            Giterator_t<float, VolumeOctree<float>> begin( distanceMap, pos, diff );
+            Giterator_t<float, VolumeOctree<float>> end = distanceMap.gend( begin );
 
             scanline( begin, end, vfield, delta / 2.0 );
        }
@@ -61,7 +61,7 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
 
     // iterate through voting field, evaluating polls
     LOG( info2 ) << "Evaluating polls.";
-    ScalarField_t<float,Volume_t<float>> rawfield( _lower, _upper, _voxelSize, -1.0 );
+    ScalarField_t<float,VolumeOctree<float>> rawfield( _lower, _upper, _voxelSize, -1.0 );
 
     for ( int i = 0; i < sizeX(); i++ )
         for (  int j = 0; j < sizeY(); j++ )

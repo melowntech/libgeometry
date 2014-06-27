@@ -257,25 +257,25 @@ private:
 
 
 template <typename Value_t>
-class Volume_t{
+class VolumeOctree{
 public:
     typedef Value_t ValueType;
     typedef typename VolumeBase_t::Position_s Position_s;
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
     /** Construct a volume and initialize it to a given value. */
-    Volume_t( const int sizeX, const int sizeY, const int sizeZ,
+    VolumeOctree( const int sizeX, const int sizeY, const int sizeZ,
               const Value_t & initValue );
 
-    Volume_t( const Volume_t&) = delete;
+    VolumeOctree( const VolumeOctree&) = delete;
 
-    Volume_t & operator=(const Volume_t&) = delete;
+    VolumeOctree & operator=(const VolumeOctree&) = delete;
 
-    Volume_t( Volume_t &&) = default;
+    VolumeOctree( VolumeOctree &&) = default;
 
-    Volume_t& operator=(Volume_t &&) = default;
+    VolumeOctree& operator=(VolumeOctree &&) = default;
 
     /** Volume destruction. */
-    ~Volume_t(){}
+    ~VolumeOctree(){}
 
     /** Value getter. */
     Value_t get( int i, int j, int k ) const;
@@ -336,22 +336,22 @@ protected:
     Value_t _initValue;
 };
 
-/** GeoVolume is a volume with defined floating point georeferencing. */
-template <typename Value_t, class Container_t = Volume_t<Value_t>>
-class GeoVolume_t {
+/** GeoVolume_t_t is a volume with defined floating point georeferencing. */
+template <typename Value_t, class Container_t = VolumeOctree<Value_t>>
+class GeoVolume_t_t {
 public :
     typedef typename VolumeBase_t::Position_s Position_s;
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
 
-    GeoVolume_t( const FPosition_s & lower,
+    GeoVolume_t_t( const FPosition_s & lower,
                  const FPosition_s & upper,
                  const double voxelSize, const Value_t & initValue );
 
-    GeoVolume_t( const GeoVolume_t&) = delete;
-    GeoVolume_t & operator=(const GeoVolume_t&) = delete;
-    GeoVolume_t( GeoVolume_t &&) = default;
-    GeoVolume_t& operator=(GeoVolume_t &&) = default;
+    GeoVolume_t_t( const GeoVolume_t_t&) = delete;
+    GeoVolume_t_t & operator=(const GeoVolume_t_t&) = delete;
+    GeoVolume_t_t( GeoVolume_t_t &&) = default;
+    GeoVolume_t_t& operator=(GeoVolume_t_t &&) = default;
 
     FPosition_s lower() const { return _lower; }
     FPosition_s upper() const { return _upper; }
@@ -398,9 +398,9 @@ protected :
     double _voxelSize;
 };
 
-/** ScalarField is a geovolume with scalar values. */
+/** ScalarField is a GeoVolume_t_t with scalar values. */
 template <typename Value_t, class Container_t>
-class ScalarField_t : public GeoVolume_t<Value_t, Container_t> {
+class ScalarField_t : public GeoVolume_t_t<Value_t, Container_t> {
 public :
     typedef enum { TO_MIN, TO_MAX } SurfaceOrientation_t;
     typedef enum { M_CUBES, M_TETRAHEDRONS } IsosurfaceAlgorithm_t;
@@ -408,13 +408,13 @@ public :
     typedef typename VolumeBase_t::Position_s Position_s;
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
-    typedef GeoVolume_t<Value_t,Container_t> GeoVolumeType;
+    typedef GeoVolume_t_t<Value_t,Container_t> GeoVolume_t_tType;
 
     ScalarField_t(
         const FPosition_s & lower,
         const FPosition_s & upper,
         const double voxelSize, const Value_t & initValue )
-        : GeoVolume_t<Value_t,Container_t>( lower, upper
+        : GeoVolume_t_t<Value_t,Container_t>( lower, upper
                                           , voxelSize, initValue ) {};
 
     ScalarField_t( const ScalarField_t&) = delete;
@@ -497,15 +497,15 @@ private:
             Value_t midval );
 };
 
-/** Bitfield is a geovolume with true/false values. */
-typedef ScalarField_t<bool,Volume_t<bool>> Bitfield_t;
+/** Bitfield is a GeoVolume_t_t with true/false values. */
+typedef ScalarField_t<bool,VolumeOctree<bool>> Bitfield_t;
 
 /** Distance map provides a distance map for a bitfield. Each element
   * of a distance map holds the euclidian distance from the nearest
   * non zero point. */
 
 template <typename Value_t>
-class DistanceMap_t: public ScalarField_t<Value_t, Volume_t<Value_t>> {
+class DistanceMap_t: public ScalarField_t<Value_t, VolumeOctree<Value_t>> {
 public:
 
     /**
@@ -564,12 +564,12 @@ private:
           return op2;
     }
 
-    class DistVectorField_t: public Volume_t<DistVector_s> {
+    class DistVectorField_t: public VolumeOctree<DistVector_s> {
 
     public:
 
         DistVectorField_t( int sizeX, int sizeY, int sizeZ,
-            const DistVector_s & infty ) : Volume_t<DistVector_s>( sizeX,
+            const DistVector_s & infty ) : VolumeOctree<DistVector_s>( sizeX,
             sizeY, sizeZ, infty ) {}
 
         /*void set( const int x, const int y, const int z,
@@ -579,7 +579,7 @@ private:
                 std::cout << "( " << x << ", " << y << ", " << z << ") <- ("
                 << value.distX << ", " << value.distY << ", " << value.distZ <<
                 " )\n";
-            Volume_t<DistVector_s>::set( x, y, z, value );
+            VolumeOctree<DistVector_s>::set( x, y, z, value );
         }*/
     };
 
@@ -598,7 +598,7 @@ private:
   * bitfield is taken as a point sampling of the boundary of the solid
   * with a defined density. */
 
-class BitfieldReconstruction_t : public ScalarField_t<float, Volume_t<float>> {
+class BitfieldReconstruction_t : public ScalarField_t<float, VolumeOctree<float>> {
 
 public :
 
@@ -633,12 +633,12 @@ protected :
         Poll_s() : positives( 0 ), negatives( 0 ) {};
     };
 
-    class VotingField_t: public Volume_t<Poll_s> {
+    class VotingField_t: public VolumeOctree<Poll_s> {
 
     public:
         template <class T>
-        VotingField_t( const ScalarField_t<T, Volume_t<T>> & from )
-            : Volume_t<Poll_s>( from.sizeX(), from.sizeY()
+        VotingField_t( const ScalarField_t<T, VolumeOctree<T>> & from )
+            : VolumeOctree<Poll_s>( from.sizeX(), from.sizeY()
                 , from.sizeZ(), Poll_s() ) {}
     };
 
@@ -649,8 +649,8 @@ protected :
      * neighbourhood of boundary samples.
      */
     void scanline(
-        const Giterator_t<float, Volume_t<float>> & begin,
-        const Giterator_t<float, Volume_t<float>> & end,
+        const Giterator_t<float, VolumeOctree<float>> & begin,
+        const Giterator_t<float, VolumeOctree<float>> & end,
         VotingField_t & vfield,
         const double delta );
 
@@ -801,7 +801,6 @@ VolumeArray<Value_t>::VolumeArray(
     sizeX_(sizeX), sizeY_(sizeY), sizeZ_(sizeZ),
     initValue_(initValue),
     data(std::vector<Value_t>((std::size_t)sizeX*sizeY*sizeZ,initValue)){
-    std::cout <<"Volume size: "<< data.size()<<std::endl;
 }
 
 template <typename Value_t>
@@ -818,10 +817,10 @@ void VolumeArray<Value_t>::set( int i, int j, int k, const Value_t & value  ){
     this->data[k+(std::size_t)j*sizeZ_+(std::size_t)i*sizeZ_*sizeY_]=value;
 }
 
-/* class Volume_t<Value_t> */
+/* class VolumeOctree<Value_t> */
 
 template <typename Value_t>
-Volume_t<Value_t>::Volume_t(
+VolumeOctree<Value_t>::VolumeOctree(
     const int sizeX, const int sizeY, const int sizeZ,
     const Value_t & initValue )
     : _root(std::unique_ptr<Node_s>(new Node_s( initValue )) ),
@@ -832,17 +831,17 @@ Volume_t<Value_t>::Volume_t(
 
 
 template <typename Value_t>
-uint Volume_t<Value_t>::nodeCount(){
+uint VolumeOctree<Value_t>::nodeCount(){
     return this->_root->nodeCount();
 }
 
 template <typename Value_t>
-uint Volume_t<Value_t>::memUsed(){
-    return this->_root->nodeCount()*sizeof(Volume_t<Value_t>::Node_s);
+uint VolumeOctree<Value_t>::memUsed(){
+    return this->_root->nodeCount()*sizeof(VolumeOctree<Value_t>::Node_s);
 }
 
 template <typename Value_t>
-uint Volume_t<Value_t>::Node_s::nodeCount() {
+uint VolumeOctree<Value_t>::Node_s::nodeCount() {
     uint count = 1;
     if ( type == GRAY )
         for ( int i = 0; i < 8; i++ )
@@ -851,14 +850,14 @@ uint Volume_t<Value_t>::Node_s::nodeCount() {
 }
 
 template <typename Value_t>
-Volume_t<Value_t>::Node_s::~Node_s() {
+VolumeOctree<Value_t>::Node_s::~Node_s() {
     if ( type == GRAY )
         for ( int i = 0; i < 8; i++ )
             delete subnodes[i];
 }
 
 template <typename Value_t>
-Value_t Volume_t<Value_t>::get( int i, int j, int k ) const {
+Value_t VolumeOctree<Value_t>::get( int i, int j, int k ) const {
 
     if ( i < 0 || i >= _sizeX || j < 0 || j >= _sizeY || k < 0 || k >= _sizeZ )
         return _initValue;
@@ -867,7 +866,7 @@ Value_t Volume_t<Value_t>::get( int i, int j, int k ) const {
 }
 
 template <typename Value_t>
-void Volume_t<Value_t>::set( int i, int j, int k, const Value_t & value ) {
+void VolumeOctree<Value_t>::set( int i, int j, int k, const Value_t & value ) {
 
     if ( i < 0 || i >= _sizeX || j < 0 || j >= _sizeY || k < 0 || k >= _sizeZ )
         return;
@@ -875,11 +874,11 @@ void Volume_t<Value_t>::set( int i, int j, int k, const Value_t & value ) {
     _root->set( _rootSize, Position_s( i, j, k ), value );
 }
 
-/* class Volume_t<Value_t>::Node_s */
+/* class VolumeOctree<Value_t>::Node_s */
 
 template <typename Value_t>
-typename Volume_t<Value_t>::Node_s::Octant_t
-    Volume_t<Value_t>::Node_s::findOctant(
+typename VolumeOctree<Value_t>::Node_s::Octant_t
+    VolumeOctree<Value_t>::Node_s::findOctant(
         int nodeSize, const Position_s & pos ) {
 
     Octant_t retval = LBB;
@@ -894,7 +893,7 @@ typename Volume_t<Value_t>::Node_s::Octant_t
 }
 
 template <typename Value_t>
-typename Volume_t<Value_t>::Position_s Volume_t<Value_t>::Node_s::toOctant(
+typename VolumeOctree<Value_t>::Position_s VolumeOctree<Value_t>::Node_s::toOctant(
     Octant_t octant, int nodeSize, const Position_s & pos ) {
 
     Position_s retval( pos );
@@ -907,7 +906,7 @@ typename Volume_t<Value_t>::Position_s Volume_t<Value_t>::Node_s::toOctant(
 }
 
 template <typename Value_t>
-typename Volume_t<Value_t>::Position_s Volume_t<Value_t>::Node_s::fromOctant(
+typename VolumeOctree<Value_t>::Position_s VolumeOctree<Value_t>::Node_s::fromOctant(
     Octant_t octant, int nodeSize, const Position_s & pos ) {
 
     Position_s retval( pos );
@@ -920,7 +919,7 @@ typename Volume_t<Value_t>::Position_s Volume_t<Value_t>::Node_s::fromOctant(
 }
 
 template <typename Value_t>
-Value_t Volume_t<Value_t>::Node_s::get( int nodeSize, const Position_s & pos ) {
+Value_t VolumeOctree<Value_t>::Node_s::get( int nodeSize, const Position_s & pos ) {
 
     if ( type == SOLID ) return value;
 
@@ -931,7 +930,7 @@ Value_t Volume_t<Value_t>::Node_s::get( int nodeSize, const Position_s & pos ) {
 }
 
 template <typename Value_t>
-void Volume_t<Value_t>::Node_s::set( int nodeSize, const Position_s & pos,
+void VolumeOctree<Value_t>::Node_s::set( int nodeSize, const Position_s & pos,
     const Value_t & value ) {
 
     if ( type == SOLID && this->value == value ) {
@@ -979,10 +978,10 @@ void Volume_t<Value_t>::Node_s::set( int nodeSize, const Position_s & pos,
     }
 }
 
-/* class GeoVolume_t */
+/* class GeoVolume_t_t */
 
 template <class Value_t,class Container_t>
-GeoVolume_t<Value_t,Container_t>::GeoVolume_t(
+GeoVolume_t_t<Value_t,Container_t>::GeoVolume_t_t(
     const VolumeBase_t::FPosition_s & lower,
     const VolumeBase_t::FPosition_s & upper, const double voxelSize,
     const Value_t & initValue )
@@ -999,38 +998,38 @@ GeoVolume_t<Value_t,Container_t>::GeoVolume_t(
 }
 
 template <class Value_t,class Container_t>
-Value_t GeoVolume_t<Value_t,Container_t>::get( int i, int j, int k ) const{
+Value_t GeoVolume_t_t<Value_t,Container_t>::get( int i, int j, int k ) const{
     return container_.get(i,j,k);
 }
 
 template <class Value_t,class Container_t>
-void GeoVolume_t<Value_t,Container_t>::set( int i, int j, int k, const Value_t & value ){
+void GeoVolume_t_t<Value_t,Container_t>::set( int i, int j, int k, const Value_t & value ){
     container_.set(i,j,k,value);
 }
 
 
 template <class Value_t,class Container_t>
-Value_t GeoVolume_t<Value_t,Container_t>::fget( const double x, const double y,
+Value_t GeoVolume_t_t<Value_t,Container_t>::fget( const double x, const double y,
     const double z ) {
 
     typename VolumeBase_t::Position_s
         pos( geo2grid( VolumeBase_t::FPosition_s( x, y, z ) ) );
 
-    return Volume_t<Value_t>::get( pos.x, pos.y, pos.z );
+    return VolumeOctree<Value_t>::get( pos.x, pos.y, pos.z );
 }
 
 template <class Value_t,class Container_t>
-void GeoVolume_t<Value_t,Container_t>::fset( const double x, const double y,
+void GeoVolume_t_t<Value_t,Container_t>::fset( const double x, const double y,
     const double z, const Value_t & value ) {
 
     typename VolumeBase_t::Position_s
         pos( geo2grid( VolumeBase_t::FPosition_s( x, y, z ) ) );
 
-    Volume_t<Value_t>::set( pos.x, pos.y, pos.z, value );
+    VolumeOctree<Value_t>::set( pos.x, pos.y, pos.z, value );
 }
 
 template <class Value_t,class Container_t>
-typename VolumeBase_t::Position_s GeoVolume_t<Value_t,Container_t>::geo2grid(
+typename VolumeBase_t::Position_s GeoVolume_t_t<Value_t,Container_t>::geo2grid(
     const VolumeBase_t::FPosition_s & gpos,
     const int roundingX, const int roundingY,
     const int roundingZ  ) {
@@ -1073,10 +1072,10 @@ typename VolumeBase_t::Position_s GeoVolume_t<Value_t,Container_t>::geo2grid(
 
 
 template <class Value_t,class Container_t>
-typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::geo2gridf(
+typename VolumeBase_t::FPosition_s GeoVolume_t_t<Value_t, Container_t>::geo2gridf(
         const VolumeBase_t::FPosition_s & gpos )
 {
-    return typename Volume_t<Value_t>::FPosition_s(
+    return typename VolumeOctree<Value_t>::FPosition_s(
         ( gpos.x - _lower.x ) / ( _upper.x - _lower.x )
             * this->container().sizeX() - 0.5,
         ( gpos.y - _lower.y ) / ( _upper.y - _lower.y )
@@ -1086,7 +1085,7 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::geo2gridf(
 }
 
 template <class Value_t,class Container_t>
-typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
+typename VolumeBase_t::FPosition_s GeoVolume_t_t<Value_t, Container_t>::grid2geo(
     const typename VolumeBase_t::Position_s & pos ) {
 
     return VolumeBase_t::FPosition_s( _lower.x + ( pos.x + 0.5 )
@@ -1098,7 +1097,7 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
 }
 
 template <class Value_t,class Container_t>
-typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
+typename VolumeBase_t::FPosition_s GeoVolume_t_t<Value_t, Container_t>::grid2geo(
     const VolumeBase_t::FPosition_s & pos ) {
     return VolumeBase_t::FPosition_s(
         _lower.x + ( pos.x + 0.5 )
@@ -1187,7 +1186,7 @@ void filterInplace(
 
 /*
  * Specialized version of filtering used for VolumeArrays. The container
- * representation allows to use multithreding
+ * representation allows to use multithreding.
  */
 template <class Value_t>
 void filterInplace(
@@ -1203,8 +1202,9 @@ void filterInplace(
 
     std::vector<VolumeBase_t::Position_s> poss
         = Giterator::iteratorPositions( container, diff );
-
+#ifdef OPENMP
     #pragma omp parallel for schedule( dynamic, 100 )
+#endif
     for(uint p=0; p<poss.size(); ++p){
         VolumeBase_t::Position_s pos = poss[p];
         Giterator sit( container, pos, diff );
@@ -1828,7 +1828,9 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
     std::vector<FPosition_s> retval;
 
     std::vector<std::vector<FPosition_s>> tVertices(omp_get_max_threads());
+#ifdef OPENMP
     #pragma omp parallel for schedule( dynamic, 5 )
+#endif
     for ( int i = -1; i < this->container_.sizeX(); i++ )
         for ( int j = -1; j < this->container_.sizeY(); j++ )
             for ( int k = -1; k < this->container_.sizeZ(); k++ ) {
@@ -1836,28 +1838,28 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
                 Value_t values[8];
 
                 vertices[0] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j, k ) );
                 values[0] = this->get( i, j, k );
                 vertices[1] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i + 1, j, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i + 1, j, k ) );
                 values[1] = this->get( i + 1, j, k );
                 vertices[2] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i+1, j + 1, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i+1, j + 1, k ) );
                 values[2] = this->get( i+1, j + 1, k );
                 vertices[3] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j + 1, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j + 1, k ) );
                 values[3] = this->get( i, j + 1, k );
                 vertices[4] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j, k + 1 ) );
                 values[4] = this->get( i, j, k + 1 );
                 vertices[5] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i + 1, j, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i + 1, j, k + 1 ) );
                 values[5] = this->get( i + 1, j, k + 1 );
                 vertices[6] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i+1, j + 1, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i+1, j + 1, k + 1 ) );
                 values[6] = this->get( i + 1, j + 1, k + 1 );
                 vertices[7] = grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j + 1, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j + 1, k + 1 ) );
                 values[7] = this->get( i, j + 1 , k + 1 );
 
                 isoFromCube(tVertices[omp_get_thread_num()], vertices, values
@@ -1888,28 +1890,28 @@ ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons( const Value_t & thr
                 } vertexes[8];
 
                 vertexes[0].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j, k ) );
                 vertexes[0].value = this->get( i, j, k );
                 vertexes[1].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i + 1, j, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i + 1, j, k ) );
                 vertexes[1].value = this->get( i + 1, j, k );
                 vertexes[2].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j + 1, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j + 1, k ) );
                 vertexes[2].value = this->get( i, j + 1, k );
                 vertexes[3].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i + 1, j + 1, k ) );
+                    typename VolumeOctree<Value_t>::Position_s( i + 1, j + 1, k ) );
                 vertexes[3].value = this->get( i + 1, j + 1, k );
                 vertexes[4].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j, k + 1 ) );
                 vertexes[4].value = this->get( i, j, k + 1 );
                 vertexes[5].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i + 1, j, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i + 1, j, k + 1 ) );
                 vertexes[5].value = this->get( i + 1, j, k + 1 );
                 vertexes[6].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i, j + 1, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i, j + 1, k + 1 ) );
                 vertexes[6].value = this->get( i, j + 1, k + 1 );
                 vertexes[7].vertex = this->grid2geo(
-                    typename Volume_t<Value_t>::Position_s( i + 1, j + 1, k + 1 ) );
+                    typename VolumeOctree<Value_t>::Position_s( i + 1, j + 1, k + 1 ) );
                 vertexes[7].value = this->get( i + 1, j + 1, k + 1 );
 
                 isoFromTetrahedron(
@@ -2042,7 +2044,7 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::getQuadsAsMesh( const Value_
 template <typename Value_t>
 DistanceMap_t<Value_t>::DistanceMap_t( const Bitfield_t & bitfield,
     const Value_t initValue )
-    : ScalarField_t<Value_t, Volume_t<Value_t>>( bitfield.lower(), bitfield.upper(),
+    : ScalarField_t<Value_t, VolumeOctree<Value_t>>( bitfield.lower(), bitfield.upper(),
       bitfield.voxelSize(), initValue ) {
 
     // initialize vector distance field (Danielsson's 4SED algorithm)
@@ -2083,7 +2085,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const Bitfield_t & bitfield,
 template <typename Value_t>
 DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
     float voxelSize, const Value_t initValue )
-    : ScalarField_t<Value_t, Volume_t<Value_t>>( cloud.lower(), cloud.upper(),
+    : ScalarField_t<Value_t, VolumeOctree<Value_t>>( cloud.lower(), cloud.upper(),
       voxelSize, initValue ) {
 
     LOG( info2 ) << "Corrected extents: "
@@ -2098,14 +2100,14 @@ DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
     BOOST_FOREACH( math::Point3 point, cloud ) {
 
             typename VolumeBase_t::FPosition_s fpos
-                = GeoVolume_t<Value_t>::geo2gridf( point );
+                = GeoVolume_t_t<Value_t>::geo2gridf( point );
 
             for ( int i = -1; i <= 1; i += 2 )
                 for ( int j = -1; j <= 1; j += 2 )
                     for ( int k = -1; k <= 1; k += 2 ) {
 
                 typename VolumeBase_t::Position_s
-                    pos = GeoVolume_t<Value_t>::geo2grid( point, i, j , k );
+                    pos = GeoVolume_t_t<Value_t>::geo2grid( point, i, j , k );
 
                 DistVector_s curVal = dvField.get( pos.x, pos.y, pos.z );
 
