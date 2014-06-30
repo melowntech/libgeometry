@@ -70,6 +70,19 @@ public:
     std::shared_ptr<Volume> volume();
     void reset();
 private:
+    /**
+     * LayeredZbuffer is container for storing 2D image
+     * with multiple values per pixel.
+     * It models the following concepts:
+     *
+     * class LayeredBuffer {
+     * public:
+     *      LayeredBuffer( math::Size2i & size );
+     *      Iterator begin(uint x, uint y);
+     *      Iterator end(uint x, uint y);
+     * };
+     */
+
     struct LayeredZBuffer{
         typedef std::vector<std::vector<std::vector<float>>> LZBData;
         typedef std::vector<float>::iterator Iterator;
@@ -95,26 +108,6 @@ private:
             }
         }
 
-        void checkCells(){
-            for( uint col=0; col < data.size(); col++){
-                for( uint cell=0; cell < data[col].size(); cell++){
-                    if(data[col][cell].size()>100){
-                        std::cout << col<<" : "<<cell
-                                  <<" - " << data[col][cell].size()<<std::endl;
-                    }
-                }
-            }
-        }
-
-        long avgCellSize(){
-            long totalSize=0;
-            for( uint col=0; col < data.size(); col++){
-                for( uint cell=0; cell < data[col].size(); cell++){
-                    totalSize += data[col][cell].size();
-                }
-            }
-            return totalSize/(size.width*size.height);
-        }
 
         long mem(){
             long dataMem=0;
@@ -142,21 +135,24 @@ private:
         typedef std::vector<float>::iterator Iterator;
         math::Size2i size;
         std::vector<float> data;
-        std::vector<size_t> pos;
+        std::vector<uint> rowpos;
+        std::vector<size_t> colStart;
         std::vector<unsigned short> count;
 
         CompressedLayeredZBuffer():size(math::Size2(0,0)){}
 
         CompressedLayeredZBuffer(LayeredZBuffer &lzBuffer){
             this->size = lzBuffer.size;
-            pos.reserve(size.width*size.height);
+            colStart.reserve(size.width);
+            rowpos.reserve(size.width*size.height);
             count.reserve(size.width*size.height);
 
             std::size_t size = 0;
             for( auto &col : lzBuffer.data){
+                colStart.push_back(size);
                 for( auto &cell : col){
                     count.push_back(cell.size());
-                    pos.push_back(size);
+                    rowpos.push_back(size-colStart.back());
                     size+=cell.size();
                 }
             }
@@ -170,13 +166,19 @@ private:
             }
         }
 
+        long mem(){
+            return data.size()*sizeof(float) + rowpos.size()*sizeof(uint)
+                + colStart.size()*sizeof(size_t)
+                + count.size()*sizeof(unsigned short);
+        }
+
         Iterator begin(uint x, uint y){
-            return data.begin()+pos[(std::size_t)x*size.height+y];
+            return data.begin()+colStart[x]
+                    +rowpos[(std::size_t)x*size.height+y];
         }
 
         Iterator end(uint x, uint y){
-            return data.begin()+pos[(std::size_t)x*size.height+y]
-                        +count[(std::size_t)x*size.height+y];
+            return begin(x,y)+count[(std::size_t)x*size.height+y];
         }
 
     };

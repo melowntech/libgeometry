@@ -128,10 +128,30 @@ void MeshVoxelizer::voxelize(){
         new Volume( extents.ll, extents.ur, params_.voxelSize, 0));
 
     math::Size3i vSize = volume_->cSize();
+    long volMem = (long)vSize.width * vSize.height
+                    * vSize.depth * sizeof(unsigned short);
     LOG( info2 )<<"Memory consumption of volume: "
-        << (long)vSize.width*vSize.height*vSize.depth*sizeof(unsigned short)
-        /1024.0/1024.0/1024.0 << " GB.";
+        << volMem/1024.0/1024.0/1024.0 << " GB.";
 
+    long mem = 0;
+    math::Point2 avgSize(0,0);
+    for(auto res : results){
+        mem += res.buffer.mem();
+        avgSize += math::Point2(res.buffer.size.width, res.buffer.size.height);
+    }
+    avgSize=avgSize/results.size();
+    LOG( info2 )<<"Avg zbuffer size: "<<avgSize;
+    LOG( info2 )<<"Mem zbuffer constants: "
+        <<avgSize(0)/volumeGridRes(0)<<":"<<avgSize(1)/volumeGridRes(1);
+
+    LOG( info2 )<<"Memory consumption of zbuffers: "
+        << mem/1024.0/1024.0/1024.0 << " GB.";
+
+    LOG( info2 )<<"Memory consumption of zbuffers per (m^2/gsdStr^2) "
+        << mem/(volumeGridRes(0)*volumeGridRes(1))/1024.0 << " kB.";
+
+    LOG( info2 )<<"Memory consumption of volume per (m^2/gsdStr^2)"
+        << volMem/(volumeGridRes(0)*volumeGridRes(1))/1024.0 << " kB.";
 
     uint progress = 0;
     LOG( info2 )<<"Voxelization progress: "<<progress;
