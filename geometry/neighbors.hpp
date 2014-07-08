@@ -20,27 +20,24 @@ namespace geometry {
 /** Neighbor of a point: neighbor and its distance from point
  */
 template <typename PointType>
-struct Neighbor : std::pair<PointType, double>;
-
-/** List of neighbors.
- */
-
-template <typename PointType>
-struct Neighbors : template std::vector<Neighbor<PointType> >;
+struct Neighbor : std::pair<PointType, double>
+{/*DO NOT PUT ANYTHING HERE*/};
 
 /** Find neighbors of a point in given radius.
  */
 template <typename PointType>
 double collectNeighbors(const KdTree<PointType> &kdtree
                         , const PointType &point
-                        , Neighbors<PointType> &neighbors, const size_t max
+                        , std::vector<Neighbor<PointType> > &neighbors
+                        , const size_t max
                         , double radius, bool dontCutFirstRadius);
 
 // implementation
 
+template <typename PointType>
 inline double collectNeighbors(const KdTree<PointType> &kdtree
                                , const PointType &point
-                               , Neighbors<PointType> &neighbors
+                               , std::vector<Neighbor<PointType> > &neighbors
                                , const size_t max
                                , double radius, bool dontCutFirstRadius)
 {
@@ -49,7 +46,7 @@ inline double collectNeighbors(const KdTree<PointType> &kdtree
     {
         LOG(info1) << "collectNeighbors: using radius = " << radius;
         neighbors.clear();
-        kdtree.range<false>(point, radius, neighbors);
+        kdtree.template range<false>(point, radius, neighbors);
         iterations++;
         radius *= 2;
         LOG(info1) << "collectNeighbors: found = " << neighbors.size();
