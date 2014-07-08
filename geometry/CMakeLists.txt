@@ -47,6 +47,8 @@ set(geometry_SOURCES
     mesh.hpp mesh.cpp
     meshop.hpp meshop.cpp
 
+    neighbors.hpp
+
     mesh-voxelizer.hpp mesh-voxelizer.cpp
 
     detail/volume.mcubes.hpp detail/volume.mcubes.cpp
