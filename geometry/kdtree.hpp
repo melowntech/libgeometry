@@ -354,15 +354,15 @@ private:
 
 public:
     typedef typename C::const_iterator iterator;
+    typedef std::size_t size_type;
     typedef std::pair<T, double> Neighbor;
     typedef std::vector<Neighbor> Neighbors;
 
     KdTree(const iterator &beg, const iterator &end)
-        : begin_(beg), end_(end)
+        : begin_(beg), end_(end), size_(std::distance(beg, end))
     {
-        if (!std::distance(beg, end)) {
-            return;
-        }
+        if (!size_) { return; }
+
         typename node_type::Indirect indirect;
         indirect.reserve(std::distance(beg, end));
         for (iterator i(beg) ; i != end; ++i) {
@@ -374,16 +374,17 @@ public:
 
     KdTree(const mutable_iterator &beg, const mutable_iterator &end
            , const IntrusiveKdTree &intrusive)
-        : begin_(beg), end_(end)
+        : begin_(beg), end_(end), size_(std::distance(beg, end))
     {
-        if (!std::distance(beg, end)) {
-            return;
-        }
+        if (!size_) { return; }
+
         root_.reset(new node_type(beg, end, intrusive));
     }
 
     iterator begin() const { return begin_; }
     iterator end() const { return end_; }
+
+    size_type size() const { return size_; }
 
     template<bool IgnoreEqual = false>
     iterator nearest(const T& query, double& dist2) const
@@ -437,6 +438,7 @@ private:
     boost::shared_ptr<node_type> root_;
     iterator begin_;
     iterator end_;
+    size_type size_;
 };
 
 template<typename T, unsigned int K, typename G, typename C>

@@ -21,15 +21,15 @@ math::Points3 CloudSmoother::operator()(const math::Points3 &points
                                         , const KdTree<math::Point3> &kdtree)
     const
 {
+    // sanity check
+    if (!params_.feasible(points.size())) {
+        return points;
+    }
+
     LOG(info3) << "Smoothing cloud.";
     KdTree<math::Point3>::Neighbors neighbors;
 
     auto size(points.size());
-
-    if (size < params_.neighbors) {
-        LOG(warn2) << "Too few points to smooth cloud. Keeping intact.";
-        return points;
-    }
 
     // allocate smooth cloud
     math::Points3 smooth(size);

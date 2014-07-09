@@ -10,6 +10,9 @@
 #ifndef geometry_smoothcloud_hpp_included_
 #define geometry_smoothcloud_hpp_included_
 
+#include <iostream>
+#include <boost/program_options.hpp>
+
 #include "math/geometry_core.hpp"
 
 #include "./kdtree.hpp"
@@ -30,6 +33,32 @@ public:
         Params()
             : neighbors(10), radius(0.1)
         {}
+
+        void configuration(const std::string &section
+                           , boost::program_options::options_description
+                           &config)
+        {
+            using boost::program_options::value;
+            config.add_options()
+                ((section + "neighbors").c_str(),
+                 value(&neighbors)->default_value(neighbors),
+                 "Number of point's neigbors to use.")
+                ((section + "radius").c_str(),
+                 value(&radius)->default_value(radius),
+                 "Radius of point's neighborhood use.")
+                ;
+        }
+
+        void configure(const boost::program_options::variables_map &) {}
+
+        template <typename E, typename T>
+        std::basic_ostream<E, T>& dump(std::basic_ostream<E, T> &os
+                                       , const std::string &section
+                                       = std::string()) const;
+
+        bool feasible(std::size_t pointCount) const {
+            return (neighbors <= pointCount) && (radius > 0.0);
+        }
     };
 
     CloudSmoother(const Params &params = Params())
@@ -57,7 +86,19 @@ private:
 inline math::Points3 CloudSmoother::operator()(const math::Points3 &points)
     const
 {
+    if (!params_.feasible(points.size())) { return points; }
     return operator()(points, {points.begin(), points.end()});
+}
+
+template <typename E, typename T>
+std::basic_ostream<E, T>&
+CloudSmoother::Params::dump(std::basic_ostream<E, T> &os
+                            , const std::string &section) const
+{
+    return os
+        << section << "neighbors = " << neighbors << "\n"
+        << section << "radius = " << radius << "\n"
+        ;
 }
 
 } // namespace geometry

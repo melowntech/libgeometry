@@ -23,8 +23,8 @@ template <typename PointType>
 double collectNeighbors(const KdTree<PointType> &kdtree
                         , const PointType &point
                         , typename KdTree<PointType>::Neighbors &neighbors
-                        , const size_t max
-                        , double radius, bool dontCutFirstRadius);
+                        , size_t max, double radius
+                        , bool dontCutFirstRadius);
 
 // implementation
 
@@ -33,21 +33,22 @@ inline double
 collectNeighbors(const KdTree<PointType> &kdtree
                  , const PointType &point
                  , typename KdTree<PointType>::Neighbors &neighbors
-                 , const size_t max, double radius, bool dontCutFirstRadius)
+                 , size_t max, double radius, bool dontCutFirstRadius)
 {
     typedef typename KdTree<PointType>::Neighbor Neighbor;
 
+    // we need to limit max number of neighbors to same sane value
+    max = std::min(max, kdtree.size() / 2);
+
     int iterations = 0;
-    do
-    {
+    do {
         LOG(info1) << "collectNeighbors: using radius = " << radius;
         neighbors.clear();
         kdtree.template range<false>(point, radius, neighbors);
         iterations++;
         radius *= 2;
         LOG(info1) << "collectNeighbors: found = " << neighbors.size();
-    }
-    while (neighbors.size() < max);
+    } while (neighbors.size() < max);
 
     LOG(info1) << "! collectNeighbors: found = " << neighbors.size();
 
