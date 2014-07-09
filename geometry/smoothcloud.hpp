@@ -57,7 +57,7 @@ public:
                                        = std::string()) const;
 
         bool feasible(std::size_t pointCount) const {
-            return (neighbors <= pointCount) && (radius > 0.0);
+            return neighbors && (neighbors <= pointCount) && (radius > 0.0);
         }
     };
 
