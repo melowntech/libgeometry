@@ -354,6 +354,8 @@ private:
 
 public:
     typedef typename C::const_iterator iterator;
+    typedef std::pair<T, double> Neighbor;
+    typedef std::vector<Neighbor> Neighbors;
 
     KdTree(const iterator &beg, const iterator &end)
         : begin_(beg), end_(end)

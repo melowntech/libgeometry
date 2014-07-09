@@ -49,6 +49,8 @@ set(geometry_SOURCES
 
     neighbors.hpp
 
+    smoothcloud.hpp smoothcloud.cpp
+
     mesh-voxelizer.hpp mesh-voxelizer.cpp
 
     detail/volume.mcubes.hpp detail/volume.mcubes.cpp

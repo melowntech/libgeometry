@@ -22,21 +22,20 @@ namespace geometry {
 template <typename PointType>
 double collectNeighbors(const KdTree<PointType> &kdtree
                         , const PointType &point
-                        , std::vector<std::pair<PointType, double> > &neighbors
+                        , typename KdTree<PointType>::Neighbors &neighbors
                         , const size_t max
                         , double radius, bool dontCutFirstRadius);
 
 // implementation
 
 template <typename PointType>
-inline double collectNeighbors(const KdTree<PointType> &kdtree
-                               , const PointType &point
-                               , std::vector<std::pair<PointType, double> >
-                               &neighbors
-                               , const size_t max
-                               , double radius, bool dontCutFirstRadius)
+inline double
+collectNeighbors(const KdTree<PointType> &kdtree
+                 , const PointType &point
+                 , typename KdTree<PointType>::Neighbors &neighbors
+                 , const size_t max, double radius, bool dontCutFirstRadius)
 {
-    typedef std::pair<PointType, double> Neighbor;
+    typedef typename KdTree<PointType>::Neighbor Neighbor;
 
     int iterations = 0;
     do
