@@ -37,7 +37,7 @@ void MeshVoxelizer::voxelize(){
 
     //add floor to mimic closed mesh
     std::vector<geometry::Mesh> seals;
-    if(params_.addFloor){
+    if(params_.addSeal){
         for(auto & mesh: meshes){
             seals.push_back(sealOfMesh(*mesh));
         }
@@ -124,8 +124,9 @@ void MeshVoxelizer::voxelize(){
 
 
     //create new volume
-    volume_ = std::unique_ptr<Volume>(
-        new Volume( extents.ll, extents.ur, params_.voxelSize, 0));
+    volume_ = std::unique_ptr<Volume>( new Volume( extents.ll, extents.ur
+                                                 , params_.voxelSize
+                                                 , VoxelizerUnit::empty()));
 
     math::Size3i vSize = volume_->cSize();
     long volMem = (long)vSize.width * vSize.height
@@ -165,8 +166,7 @@ void MeshVoxelizer::voxelize(){
                 auto voxCenter
                         = volume_->grid2geo(math::Point3(x,y,z));
                 if(isInside({voxCenter.x, voxCenter.y, voxCenter.z}, results)){
-                        volume_->set( x, y, z
-                                     ,std::numeric_limits<unsigned short>::max());
+                        volume_->set( x, y, z,VoxelizerUnit::full());
                 }
 
             }
@@ -178,9 +178,12 @@ void MeshVoxelizer::voxelize(){
             LOG( info2 )<<"Voxelization progress: "<<progress;
         }
     }
-
-    LOG( info2 )<<"Filling volume from seal";
-    fillVolumeFromSeal();
+#if 0
+    if(params_.addSeal){
+        LOG( info2 )<<"Filling volume from seal";
+        fillVolumeFromSeal();
+    }
+#endif
 }
 
 std::shared_ptr<MeshVoxelizer::Volume> MeshVoxelizer::volume(){
@@ -322,14 +325,14 @@ void MeshVoxelizer::fillVolumeFromSeal(){
             //find first full voxel from the direction of seal
             int full = -1;
             for(int z = 0;z<vSize.depth; ++z){
-                if(volume_->get(x,y,z)>0){
+                if(volume_->get(x,y,z)!=VoxelizerUnit::empty()){
                         full = z;
                         break;
                 }
             }
             //fill from bottom up
             for(int z = 0;z<full; ++z){
-                volume_->set(x,y,z,1);
+                volume_->set(x,y,z,VoxelizerUnit::full());
             }
         }
     }

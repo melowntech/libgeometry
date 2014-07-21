@@ -25,6 +25,22 @@ namespace geometry{
 
 namespace fs = boost::filesystem;
 
+template<typename T>
+class VoxelizerUnit_{
+public:
+    static T empty(){
+        return std::numeric_limits<T>::lowest();
+    }
+
+    static T full(){
+        return std::numeric_limits<T>::max();
+    }
+
+    static T middle(){
+        return ((full()-empty())/2)+empty();
+    }
+};
+
 /**
  * @brief MeshVoxelizer
  * @details Class Mesh Voxelizer is able to voxelize arbitrary mesh
@@ -32,27 +48,26 @@ namespace fs = boost::filesystem;
  * and extract iso surface of this voxel grid.
  * Right now the voxel sizes must be all same - voxel must be a cube.
  */
-
 class MeshVoxelizer{
 
 public:
     typedef ScalarField_t<unsigned short, VolumeArray<unsigned short>> Volume;
-
+    typedef VoxelizerUnit_<unsigned short> VoxelizerUnit;
 
     enum class Method{ PARITY_COUNT, RAY_STABING };
 
     struct Parameters {
         float voxelSize;
-        bool addFloor;
+        bool addSeal;
         float isoThreshold;
         float sealFactor;
         Method method;
 
         Parameters():
             voxelSize(0.25)
-          , addFloor(true)
+          , addSeal(true)
           , isoThreshold(0.5)
-          , sealFactor(3)
+          , sealFactor(2)
           , method(Method::PARITY_COUNT)
          {};
     };
