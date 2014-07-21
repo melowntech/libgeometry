@@ -178,12 +178,11 @@ void MeshVoxelizer::voxelize(){
             LOG( info2 )<<"Voxelization progress: "<<progress;
         }
     }
-#if 0
+
     if(params_.addSeal){
         LOG( info2 )<<"Filling volume from seal";
         fillVolumeFromSeal();
     }
-#endif
 }
 
 std::shared_ptr<MeshVoxelizer::Volume> MeshVoxelizer::volume(){
