@@ -37,8 +37,8 @@ define_module(LIBRARY geometry DEPENDS math utility dbglog
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
 set(geometry_SOURCES
-	pointcloud.cpp
-	volume.cpp
+	  pointcloud.cpp
+	  volume.cpp
     parse-obj.cpp
 
     polygon.hpp
@@ -53,6 +53,7 @@ set(geometry_SOURCES
 
     mesh-voxelizer.hpp mesh-voxelizer.cpp
 
+    volumeop.hpp volumeop.cpp
     detail/volume.mcubes.hpp detail/volume.mcubes.cpp
 
     ${geometry_OPENMESH_SOURCES}

@@ -1,6 +1,6 @@
 /**
  * @file mesh-voxelizer.hpp
- * @author Tomas Drinovsky <ondrej.prochazka@citationtech.net>
+ * @author Tomas Drinovsky <tomas.drinovsky@citationtech.net>
  *
  * Mesh voxelization class.
  *
@@ -25,22 +25,6 @@ namespace geometry{
 
 namespace fs = boost::filesystem;
 
-template<typename T>
-class VoxelizerUnit_{
-public:
-    static T empty(){
-        return std::numeric_limits<T>::lowest();
-    }
-
-    static T full(){
-        return std::numeric_limits<T>::max();
-    }
-
-    static T middle(){
-        return ((full()-empty())/2)+empty();
-    }
-};
-
 /**
  * @brief MeshVoxelizer
  * @details Class Mesh Voxelizer is able to voxelize arbitrary mesh
@@ -52,7 +36,7 @@ class MeshVoxelizer{
 
 public:
     typedef ScalarField_t<unsigned short, VolumeArray<unsigned short>> Volume;
-    typedef VoxelizerUnit_<unsigned short> VoxelizerUnit;
+    typedef VolumeUnit<unsigned short> VoxelizerUnit;
 
     enum class Method{ PARITY_COUNT, RAY_STABING };
 
