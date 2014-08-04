@@ -141,9 +141,9 @@ void filter(
     typedef typename Container_t::ValueType ValueType;
     typedef Giterator_t<ValueType,Container_t> Giterator;
 
-    assert( this->sizeX() == dstVolume.sizeX() );
-    assert( this->sizeY() == dstVolume.sizeY() );
-    assert( this->sizeZ() == dstVolume.sizeZ() );
+    assert( container.sizeX() == dstVolume.sizeX() );
+    assert( container.sizeY() == dstVolume.sizeY() );
+    assert( container.sizeZ() == dstVolume.sizeZ() );
     assert( diff != VolumeBase_t::Displacement_s( 0, 0, 0 ) );
 
     std::set<VolumeBase_t::Position_s> poss
