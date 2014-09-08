@@ -136,24 +136,13 @@ void MeshVoxelizer::voxelize(){
         << volMem/1024.0/1024.0/1024.0 << " GB.";
 
     long mem = 0;
-    math::Point2 avgSize(0,0);
     for(auto res : results){
         mem += res.buffer.mem();
-        avgSize += math::Point2(res.buffer.size.width, res.buffer.size.height);
     }
-    avgSize=avgSize/results.size();
-    LOG( info2 )<<"Avg zbuffer size: "<<avgSize;
-    LOG( info2 )<<"Mem zbuffer constants: "
-        <<avgSize(0)/volumeGridRes(0)<<":"<<avgSize(1)/volumeGridRes(1);
 
     LOG( info2 )<<"Memory consumption of zbuffers: "
         << mem/1024.0/1024.0/1024.0 << " GB.";
 
-    LOG( info2 )<<"Memory consumption of zbuffers per (m^2/gsdStr^2) "
-        << mem/(volumeGridRes(0)*volumeGridRes(1))/1024.0 << " kB.";
-
-    LOG( info2 )<<"Memory consumption of volume per (m^2/gsdStr^2)"
-        << volMem/(volumeGridRes(0)*volumeGridRes(1))/1024.0 << " kB.";
 
     uint progress = 0;
     LOG( info2 )<<"Voxelization progress: "<<progress;
@@ -301,24 +290,24 @@ geometry::Mesh MeshVoxelizer::sealOfMesh(geometry::Mesh & mesh){
 
     double cellWidth = offset;
 
-    uint cols=std::ceil(extSize(0)/cellWidth);
-    uint rows=std::ceil(extSize(1)/cellWidth);
+    int cols=std::ceil(extSize(0)/cellWidth);
+    int rows=std::ceil(extSize(1)/cellWidth);
 
     std::vector<std::vector<double>> minMap
         = std::vector<std::vector<double>>(cols);
-    for(uint x=0; x<cols; ++x){
+    for(int x=0; x<cols; ++x){
         minMap[x] = std::vector<double>(rows,INFINITY);
     }
 
     for(const auto& vertex: mesh.vertices){
-        uint x = std::floor((vertex(0)-extents.ll(0))/cellWidth);
-        uint y = std::floor((vertex(1)-extents.ll(1))/cellWidth);
+        int x = std::floor((vertex(0)-extents.ll(0))/cellWidth);
+        int y = std::floor((vertex(1)-extents.ll(1))/cellWidth);
 
         minMap[x][y]=std::min(minMap[x][y],vertex(2));
     }
 
-    for(uint x=0; x< cols; ++x){
-        for(uint y=0; y< rows; ++y){
+    for(int x=0; x< cols; ++x){
+        for(int y=0; y< rows; ++y){
             if(x==0 || y==0 || x==cols-1 || y==rows-1){
                 //fill unsetted values
                 int searchOffset=1;
@@ -341,14 +330,14 @@ geometry::Mesh MeshVoxelizer::sealOfMesh(geometry::Mesh & mesh){
         }
     }
 
-    for(uint x=1; x< cols-1; ++x){
-        for(uint y=1; y< rows-1; ++y){
+    for(int x=1; x< cols-1; ++x){
+        for(int y=1; y< rows-1; ++y){
             minMap[x][y] = extents.ll(2);
         }
     }
 
-    for(uint y=0; y< rows; ++y){
-        for(uint x=0; x< cols; ++x){
+    for(int y=0; y< rows; ++y){
+        for(int x=0; x< cols; ++x){
             seal.vertices.push_back(
                 math::Point3( x*cellWidth+extents.ll(0)
                             , y*cellWidth+extents.ll(1)
@@ -356,8 +345,8 @@ geometry::Mesh MeshVoxelizer::sealOfMesh(geometry::Mesh & mesh){
         }
     }
 
-    for(uint x=0; x< cols-1; ++x){
-        for(uint y=0; y< rows-1; ++y){
+    for(int x=0; x< cols-1; ++x){
+        for(int y=0; y< rows-1; ++y){
             seal.addFace(x+(y*cols), x+1+((y+1)*cols), x+1+(y*cols));
             seal.addFace(x+(y*cols), x+((y+1)*cols), x+1+((y+1)*cols));
         }
