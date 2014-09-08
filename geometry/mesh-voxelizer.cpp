@@ -5,6 +5,7 @@
 # define omp_get_thread_num() 0
 #endif
 
+#include "geometry/meshop.hpp"
 #include "geometry/mesh-voxelizer.hpp"
 #include "math/geometry_core.hpp"
 #include "imgproc/scanconversion.hpp"
@@ -296,23 +297,71 @@ geometry::Mesh MeshVoxelizer::sealOfMesh(geometry::Mesh & mesh){
     float offset = params_.voxelSize * params_.sealFactor;
 
     geometry::Mesh seal;
-    std::size_t indicesStart = 0;
+    math::Point3 extSize = extents.ur-extents.ll;
 
-    seal.vertices.push_back(
-                math::Point3(extents.ll(0)-offset,extents.ll(1)-offset
-                             ,extents.ll(2)-offset));
-    seal.vertices.push_back(
-                math::Point3(extents.ll(0)-offset,extents.ur(1)+offset
-                             ,extents.ll(2)-offset));
-    seal.vertices.push_back(
-                math::Point3(extents.ur(0)+offset,extents.ll(1)-offset
-                             ,extents.ll(2)-offset));
-    seal.vertices.push_back(
-                math::Point3(extents.ur(0)+offset,extents.ur(1)+offset
-                             ,extents.ll(2)-offset));
+    double cellWidth = offset;
 
-    seal.addFace(indicesStart,indicesStart+2,indicesStart+1);
-    seal.addFace(indicesStart+1,indicesStart+2,indicesStart+3);
+    uint cols=std::ceil(extSize(0)/cellWidth);
+    uint rows=std::ceil(extSize(1)/cellWidth);
+
+    std::vector<std::vector<double>> minMap
+        = std::vector<std::vector<double>>(cols);
+    for(uint x=0; x<cols; ++x){
+        minMap[x] = std::vector<double>(rows,INFINITY);
+    }
+
+    for(const auto& vertex: mesh.vertices){
+        uint x = std::floor((vertex(0)-extents.ll(0))/cellWidth);
+        uint y = std::floor((vertex(1)-extents.ll(1))/cellWidth);
+
+        minMap[x][y]=std::min(minMap[x][y],vertex(2));
+    }
+
+    for(uint x=0; x< cols; ++x){
+        for(uint y=0; y< rows; ++y){
+            if(x==0 || y==0 || x==cols-1 || y==rows-1){
+                //fill unsetted values
+                int searchOffset=1;
+                while(!std::isfinite(minMap[x][y])){
+                    for(int xoff=-searchOffset; xoff<searchOffset; ++xoff ){
+                        for(int yoff=-searchOffset; yoff<searchOffset; ++yoff ){
+                            if( x+xoff>0 && x+xoff<(int)cols
+                               && y+yoff>0 && y+yoff<(int)rows){
+                                minMap[x][y]=std::min( minMap[x][y]
+                                                     , minMap[x+xoff][y+yoff]);
+                            }
+                        }
+                    }
+                    searchOffset++;
+                    if(searchOffset>params_.sealFactor*2){
+                        minMap[x][y] = extents.ll(2);
+                    }
+                }
+            }
+        }
+    }
+
+    for(uint x=1; x< cols-1; ++x){
+        for(uint y=1; y< rows-1; ++y){
+            minMap[x][y] = extents.ll(2);
+        }
+    }
+
+    for(uint y=0; y< rows; ++y){
+        for(uint x=0; x< cols; ++x){
+            seal.vertices.push_back(
+                math::Point3( x*cellWidth+extents.ll(0)
+                            , y*cellWidth+extents.ll(1)
+                            , minMap[x][y]-offset ));
+        }
+    }
+
+    for(uint x=0; x< cols-1; ++x){
+        for(uint y=0; y< rows-1; ++y){
+            seal.addFace(x+(y*cols), x+1+((y+1)*cols), x+1+(y*cols));
+            seal.addFace(x+(y*cols), x+((y+1)*cols), x+1+((y+1)*cols));
+        }
+    }
 
     return seal;
 }

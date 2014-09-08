@@ -51,7 +51,7 @@ public:
             voxelSize(0.25)
           , addSeal(true)
           , isoThreshold(0.5)
-          , sealFactor(2)
+          , sealFactor(5)
           , method(Method::PARITY_COUNT)
          {};
     };

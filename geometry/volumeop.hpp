@@ -146,7 +146,7 @@ void filter(
     assert( container.sizeZ() == dstVolume.sizeZ() );
     assert( diff != VolumeBase_t::Displacement_s( 0, 0, 0 ) );
 
-    std::set<VolumeBase_t::Position_s> poss
+    std::vector<VolumeBase_t::Position_s> poss
         = Giterator::iteratorPositions( container, diff );
 
     BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
