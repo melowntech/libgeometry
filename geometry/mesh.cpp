@@ -193,4 +193,24 @@ void Mesh::skirt( const math::Point3 & down ) {
     LOG( info1 ) << evenc << " even, " << oddc << " odd.";
 }
 
+double Mesh::area(const Face &face)
+{
+    return (norm_2(math::crossProduct(b(face) - a(face)
+                                     , c(face) - a(face)))
+            * 0.5);
+}
+
+math::Point3 Mesh::barycenter(const Face &face)
+{
+    const auto &va(a(face));
+    const auto &vb(b(face));
+    const auto &vc(c(face));
+
+    return {
+        (va(0) + vb(0) + vc(0)) / 3.0
+        , (va(1) + vb(1) + vc(1)) / 3.0
+        , (va(2) + vb(2) + vc(2)) / 3.0
+    };
+}
+
 } //namespace geometry

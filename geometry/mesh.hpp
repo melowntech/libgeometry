@@ -151,6 +151,13 @@ struct Mesh {
 
     FaceVertexConstIterator end(const Face&) const;
 
+    /** Calculate face area.
+     */
+    double area(const Face &face);
+
+    /** Calculate face barycenter.
+     */
+    math::Point3 barycenter(const Face &face);
 };
 
 inline void Mesh::addFace(math::Points3::size_type a
