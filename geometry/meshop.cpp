@@ -9,8 +9,11 @@
 #include "./parse-obj.hpp"
 
 #include "utility/expect.hpp"
+#include <boost/numeric/ublas/vector.hpp>
 
-namespace geometry {
+namespace geometry {   
+
+namespace ublas = boost::numeric::ublas;
 
 Obj asObj(const Mesh &mesh)
 {
@@ -45,6 +48,23 @@ Obj asObj(const Mesh &mesh)
     }
 
     return obj;
+}
+
+Mesh::pointer asMesh(const Obj &obj){
+    auto newMesh(std::make_shared<geometry::Mesh>());
+    for( const auto&v : obj.vertices ){
+        newMesh->vertices.push_back(v);
+    }
+
+    for( const auto&t : obj.texcoords ){
+        newMesh->tCoords.emplace_back( t(0), t(1) );
+    }
+
+    for( const auto&f : obj.facets ){
+        newMesh->addFace(f.v[0], f.v[1], f.v[2], f.t[0], f.t[1], f.t[2]);
+    }
+
+    return newMesh;
 }
 
 void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
@@ -211,5 +231,215 @@ Mesh loadObj( const boost::filesystem::path &filename )
 
     return parser_.mesh;
 }
+
+
+Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
+    auto pmesh(std::make_shared<geometry::Mesh>(omesh));
+    auto & mesh(*pmesh);
+
+    struct EdgeKey
+    {
+        int v1, v2; // vertex indices
+
+        EdgeKey(int v1, int v2)
+        {
+            this->v1 = std::min(v1, v2);
+            this->v2 = std::max(v1, v2);
+        }
+
+        bool operator< (const EdgeKey& other) const
+        {
+            return (v1 == other.v1) ? (v2 < other.v2) : (v1 < other.v1);
+        }
+    };
+
+    struct Edge {
+        typedef enum {
+            AB,
+            BC,
+            CA
+        } EdgeType;
+
+        int v1, v2;
+        int f1, f2;
+        EdgeType et1, et2;
+
+        float length;
+
+        Edge(int pv1, int pv2, float plength)
+            :v1(std::min(pv1,pv2)),v2(std::max(pv1,pv2)), length(plength){
+            f1 = -1;
+            f2 = -1;
+        }
+
+        void addFace(int pv1, int pv2, int fid, EdgeType type){
+            if(pv1<pv2){
+                f1=fid;
+                et1 = type;
+            }
+            else{
+                f2=fid;
+                et2 = type;
+            }
+        }
+
+        bool operator< (const Edge& other) const
+        {
+            return length < other.length;
+        }
+    };
+
+    struct EdgeMap {
+        std::map<EdgeKey, std::shared_ptr<Edge>> map;
+        std::vector<std::shared_ptr<Edge>> heap;
+
+        bool compareEdgePtr(const std::shared_ptr<Edge> &a, const std::shared_ptr<Edge> &b){
+            return a->length<b->length;
+        }
+
+        void addFaceEdge(int pv1, int pv2, int fid, Edge::EdgeType type, float length){
+            auto key(EdgeKey(pv1,pv2));
+            auto it(map.find(key));
+            if(it!=map.end()){
+                it->second->addFace(pv1, pv2, fid, type );
+            }
+            else{
+                heap.push_back(std::make_shared<Edge>(Edge(pv1, pv2, length)));
+                heap.back()->addFace(pv1, pv2, fid, type );
+                map.insert(std::make_pair(key,heap.back()));
+                std::push_heap(heap.begin(),heap.end(), [this]( const std::shared_ptr<Edge> &a
+                                                              , const std::shared_ptr<Edge> &b){
+                    return this->compareEdgePtr(a,b);
+                });
+            }
+        }
+
+        Edge pop_top_edge(){
+            auto edge = *heap[0];
+            std::pop_heap(heap.begin(), heap.end(), [this]( const std::shared_ptr<Edge> &a
+                                                          , const std::shared_ptr<Edge> &b){
+                return this->compareEdgePtr(a,b);
+            }); 
+            heap.pop_back();
+            map.erase(EdgeKey(edge.v1, edge.v2));
+            return edge;
+        }
+
+        Edge top_edge(){
+            return *heap[0];
+        }
+
+        void addFaceEdges(const Mesh & mesh, uint fid){
+            const auto& f = mesh.faces[fid];
+            float e1Length =  ublas::norm_2(mesh.vertices[f.a]-mesh.vertices[f.b]);
+            addFaceEdge(f.a, f.b, fid, Edge::EdgeType::AB, e1Length);
+
+            float e2Length =  ublas::norm_2(mesh.vertices[f.b]-mesh.vertices[f.c]);
+            addFaceEdge(f.b, f.c, fid, Edge::EdgeType::BC, e2Length);
+
+            float e3Length =  ublas::norm_2(mesh.vertices[f.c]-mesh.vertices[f.a]);
+            addFaceEdge(f.c, f.a, fid, Edge::EdgeType::CA, e3Length);
+        }
+
+        std::size_t size(){
+            return heap.size();
+        }
+
+    };
+
+    EdgeMap edgeMap;
+
+    auto splitEdge = [&mesh,&edgeMap]( int fid, Edge::EdgeType type
+                       , int vid) mutable -> void{
+        auto & face = mesh.faces[fid];
+        switch(type){
+            case Edge::EdgeType::AB:
+                {
+                    if(mesh.tCoords.size()>0){
+                        math::Point2 tcMiddle = ( mesh.tCoords[face.ta] 
+                                                + mesh.tCoords[face.tb]) * 0.5;
+                        mesh.tCoords.push_back(tcMiddle); 
+                    }
+                    mesh.addFace( mesh.faces[fid].b, mesh.faces[fid].c
+                                , vid
+                                , mesh.faces[fid].tb, mesh.faces[fid].tc
+                                , mesh.tCoords.size()-1);
+
+                    mesh.faces[fid].b = vid;
+                    mesh.faces[fid].tb = mesh.tCoords.size()-1;
+
+                    edgeMap.addFaceEdges(mesh, fid);  
+                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);   
+                }
+                break;
+            case Edge::EdgeType::BC:
+                {
+                    if(mesh.tCoords.size()>0){
+                        math::Point2 tcMiddle = (mesh.tCoords[face.tb] 
+                                                + mesh.tCoords[face.tc]) * 0.5;
+                        mesh.tCoords.push_back(tcMiddle); 
+                    }
+                    mesh.addFace( mesh.faces[fid].c,mesh.faces[fid].a, vid
+                                , mesh.faces[fid].tc,mesh.faces[fid].ta
+                                , mesh.tCoords.size()-1);
+
+                    mesh.faces[fid].c = vid;
+                    mesh.faces[fid].tc = mesh.tCoords.size()-1;
+
+                    edgeMap.addFaceEdges(mesh, fid);  
+                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);    
+                }
+                break;
+            case Edge::EdgeType::CA:
+                {
+                    if(mesh.tCoords.size()>0){
+                        math::Point2 tcMiddle = (mesh.tCoords[face.tc] 
+                                                + mesh.tCoords[face.ta]) * 0.5;
+                        mesh.tCoords.push_back(tcMiddle); 
+                    }
+
+                    mesh.addFace( mesh.faces[fid].a,mesh.faces[fid].b, vid
+                                , mesh.faces[fid].ta,mesh.faces[fid].tb
+                                , mesh.tCoords.size()-1);
+
+                    mesh.faces[fid].a = vid;
+                    mesh.faces[fid].ta = mesh.tCoords.size()-1;
+
+                    edgeMap.addFaceEdges(mesh, fid);  
+                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);   
+                }
+                break;
+        }
+    };
+
+    for (uint i=0; i<mesh.faces.size(); ++i ) {
+        //add all 3 edges
+        edgeMap.addFaceEdges(mesh, i);
+    }
+
+    //sort edges by length
+    while( mesh.faces.size() < maxFacesCount && edgeMap.size()>0 ){
+        //split edge
+        auto edge = edgeMap.pop_top_edge();
+
+        //find middle
+        math::Point3 middle = (mesh.vertices[edge.v1] 
+                            + mesh.vertices[edge.v2]) * 0.5;  
+        mesh.vertices.push_back(middle);      
+
+        //split first face
+        if(edge.f1>=0){
+            splitEdge(edge.f1, edge.et1, mesh.vertices.size()-1);
+        } 
+
+        //split second face
+        if(edge.f2>=0){
+            splitEdge(edge.f2, edge.et2, mesh.vertices.size()-1);
+        }
+    }
+
+    return pmesh;
+}
+
 
 } // namespace geometry

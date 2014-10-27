@@ -23,6 +23,10 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount)
 
 Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount);
 
+Mesh::pointer refine( const Mesh &mesh, uint maxFacesCount);
+
+
+
 /** Function that tells how many faces should given cell have.
  */
 typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
@@ -59,6 +63,12 @@ Obj asObj(const Mesh &mesh);
 /** TODO: remove this once geometry::Obj is no longer used for modeling.
 */
 Obj asObj(const Mesh::pointer &mesh);
+
+/** TODO: remove this once geometry::Obj is no longer used for modeling.
+*/
+Mesh::pointer asMesh(const Obj &obj);
+
+
 
 void saveAsObj(const Mesh &mesh
                , const boost::filesystem::path &filepath
