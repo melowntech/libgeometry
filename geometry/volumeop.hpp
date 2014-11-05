@@ -132,6 +132,12 @@ UTILITY_GENERATE_ENUM_IO(StructuralElement::SEShape,
 
 
 //filtering
+/** Filters volumetric data in particular direction
+ * \param filter FIR filter used for filtering
+ * \param diff defines displacement used as step
+ * \param container source volumetric data
+ * \param dstVolume destination volumetric data
+ */
 template <class Container_t>
 void filter(
     const math::FIRFilter_t & filter,
@@ -164,7 +170,33 @@ void filter(
     }
 }
 
+/** Filters volumetric data in x,y,z axis
+ * \param filter FIR filter used for filtering
+ * \param container source volumetric data
+ * \param dstVolume destination volumetric data
+ */
+template <class Container_t>
+void filter(
+    const math::FIRFilter_t & filter,
+    Container_t & container,
+    Container_t & dstVolume ) {
 
+    typename VolumeBase_t::Displacement_s directions[3];
+    directions[0] = typename VolumeBase_t::Displacement_s(1,0,0);
+    directions[1] = typename VolumeBase_t::Displacement_s(0,1,0);
+    directions[2] = typename VolumeBase_t::Displacement_s(0,0,1);
+
+    for(uint fAxis = 0; fAxis<3; ++fAxis){
+        LOG( info2 )<<"Filtering volume in axis "<<fAxis;
+        filter( filter, directions[fAxis], container, dstVolume);
+    }
+}
+
+/** Filters volumetric data inplace in particular direction
+ * \param filter FIR filter used for filtering
+ * \param diff defines displacement used as step
+ * \param container source volumetric data
+ */
 template <class Container_t>
 void filterInplace(
         const math::FIRFilter_t & filter,

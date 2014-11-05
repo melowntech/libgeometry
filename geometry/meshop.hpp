@@ -21,8 +21,27 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount)
 #endif
     ;
 
+
+/** Simplify mesh to certain amount of faces
+ * \param mesh mesh to simplify
+ * \param faceCount target face count of simplified mesh
+ * \return simplified mesh
+ */
 Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount);
 
+/** Simplify mesh with maximal geometric error 
+ * \param mesh mesh to simplify
+ * \param maxErr maximal geometric error
+ * \return simplified mesh
+ */
+Mesh::pointer simplify(const Mesh &mesh, double maxErr);
+
+/** Refines mesh. Longest edges are splitted until certain amount of faces is reached
+ *
+ * \param mesh mesh to refine
+ * \param maxFacesCount target faces count of the refined mesh
+ * \return refined mesh
+ */
 Mesh::pointer refine( const Mesh &mesh, uint maxFacesCount);
 
 
@@ -93,6 +112,11 @@ Mesh loadObj( const boost::filesystem::path &filepath );
 inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount)
 {
     return simplify(*mesh, faceCount);
+}
+
+inline Mesh::pointer simplify(const Mesh::pointer &mesh, double maxErr)
+{
+    return simplify(*mesh, maxErr);
 }
 
 inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh

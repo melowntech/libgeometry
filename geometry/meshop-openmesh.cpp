@@ -147,6 +147,28 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount)
     return newMesh;
 }
 
+Mesh::pointer simplify(const Mesh &mesh, double maxErr)
+{
+    OMMesh omMesh;
+    toOpenMesh(mesh, omMesh);
+
+    // lock the corner vertices of the window to prevent simplifying the corners
+    lockCorners(omMesh);
+
+    Decimator decimator(omMesh);
+    HModQuadric hModQuadric; // collapse priority based on vertex error quadric
+    decimator.add(hModQuadric);
+    decimator.module( hModQuadric ).set_max_err(maxErr, false);
+    decimator.initialize();
+
+    decimator.decimate_to_faces(0, 0);
+    omMesh.garbage_collection();
+
+    auto newMesh(std::make_shared<geometry::Mesh>());
+    fromOpenMesh(omMesh, *newMesh);
+    return newMesh;
+}
+
 namespace {
 
 struct Tiling {

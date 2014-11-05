@@ -290,8 +290,8 @@ geometry::Mesh MeshVoxelizer::sealOfMesh(geometry::Mesh & mesh){
 
     double cellWidth = offset;
 
-    int cols=std::ceil(extSize(0)/cellWidth);
-    int rows=std::ceil(extSize(1)/cellWidth);
+    int cols=std::ceil(extSize(0)/cellWidth)+1;
+    int rows=std::ceil(extSize(1)/cellWidth)+1;
 
     std::vector<std::vector<double>> minMap
         = std::vector<std::vector<double>>(cols);
@@ -302,7 +302,6 @@ geometry::Mesh MeshVoxelizer::sealOfMesh(geometry::Mesh & mesh){
     for(const auto& vertex: mesh.vertices){
         int x = std::floor((vertex(0)-extents.ll(0))/cellWidth);
         int y = std::floor((vertex(1)-extents.ll(1))/cellWidth);
-
         minMap[x][y]=std::min(minMap[x][y],vertex(2));
     }
 
