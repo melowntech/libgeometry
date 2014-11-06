@@ -34,7 +34,7 @@ Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount);
  * \param maxErr maximal geometric error
  * \return simplified mesh
  */
-Mesh::pointer simplify(const Mesh &mesh, double maxErr);
+Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr);
 
 /** Refines mesh. Longest edges are splitted until certain amount of faces is reached
  *
@@ -114,7 +114,7 @@ inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount)
     return simplify(*mesh, faceCount);
 }
 
-inline Mesh::pointer simplify(const Mesh::pointer &mesh, double maxErr)
+inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
 {
     return simplify(*mesh, maxErr);
 }

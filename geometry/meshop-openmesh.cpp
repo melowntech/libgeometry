@@ -147,7 +147,7 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount)
     return newMesh;
 }
 
-Mesh::pointer simplify(const Mesh &mesh, double maxErr)
+Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr)
 {
     OMMesh omMesh;
     toOpenMesh(mesh, omMesh);
@@ -247,6 +247,7 @@ public:
 
     ~ModGrid() {
         mesh_.remove_property(cells_);
+        //stat();
     }
 
     virtual void initialize() UTILITY_OVERRIDE {
@@ -293,6 +294,15 @@ private:
     typedef typename MeshType::FaceHandle FaceHandle;
     typedef typename MeshType::Scalar Scalar;
 
+    void stat() const {
+        auto ioriginal(original_.begin());
+        auto icurrent(current_.begin());
+        for (auto max : max_) {
+            LOG(info2) << *ioriginal++ << " -> " << *icurrent++
+                       << " (" << max << ")";
+        }
+    }
+
     void calculateGrid() {
         current_.clear();
         current_.resize(area(tiling_->size));
@@ -309,6 +319,9 @@ private:
 
         // get face count limits
         max_ = tiling_->getMax(current_);
+
+        // for statistics
+        original_.assign(current_.begin(), current_.end());
     }
 
     inline std::size_t barycenterCell(FaceHandle f) const {
@@ -364,6 +377,7 @@ private:
     Tiling *tiling_;
     std::vector<std::size_t> current_;
     std::vector<std::size_t> max_;
+    std::vector<std::size_t> original_;
     OpenMesh::FPropHandleT<Scalar> cells_;
 };
 
