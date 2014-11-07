@@ -9,8 +9,11 @@
 
 #include <OpenMesh/Core/IO/MeshIO.hh>
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
-#include <OpenMesh/Tools/Decimater/DecimaterT.hh>
-#include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
+//#include <OpenMesh/Tools/Decimater/DecimaterT.hh>
+//#include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
+
+#include "./DecimaterT.hh"
+#include "./ModQuadricT.hh"
 
 #include "./meshop.hpp"
 
@@ -202,6 +205,31 @@ struct Tiling {
         return xx + yy * size.width;
     };
 
+    inline math::Point2 tileLowerLeft(int index){
+        int y = index/size.width;
+        int x = index%size.width;
+
+        return math::Point2( x*tileSize+origin(0)
+                           , y*tileSize+origin(1));
+    }
+
+    inline std::vector<std::size_t> intersectingCells(math::Point2 triangle[3]) const{
+        std::vector<std::size_t> result;
+
+        for(uint x=0; x<size.width; ++x){
+            for(uint y=0; y<size.height; ++y){
+                math::Point2 offset(x*tileSize, y*tileSize);
+                math::Point2 ll = origin + offset;
+                math::Point2 ur = ll+math::Point2(tileSize, tileSize);
+
+                if(math::triangleRectangleCollision(triangle,ll,ur)){    
+                    result.push_back(x + y * size.width);
+                }
+            }
+        }
+        return result; 
+    };
+
     /** Calculate maximum face count in all cells of grid. If real value is
      *  lower than maximum, set maximum to real value.
      */
@@ -305,7 +333,7 @@ private:
 
     void calculateGrid() {
         current_.clear();
-        current_.resize(area(tiling_->size));
+        current_.resize(area(tiling_->size)); 
 
         for (const auto &f : mesh_.faces()) {
             auto cellIndex(barycenterCell(f));
@@ -381,6 +409,190 @@ private:
     OpenMesh::FPropHandleT<Scalar> cells_;
 };
 
+
+/*
+ * OpenMesh module for decimation mesh in grid. 
+ * Each cell has defined maximal face count and 
+ * once this face count is reached, incident faces 
+ * can't be decimated.
+ */
+template <typename MeshType>
+class ModGrid2 : public OpenMesh::Decimater::ModBaseT<MeshType>
+{
+public:
+    DECIMATING_MODULE(ModGrid2, MeshType, Grid);
+
+    ModGrid2(MeshType &mesh)
+        : Base(mesh, true) // true -> binary module!
+        , mesh_(mesh), tiling_()
+    {
+        mesh_.add_property(cells_);
+    }
+
+    ~ModGrid2() {
+        mesh_.remove_property(cells_);
+        //stat();
+    }
+
+    virtual void initialize() UTILITY_OVERRIDE {
+        auto &prop(mesh_.mproperty(Tiling::Property));
+        if (!prop.n_elements()) {
+            LOGTHROW(err2, std::runtime_error)
+                << "Tiling property not set at mesh.";
+        }
+        tiling_ = &prop[0];
+
+        calculateGrid();
+    }
+
+    virtual float collapse_priority(const CollapseInfo &ci) UTILITY_OVERRIDE {
+        // can be both faces removed?
+        if (canRemove(ci.fl) && canRemove(ci.fr)) {
+            return Base::LEGAL_COLLAPSE;
+        }
+
+        return Base::ILLEGAL_COLLAPSE;
+    }
+
+    virtual void preprocess_collapse(const CollapseInfo &ci) UTILITY_OVERRIDE {
+        removed(ci.fl);
+        removed(ci.fr);
+    }
+
+    virtual void postprocess_collapse(const CollapseInfo &ci) UTILITY_OVERRIDE
+    {
+        // traverse all remaining faces of non-removed vertex
+        for (auto fi(mesh_.vf_begin(ci.v1)), fe(mesh_.vf_end(ci.v1));
+             fi != fe; ++fi)
+        {
+            const auto f(fi.handle());
+            update(f);
+        }
+    }
+
+    std::size_t desiredCount() const {
+        return std::accumulate(max_.begin(), max_.end(), std::size_t(0));
+    }
+
+private:
+    typedef typename MeshType::FaceHandle FaceHandle;
+    typedef typename MeshType::Scalar Scalar;
+    typedef typename std::vector<std::size_t> CellList;
+    typedef typename std::vector<std::set<FaceHandle>> CellFaces;
+
+    void setCellVerticesAsFeatures(int cellIndex) const{
+        for(const auto &face : cellFaces_[cellIndex]){
+            for (auto vi(mesh_.cfv_iter(face)); vi; ++vi) {
+                mesh_.status(vi.handle()).set_feature(true);
+            }
+        }
+    }
+    
+    void printCells() const {
+        LOG(info2) << "Cells count:";
+        for (uint i=0; i<current_.size(); ++i) {  
+            LOG(info2) << tiling_->tileLowerLeft(i)<<" - "<<current_[i];
+        }
+    }
+
+    void stat() const {
+        auto ioriginal(original_.begin());
+        auto icurrent(current_.begin());
+        for (auto max : max_) {
+            LOG(info2) << *ioriginal++ << " -> " << *icurrent++
+                       << " (" << max << ")";
+        }
+        printCells();
+    }
+
+    void calculateGrid() {
+        current_.clear();
+        current_.resize(area(tiling_->size));
+        cellFaces_.clear();
+        cellFaces_.resize(area(tiling_->size));
+
+        for (const auto &f : mesh_.faces()) {
+            cellList(f).clear();
+            update(f);
+        }
+
+        // get face count limits
+        max_ = tiling_->getMax(current_);
+
+        // for statistics
+        original_.assign(current_.begin(), current_.end());
+    }
+
+    void removed(FaceHandle fh) {
+        if (fh.is_valid()) {
+            for(auto &cell : cellList(fh)){
+                --current_[cell];
+                cellFaces_[cell].erase(fh);
+            }
+        }  
+    }
+
+    void update(FaceHandle fh) {
+        if (!fh.is_valid()) {
+            return;
+        }
+
+        //decrement facecount in old cells
+        for(auto &cell : cellList(fh)){
+            --current_[cell];
+            cellFaces_[cell].erase(fh);
+        }
+        //recalculate cells
+        calculateCells(fh);
+
+        //increment facecount in new cells
+        for(auto &cell : cellList(fh)){
+            ++current_[cell];
+            cellFaces_[cell].insert(fh);
+        }
+    }
+
+    inline void calculateCells(FaceHandle fh){
+        math::Point2 vertices[3];
+        uint vc = 0;
+        for (auto vi(mesh_.cfv_iter(fh)); vi; ++vi) {
+            const auto &v(mesh_.point(vi.handle()));
+            vertices[vc](0) =  v[0];
+            vertices[vc](1) =  v[1];
+            vc++;
+        }
+        cellList(fh) = tiling_->intersectingCells(vertices);
+    }
+
+    inline bool canRemove(FaceHandle fh) const {
+        if (!fh.is_valid()) { return true; }
+        for(auto &cell : cellList(fh)){
+            if(current_[cell] <= max_[cell]){
+                setCellVerticesAsFeatures(cell);
+                return false;
+            } 
+        }
+        return true;
+    }
+
+    inline CellList& cellList(FaceHandle fh) {
+        return mesh_.property(cells_, fh);
+    }
+
+    inline const CellList& cellList(FaceHandle fh) const {
+        return mesh_.property(cells_, fh);
+    }
+
+    MeshType &mesh_;
+    Tiling *tiling_;
+    std::vector<std::size_t> original_;
+    std::vector<std::size_t> current_;
+    std::vector<std::size_t> max_;
+    OpenMesh::FPropHandleT<CellList> cells_;
+    CellFaces cellFaces_;
+};
+
+
 /** Converts coordinate to grid defined by reference point and cell size.
  *  Coordinates not on grid are rounded up.
  */
@@ -455,14 +667,15 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     HModQuadric hModQuadric;
     decimator.add(hModQuadric);
 
-    ModGrid<OMMesh>::Handle hModGrid;
+    ModGrid2<OMMesh>::Handle hModGrid;
     decimator.add(hModGrid);
 
     decimator.initialize();
 
     auto fc(decimator.module(hModGrid).desiredCount());
     LOG(info2) << "[simplify] Simplifying mesh to " << fc << " faces.";
-    decimator.decimate_to_faces(0, fc);
+    // simplifying to 0 faces, simplification will stop based on grid constraints
+    decimator.decimate_to_faces(0, 0);
 
     omMesh.garbage_collection();
 
