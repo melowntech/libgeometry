@@ -443,7 +443,7 @@ public :
     ScalarField_t& operator=(ScalarField_t &&) = default;
 
     template<typename Filter1 = math::CatmullRom1>
-    void downscale( int factor );
+    void downscale( int factor, float cutOffPeriod);
 
     /**
      * Provide basic visualization of a scalar field isosurface as a set of
@@ -1133,9 +1133,9 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
 
 template <class Value_t, class Container_t>
 template <typename Filter1>
-void ScalarField_t<Value_t, Container_t>::downscale(int factor){
+void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeriod){
     LOG( info2 )<<"Downscaling volume by factor "<<factor;
-    double filterCutoff = std::max(2,factor*2);
+    double filterCutoff = std::max(2.0f, cutOffPeriod);
 
     typename VolumeBase_t::Displacement_s directions[3];
     directions[0] = typename VolumeBase_t::Displacement_s(1,0,0);
