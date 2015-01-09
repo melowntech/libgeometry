@@ -40,16 +40,14 @@ struct Face {
         : imageId(), a(a), b(b), c(c), ta(), tb(), tc()
     {}
 
-    /** Calculate normal of this face.
-     */
     Face(math::Points3::size_type a, math::Points3::size_type b
          , math::Points3::size_type c, math::Points2::size_type ta
          , math::Points2::size_type tb, math::Points2::size_type tc)
         : imageId(), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
     {}
 
-
-
+    /** Calculate normal of this face.
+     */
     math::Point3 normal(const math::Points3 &vertices) const {
         return math::normalize
             (math::crossProduct(vertices[b] - vertices[a]

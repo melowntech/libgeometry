@@ -29,7 +29,7 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount)
  */
 Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount);
 
-/** Simplify mesh with maximal geometric error 
+/** Simplify mesh with maximal geometric error
  * \param mesh mesh to simplify
  * \param maxErr maximal geometric error
  * \return simplified mesh
@@ -44,7 +44,13 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr);
  */
 Mesh::pointer refine( const Mesh &mesh, uint maxFacesCount);
 
-
+/** Removes non manifold edges (edges with more than 2 incident faces)
+ ** and their incident faces.
+ *
+ * \param mesh mesh to process
+ * \return processed mesh
+ */
+Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
 
 /** Function that tells how many faces should given cell have.
  */

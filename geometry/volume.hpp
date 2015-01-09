@@ -445,6 +445,9 @@ public :
     template<typename Filter1 = math::CatmullRom1>
     void downscale( int factor, float cutOffPeriod);
 
+    template<typename Filter1 = math::CatmullRom1>
+    void downscale( int factor );
+
     /**
      * Provide basic visualization of a scalar field isosurface as a set of
      * quads, separating voxels on different sides of the isosurface.
@@ -1202,6 +1205,12 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
         ++xitN; ++xitO;
     }
     *this = std::move(tmp);
+}
+
+template <class Value_t, class Container_t>
+template <typename Filter1>
+void ScalarField_t<Value_t, Container_t>::downscale(int factor){
+    this->downscale(factor, factor*2);
 }
 
 template <class Value_t, class Container_t>

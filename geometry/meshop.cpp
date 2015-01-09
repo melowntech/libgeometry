@@ -11,7 +11,7 @@
 #include "utility/expect.hpp"
 #include <boost/numeric/ublas/vector.hpp>
 
-namespace geometry {   
+namespace geometry {
 
 namespace ublas = boost::numeric::ublas;
 
@@ -232,6 +232,75 @@ Mesh loadObj( const boost::filesystem::path &filename )
     return parser_.mesh;
 }
 
+Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
+    auto pmesh(std::make_shared<geometry::Mesh>(omesh));
+    auto & mesh(*pmesh);
+
+    struct EdgeKey
+    {
+        int v1, v2; // vertex indices
+
+        EdgeKey(int v1, int v2)
+        {
+            this->v1 = std::min(v1, v2);
+            this->v2 = std::max(v1, v2);
+        }
+
+        bool operator< (const EdgeKey& other) const
+        {
+            return (v1 == other.v1) ? (v2 < other.v2) : (v1 < other.v1);
+        }
+    };
+
+    struct Edge {
+        std::set<size_t> facesIndices;
+    };
+
+    //count faces for each edge
+    std::map<EdgeKey,Edge> edgeMap;
+    for(uint fi=0; fi<mesh.faces.size(); fi++){
+        const auto & face(mesh.faces[fi]);
+        EdgeKey edgeKeys[3] = { EdgeKey(face.a,face.b)
+                           , EdgeKey(face.b,face.c)
+                           , EdgeKey(face.c,face.a) };
+        for(const auto & key : edgeKeys){
+            auto it = edgeMap.find(key);
+            if(it==edgeMap.end()){
+                //if edge is not present insert it with current face
+                Edge edge;
+                edge.facesIndices.insert(fi);
+                edgeMap.insert(std::make_pair(key,edge));
+            }
+            else{
+                //if edge is present add current face to it
+                it->second.facesIndices.insert(fi);
+            }
+        }
+    }
+
+
+    //collect faces incident with non-manifold edge
+    std::set<size_t> facesToOmit;
+    for(auto it = edgeMap.begin(); it!=edgeMap.end(); it++){
+        if(it->second.facesIndices.size()>2){
+            for(const auto & fi : it->second.facesIndices){
+                facesToOmit.insert(fi);
+            }
+        }
+    }
+
+    mesh.faces.clear();
+    for(uint fi=0; fi<omesh.faces.size(); fi++){
+        const auto & face(omesh.faces[fi]);
+        if(facesToOmit.find(fi)==facesToOmit.end()){
+            mesh.addFace( face.a, face.b, face.c
+                        , face.ta, face.tb, face.tc );
+        }
+    }
+
+    return pmesh;
+}
+
 
 Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));
@@ -319,7 +388,7 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
             std::pop_heap(heap.begin(), heap.end(), [this]( const std::shared_ptr<Edge> &a
                                                           , const std::shared_ptr<Edge> &b){
                 return this->compareEdgePtr(a,b);
-            }); 
+            });
             heap.pop_back();
             map.erase(EdgeKey(edge.v1, edge.v2));
             return edge;
@@ -356,9 +425,9 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
             case Edge::EdgeType::AB:
                 {
                     if(mesh.tCoords.size()>0){
-                        math::Point2 tcMiddle = ( mesh.tCoords[face.ta] 
+                        math::Point2 tcMiddle = ( mesh.tCoords[face.ta]
                                                 + mesh.tCoords[face.tb]) * 0.5;
-                        mesh.tCoords.push_back(tcMiddle); 
+                        mesh.tCoords.push_back(tcMiddle);
                     }
                     mesh.addFace( mesh.faces[fid].b, mesh.faces[fid].c
                                 , vid
@@ -368,16 +437,16 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
                     mesh.faces[fid].b = vid;
                     mesh.faces[fid].tb = mesh.tCoords.size()-1;
 
-                    edgeMap.addFaceEdges(mesh, fid);  
-                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);   
+                    edgeMap.addFaceEdges(mesh, fid);
+                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);
                 }
                 break;
             case Edge::EdgeType::BC:
                 {
                     if(mesh.tCoords.size()>0){
-                        math::Point2 tcMiddle = (mesh.tCoords[face.tb] 
+                        math::Point2 tcMiddle = (mesh.tCoords[face.tb]
                                                 + mesh.tCoords[face.tc]) * 0.5;
-                        mesh.tCoords.push_back(tcMiddle); 
+                        mesh.tCoords.push_back(tcMiddle);
                     }
                     mesh.addFace( mesh.faces[fid].c,mesh.faces[fid].a, vid
                                 , mesh.faces[fid].tc,mesh.faces[fid].ta
@@ -386,16 +455,16 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
                     mesh.faces[fid].c = vid;
                     mesh.faces[fid].tc = mesh.tCoords.size()-1;
 
-                    edgeMap.addFaceEdges(mesh, fid);  
-                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);    
+                    edgeMap.addFaceEdges(mesh, fid);
+                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);
                 }
                 break;
             case Edge::EdgeType::CA:
                 {
                     if(mesh.tCoords.size()>0){
-                        math::Point2 tcMiddle = (mesh.tCoords[face.tc] 
+                        math::Point2 tcMiddle = (mesh.tCoords[face.tc]
                                                 + mesh.tCoords[face.ta]) * 0.5;
-                        mesh.tCoords.push_back(tcMiddle); 
+                        mesh.tCoords.push_back(tcMiddle);
                     }
 
                     mesh.addFace( mesh.faces[fid].a,mesh.faces[fid].b, vid
@@ -405,8 +474,8 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
                     mesh.faces[fid].a = vid;
                     mesh.faces[fid].ta = mesh.tCoords.size()-1;
 
-                    edgeMap.addFaceEdges(mesh, fid);  
-                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);   
+                    edgeMap.addFaceEdges(mesh, fid);
+                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);
                 }
                 break;
         }
@@ -423,14 +492,14 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
         auto edge = edgeMap.pop_top_edge();
 
         //find middle
-        math::Point3 middle = (mesh.vertices[edge.v1] 
-                            + mesh.vertices[edge.v2]) * 0.5;  
-        mesh.vertices.push_back(middle);      
+        math::Point3 middle = (mesh.vertices[edge.v1]
+                            + mesh.vertices[edge.v2]) * 0.5;
+        mesh.vertices.push_back(middle);
 
         //split first face
         if(edge.f1>=0){
             splitEdge(edge.f1, edge.et1, mesh.vertices.size()-1);
-        } 
+        }
 
         //split second face
         if(edge.f2>=0){

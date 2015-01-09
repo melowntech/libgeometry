@@ -27,9 +27,18 @@ typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
 /** Convert mesh to OpenMesh data structure and return mesh extents (2D bounding
  *  box)
  */
-math::Extents2 toOpenMesh(const geometry::Mesh &mesh, OMMesh& omMesh)
+math::Extents2 toOpenMesh(const geometry::Mesh &imesh, OMMesh& omMesh)
 {
     math::Extents2 e(math::InvalidExtents{});
+
+    //preprocess mesh - remove non-manifold edges
+    auto pmesh(removeNonManifoldEdges(imesh));
+    auto & mesh(*pmesh);
+    uint removedFaces = imesh.faces.size() - mesh.faces.size();
+    if(removedFaces != 0){
+        LOG( info2 )<< "Removed " <<removedFaces
+                    << " faces (incidental to non-manifold edge)";
+    }
 
     // create OpenMesh vertices
     std::vector<OMMesh::VertexHandle> handles;
@@ -219,12 +228,12 @@ struct Tiling {
                 math::Point2 ll = origin + offset;
                 math::Point2 ur = ll+math::Point2(tileSize, tileSize);
 
-                if(math::triangleRectangleCollision(triangle,ll,ur)){    
+                if(math::triangleRectangleCollision(triangle,ll,ur)){
                     result.push_back(x + y * size.width);
                 }
             }
         }
-        return result; 
+        return result;
     };
 
     /** Calculate maximum face count in all cells of grid. If real value is
@@ -330,7 +339,7 @@ private:
 
     void calculateGrid() {
         current_.clear();
-        current_.resize(area(tiling_->size)); 
+        current_.resize(area(tiling_->size));
 
         for (const auto &f : mesh_.faces()) {
             auto cellIndex(barycenterCell(f));
@@ -408,9 +417,9 @@ private:
 
 
 /*
- * OpenMesh module for decimation mesh in grid. 
- * Each cell has defined maximal face count and 
- * once this face count is reached, incident faces 
+ * OpenMesh module for decimation mesh in grid.
+ * Each cell has defined maximal face count and
+ * once this face count is reached, incident faces
  * can't be decimated.
  */
 template <typename MeshType>
@@ -484,10 +493,10 @@ private:
             }
         }
     }
-    
+
     void printCells() const {
         LOG(info2) << "Cells count:";
-        for (uint i=0; i<current_.size(); ++i) {  
+        for (uint i=0; i<current_.size(); ++i) {
             LOG(info2) << tiling_->tileLowerLeft(i)<<" - "<<current_[i];
         }
     }
@@ -526,7 +535,7 @@ private:
                 --current_[cell];
                 cellFaces_[cell].erase(fh);
             }
-        }  
+        }
     }
 
     void update(FaceHandle fh) {
@@ -567,7 +576,7 @@ private:
             if(current_[cell] <= max_[cell]){
                 setCellVerticesAsFeatures(cell);
                 return false;
-            } 
+            }
         }
         return true;
     }
