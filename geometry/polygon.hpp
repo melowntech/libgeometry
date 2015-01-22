@@ -44,6 +44,11 @@ clip(const math::Viewport2_<U> &viewport, Iterator begin, Iterator end);
 template <typename T>
 bool convex(const std::vector<math::Point2_<T> > &polygon);
 
+/** Determine whether point is inside CONVEX polygon.
+ */
+template <typename T>
+bool inside(const std::vector<math::Point2_<T> > &polygon
+            , const math::Point2_<T> &point);
 
 /****** implementation ******/
 
@@ -113,7 +118,7 @@ inline double cp(const math::Point2_<T> &prev
 } // namespace detail
 
 template <typename T>
-bool convex(const std::vector<math::Point2_<T> > &polygon)
+inline bool convex(const std::vector<math::Point2_<T> > &polygon)
 {
     if (polygon.size() < 3) {
         // this is not a polygon
@@ -137,6 +142,33 @@ bool convex(const std::vector<math::Point2_<T> > &polygon)
     // rest of polygon
     for (auto ip(polygon.begin() + 1), ep(polygon.end() - 1); ip != ep; ++ip) {
         sign |= detail::getSign(detail::cp(*(ip - 1), *ip, *(ip + 1)));
+        if (sign == 3) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+template <typename T>
+inline bool inside(const std::vector<math::Point2_<T> > &polygon
+                   , const math::Point2_<T> &point)
+{
+    // NB: works only for convex polygons
+    if (polygon.size() < 3) {
+        // this is not a polygon
+        return false;
+    }
+
+    char sign(0);
+
+    // first, special cases
+    sign = detail::getSign(detail::cp(polygon.back(), polygon.front()
+                                       , point));
+
+    // rest of polygon
+    for (auto ip(polygon.begin() + 1), ep(polygon.end()); ip != ep; ++ip) {
+        sign |= detail::getSign(detail::cp(*(ip - 1), *ip, point));
         if (sign == 3) {
             return false;
         }
