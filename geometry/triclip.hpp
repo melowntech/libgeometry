@@ -9,8 +9,10 @@
 #ifndef geometry_triclip_hpp_included_
 #define geometry_triclip_hpp_included_
 
-
+#include <boost/numeric/ublas/vector.hpp>
 #include "dbglog/dbglog.hpp"
+
+namespace ublas = boost::numeric::ublas;
 
 namespace geometry { 
 /** Textured 3D triangle representation suitable for clipping algorithm.
@@ -64,7 +66,7 @@ struct ClipPlane
 namespace detail{
     inline double signedDistance(const math::Point3 &point, const ClipPlane &plane)
     {
-        return math::dotProduct(point,plane.normal) - plane.d;
+        return ublas::inner_prod(point,plane.normal) - plane.d;
     }
 
     inline math::Point3 intersection(const math::Point3 &p1, const math::Point3 &p2,
@@ -74,8 +76,8 @@ namespace detail{
         math::Point3 sp1(std::max(p1,p2));
         math::Point3 sp2(std::min(p1,p2));
 
-        double dot1 = math::dotProduct(sp1,plane.normal);
-        double dot2 = math::dotProduct(sp2,plane.normal);
+        double dot1 = ublas::inner_prod(sp1,plane.normal);
+        double dot2 = ublas::inner_prod(sp2,plane.normal);
         double den = dot1 - dot2;
 
         // line parallel with plane, return the midpoint
