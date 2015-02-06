@@ -10,6 +10,7 @@
 #define geometry_triclip_hpp_included_
 
 #include <boost/numeric/ublas/vector.hpp>
+#include "math/geometry_core.hpp"
 #include "dbglog/dbglog.hpp"
 
 namespace ublas = boost::numeric::ublas;
