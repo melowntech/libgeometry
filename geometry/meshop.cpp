@@ -7,6 +7,7 @@
 
 #include "./meshop.hpp"
 #include "./parse-obj.hpp"
+#include "./triclip.hpp"
 
 #include "utility/expect.hpp"
 #include <boost/numeric/ublas/vector.hpp>
@@ -231,6 +232,57 @@ Mesh loadObj( const boost::filesystem::path &filename )
 
     return parser_.mesh;
 }
+
+
+Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents){
+    auto pmesh(std::make_shared<geometry::Mesh>());
+
+    ClipPlane planes[6];
+    planes[0] = {+1.,  0., 0., extents.ll[0]};
+    planes[1] = {-1.,  0., 0., -extents.ur[0]};
+    planes[2] = {0.,  +1., 0., extents.ll[1]};
+    planes[3] = {0.,  -1., 0., -extents.ur[1]};
+    planes[4] = {0.,  0., +1., extents.ll[2]};
+    planes[5] = {0.,  0., -1., -extents.ur[2]};
+    ClipTriangle::list clipped;
+    for (const auto& face : omesh.faces) {
+        clipped.emplace_back(
+              omesh.vertices[face.a]
+            , omesh.vertices[face.b]
+            , omesh.vertices[face.c]);
+    }
+    
+    std::vector<double> tinfos;
+    for (int i = 0; i < 6; i++) {
+        clipped = clipTriangles(clipped, planes[i], tinfos);
+    }
+    
+    std::map<math::Point3, math::Points3::size_type> pMap;
+    math::Points3::size_type next=0;
+
+    for (const auto &triangle : clipped) {
+        math::Points3::size_type indices[3];
+        for (int i = 0; i < 3; i++) {
+            
+            auto pair = pMap.insert(std::make_pair(triangle.pos[i], next));
+            if (pair.second) next++;
+            indices[i] = pair.first->second;
+            
+            if (indices[i] >= pmesh->vertices.size()) {
+                pmesh->vertices.push_back( triangle.pos[i] );
+            }
+        }
+        //do not add degenerated faces
+        if ( (indices[0] != indices[1])
+            && (indices[1] != indices[2])
+            && (indices[0] != indices[2])) {  
+            pmesh->addFace(indices[0], indices[1], indices[2]);
+        }
+    }
+
+    return pmesh;
+}
+
 
 Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));

@@ -14,7 +14,7 @@
 #include "./parse-obj.hpp"
 
 namespace geometry {
-
+  
 Mesh::pointer simplify(const Mesh &mesh, int faceCount)
 #ifndef GEOMETRY_HAS_OPENMESH
     UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
@@ -52,6 +52,14 @@ Mesh::pointer refine( const Mesh &mesh, uint maxFacesCount);
  */
 Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
 
+/** Clips mesh to the given 3d extents 
+ *
+ * \param mesh mesh to clip
+ * \param extents extents defining where to keep geometry
+ * \return processed mesh, texture coordinates are at the moment discarted
+ */
+Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents);
+
 /** Function that tells how many faces should given cell have.
  */
 typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
@@ -78,8 +86,6 @@ Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                              , double cellSize
                              , const FacesPerCell &facesPerCell);
 
-Mesh::pointer mergeCloseVertices( Mesh &mesh
-                                 , double mergeThreshold);
 
 /** TODO: remove this once geometry::Obj is no longer used for modeling.
 */

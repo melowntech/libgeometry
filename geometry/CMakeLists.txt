@@ -44,6 +44,8 @@ set(geometry_SOURCES
     polygon.hpp
     polyclip.cpp
 
+    triclip.hpp
+
     mesh.hpp mesh.cpp
     meshop.hpp meshop.cpp
 
