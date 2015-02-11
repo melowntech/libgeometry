@@ -11,7 +11,7 @@
 #include <OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh>
 #include <OpenMesh/Tools/Decimater/DecimaterT.hh>
 #include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
-
+#include <OpenMesh/Tools/Decimater/ModNormalFlippingT.hh>
 #include "./meshop.hpp"
 
 namespace geometry {
@@ -20,25 +20,23 @@ namespace geometry {
 
 namespace {
 
-typedef OpenMesh::TriMesh_ArrayKernelT<> OMMesh;
+struct NormalTraits : public OpenMesh::DefaultTraits 
+{
+  FaceAttributes( OpenMesh::Attributes::Normal );
+};
+
+typedef OpenMesh::TriMesh_ArrayKernelT<NormalTraits> OMMesh;
 typedef OpenMesh::Decimater::DecimaterT<OMMesh> Decimator;
 typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
+typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippingT;
+
 
 /** Convert mesh to OpenMesh data structure and return mesh extents (2D bounding
  *  box)
  */
-math::Extents2 toOpenMesh(const geometry::Mesh &imesh, OMMesh& omMesh)
+math::Extents2 toOpenMesh(const geometry::Mesh &mesh, OMMesh& omMesh)
 {
     math::Extents2 e(math::InvalidExtents{});
-
-    //preprocess mesh - remove non-manifold edges
-    auto pmesh(removeNonManifoldEdges(imesh));
-    auto & mesh(*pmesh);
-    uint removedFaces = imesh.faces.size() - mesh.faces.size();
-    if(removedFaces != 0){
-        LOG( info2 )<< "Removed " <<removedFaces
-                    << " faces (incidental to non-manifold edge)";
-    }
 
     // create OpenMesh vertices
     std::vector<OMMesh::VertexHandle> handles;
@@ -84,6 +82,63 @@ void fromOpenMesh(const OMMesh& omMesh, geometry::Mesh& mesh)
         }
         mesh.faces.emplace_back(index[0], index[1], index[2]);
     }
+}
+
+
+
+void lockBorder(OMMesh &omMesh, bool inner, bool outer){
+    // get bounding box
+    double box[2][2] = { {INFINITY, -INFINITY}, {INFINITY, -INFINITY} };
+
+    for (auto v_it = omMesh.vertices_begin();
+              v_it != omMesh.vertices_end();  ++v_it)
+    {
+        const auto& pt = omMesh.point(v_it.handle());
+        for (int i = 0; i < 2; i++) {
+            if (pt[i] < box[i][0]) box[i][0] = pt[i];
+            if (pt[i] > box[i][1]) box[i][1] = pt[i];
+        }
+    }
+
+    double eps = std::max(box[0][1]-box[0][0], box[1][1]-box[1][0])/(1<<10);
+
+    for (auto e_it = omMesh.edges_begin();
+              e_it != omMesh.edges_end();  ++e_it)
+    {
+        if(omMesh.is_boundary(e_it))
+        {
+            auto from(omMesh.from_vertex_handle(omMesh.halfedge_handle(e_it,0)));
+            auto to(omMesh.to_vertex_handle(omMesh.halfedge_handle(e_it,0)));
+
+            //check if both points lie on the same border
+            auto p1(omMesh.point(from));
+            auto p2(omMesh.point(to));
+
+            bool p1Border[4];
+            bool p2Border[4];
+
+            p1Border[0] = std::abs(p1[0]-box[0][0])<eps;
+            p1Border[1] = std::abs(p1[0]-box[0][1])<eps;
+            p1Border[2] = std::abs(p1[1]-box[1][0])<eps;
+            p1Border[3] = std::abs(p1[1]-box[1][0])<eps;
+
+            p2Border[0] = std::abs(p2[0]-box[0][0])<eps;
+            p2Border[1] = std::abs(p2[0]-box[0][1])<eps;
+            p2Border[2] = std::abs(p2[1]-box[1][0])<eps;
+            p2Border[3] = std::abs(p2[1]-box[1][0])<eps;
+
+            bool onBorder = false;
+            for (int i = 0; i < 4; i++) {
+                onBorder = (onBorder || (p1Border[i]==p2Border[i] && p1Border[i]));
+            }
+            if((inner && !onBorder) || (outer && onBorder)){
+                //if they don't lie on the border, lock them
+                omMesh.status(from).set_locked(true);
+                omMesh.status(to).set_locked(true);
+            }
+        }
+    }
+
 }
 
 void lockCorners(OMMesh &omMesh)
@@ -135,17 +190,35 @@ void lockCorners(OMMesh &omMesh)
 
 } // namespace
 
-Mesh::pointer simplify(const Mesh &mesh, int faceCount)
+Mesh::pointer simplify( const Mesh &mesh, int faceCount
+                      , SimplifyOptions simplifyOptions)
 {
     OMMesh omMesh;
-    toOpenMesh(mesh, omMesh);
+
+    //preprocess mesh - remove non-manifold edges
+    if (simplifyOptions & SimplifyOption::RMNONMANIFOLDEDGES) {
+        auto pmesh(removeNonManifoldEdges(mesh));
+        toOpenMesh(*pmesh, omMesh);
+    }
+    else{
+        toOpenMesh(mesh, omMesh);
+    }
+    omMesh.update_normals();
 
     // lock the corner vertices of the window to prevent simplifying the corners
-    lockCorners(omMesh);
+    if (simplifyOptions & SimplifyOption::CORNERS) lockCorners(omMesh);
+    if (simplifyOptions & SimplifyOption::INNERBORDER) lockBorder(omMesh, true, false);
+    if (simplifyOptions & SimplifyOption::OUTERBORDER) lockBorder(omMesh, false, true);
 
     Decimator decimator(omMesh);
     HModQuadric hModQuadric; // collapse priority based on vertex error quadric
+    
     decimator.add(hModQuadric);
+    if (simplifyOptions & SimplifyOption::PREVENTFACEFLIP) {
+        HModNormalFlippingT hModNormalFlippingT;
+        decimator.add(hModNormalFlippingT);
+        decimator.module( hModNormalFlippingT ).set_max_normal_deviation(90);
+    }
     decimator.initialize();
 
     decimator.decimate_to_faces(0, faceCount);
@@ -631,15 +704,23 @@ math::Extents2 gridExtents(const math::Extents2 &extents
 
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
                              , double cellSize
-                             , const FacesPerCell &facesPerCell)
+                             , const FacesPerCell &facesPerCell
+                             , SimplifyOptions simplifyOptions)
 {
     LOG(info2) << "[simplify] alignment: "
                << std::setprecision(15) << alignment;
     LOG(info2) << "[simplify] cellSize: " << cellSize;
 
-    // convert tom openmehs structure
+    // convert tom openmesh structure
     OMMesh omMesh;
-    const auto me(toOpenMesh(mesh, omMesh));
+    math::Extents2 me;
+    if (simplifyOptions & SimplifyOption::RMNONMANIFOLDEDGES) {
+        auto pmesh(removeNonManifoldEdges(mesh));
+        me =toOpenMesh(*pmesh, omMesh);
+    }
+    else{
+        me =toOpenMesh(mesh, omMesh);
+    }
 
     // calculate grid extents
     const auto ge(gridExtents(me, alignment, cellSize));
@@ -659,7 +740,9 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     LOG(info2) << "[simplify] grid origin: " << gorigin;
 
     // lock the corner vertices of the window to prevent simplifying the corners
-    lockCorners(omMesh);
+    if (simplifyOptions & SimplifyOption::CORNERS) lockCorners(omMesh);
+    if (simplifyOptions & SimplifyOption::INNERBORDER) lockBorder(omMesh, true, false);
+    if (simplifyOptions & SimplifyOption::OUTERBORDER) lockBorder(omMesh, false, true);
 
     // create and add tiling as a mesh property to mesh
     omMesh.add_property(Tiling::Property);
@@ -672,6 +755,11 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     // collapse priority based on vertex error quadric
     HModQuadric hModQuadric;
     decimator.add(hModQuadric);
+    if (simplifyOptions & SimplifyOption::PREVENTFACEFLIP) {
+        HModNormalFlippingT hModNormalFlippingT;
+        decimator.add(hModNormalFlippingT);
+        decimator.module( hModNormalFlippingT ).set_max_normal_deviation(90);
+    }
 
     ModGrid2<OMMesh>::Handle hModGrid;
     decimator.add(hModGrid);

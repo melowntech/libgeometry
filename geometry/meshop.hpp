@@ -14,20 +14,34 @@
 #include "./parse-obj.hpp"
 
 namespace geometry {
+
+enum SimplifyOption
+{
+    NONE = 0,
+    CORNERS =1,
+    INNERBORDER = 2,
+    OUTERBORDER = 4,
+    RMNONMANIFOLDEDGES = 8,
+    PREVENTFACEFLIP = 16
+};
+typedef long SimplifyOptions;
   
-Mesh::pointer simplify(const Mesh &mesh, int faceCount)
+Mesh::pointer simplify(const Mesh &mesh, int faceCount
+                      , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
+                                                        | SimplifyOption::RMNONMANIFOLDEDGES )
 #ifndef GEOMETRY_HAS_OPENMESH
     UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
 #endif
     ;
-
 
 /** Simplify mesh to certain amount of faces
  * \param mesh mesh to simplify
  * \param faceCount target face count of simplified mesh
  * \return simplified mesh
  */
-Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount);
+Mesh::pointer simplify( const Mesh::pointer &mesh, int faceCount
+                      , SimplifyOptions simplifyOptions = SimplifyOption::CORNERS 
+                                                        | SimplifyOption::RMNONMANIFOLDEDGES );
 
 /** Simplify mesh with maximal geometric error
  * \param mesh mesh to simplify
@@ -75,7 +89,9 @@ typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
  */
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
                              , double cellSize
-                             , const FacesPerCell &facesPerCell)
+                             , const FacesPerCell &facesPerCell
+                             , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
+                                                                | SimplifyOption::RMNONMANIFOLDEDGES )
 #ifndef GEOMETRY_HAS_OPENMESH
     UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
 #endif
@@ -84,7 +100,9 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
 Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                              , const math::Point2 &alignment
                              , double cellSize
-                             , const FacesPerCell &facesPerCell);
+                             , const FacesPerCell &facesPerCell
+                             , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
+                                                                | SimplifyOption::RMNONMANIFOLDEDGES );
 
 
 /** TODO: remove this once geometry::Obj is no longer used for modeling.
@@ -121,9 +139,10 @@ Mesh loadObj( const boost::filesystem::path &filepath );
 
 // inline stuff
 
-inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount)
+inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount
+                      , SimplifyOptions simplifyOptions)
 {
-    return simplify(*mesh, faceCount);
+    return simplify(*mesh, faceCount, simplifyOptions);
 }
 
 inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
@@ -134,9 +153,11 @@ inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
 inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                                     , const math::Point2 &alignment
                                     , double cellSize
-                                    , const FacesPerCell &facesPerCell)
+                                    , const FacesPerCell &facesPerCell
+                                    , SimplifyOptions simplifyOptions)
 {
-    return simplifyInGrid(*mesh, alignment, cellSize, facesPerCell);
+    return simplifyInGrid(*mesh, alignment, cellSize, facesPerCell
+                         , simplifyOptions);
 }
 
 inline Obj asObj(const Mesh::pointer &mesh)
