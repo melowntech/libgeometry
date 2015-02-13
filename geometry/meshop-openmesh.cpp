@@ -13,10 +13,12 @@
 #include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
 #include <OpenMesh/Tools/Decimater/ModNormalFlippingT.hh>
 #include "./meshop.hpp"
+#include <boost/numeric/ublas/vector.hpp>
 
 namespace geometry {
 
 /* code moved from the window-mesh utility */
+namespace ublas = boost::numeric::ublas;
 
 namespace {
 
@@ -84,8 +86,6 @@ void fromOpenMesh(const OMMesh& omMesh, geometry::Mesh& mesh)
     }
 }
 
-
-
 void lockBorder(OMMesh &omMesh, bool inner, bool outer){
     // get bounding box
     double box[2][2] = { {INFINITY, -INFINITY}, {INFINITY, -INFINITY} };
@@ -101,18 +101,51 @@ void lockBorder(OMMesh &omMesh, bool inner, bool outer){
     }
 
     double eps = std::max(box[0][1]-box[0][0], box[1][1]-box[1][0])/(1<<10);
+    double epsNormal = 0.001;
 
     for (auto e_it = omMesh.edges_begin();
               e_it != omMesh.edges_end();  ++e_it)
     {
         if(omMesh.is_boundary(e_it))
         {
-            auto from(omMesh.from_vertex_handle(omMesh.halfedge_handle(e_it,0)));
-            auto to(omMesh.to_vertex_handle(omMesh.halfedge_handle(e_it,0)));
+            //LOG(info3)<<"--------";
+            auto hfhandle(omMesh.halfedge_handle(e_it,0));
+
+            auto from(omMesh.from_vertex_handle(hfhandle));
+            auto to(omMesh.to_vertex_handle(hfhandle));
 
             //check if both points lie on the same border
             auto p1(omMesh.point(from));
             auto p2(omMesh.point(to));
+            math::Point3 curNormal(
+                math::normalize(math::Point3(p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2])));
+            //check if previous edge or next is in the same direction
+            bool dirChangeFrom(true);
+            bool dirChangeTo(true);
+            for(auto vih_it = omMesh.vih_iter(to); vih_it; ++vih_it) {
+                if(omMesh.is_boundary(vih_it)){
+                    //auto prevhf = omMesh.prev_halfedge_handle(hfhandle);
+                    auto pfrom(omMesh.from_vertex_handle(vih_it));
+                    auto pto(omMesh.to_vertex_handle(vih_it));
+                    auto pp1(omMesh.point(pfrom));
+                    auto pp2(omMesh.point(pto));
+                    math::Point3 prevNormal(
+                    math::normalize(math::Point3(pp2[0]-pp1[0], pp2[1]-pp1[1], pp2[2]-pp1[2])));
+                    dirChangeTo = std::abs(ublas::inner_prod(prevNormal,curNormal))<(1.0f-epsNormal);
+                }
+            }
+            for(auto voh_it = omMesh.voh_iter(from); voh_it; ++voh_it) {
+                if(omMesh.is_boundary(voh_it)){
+                    //auto nexthf = omMesh.next_halfedge_handle(hfhandle);
+                    auto nfrom(omMesh.from_vertex_handle(voh_it));
+                    auto nto(omMesh.to_vertex_handle(voh_it));
+                    auto np1(omMesh.point(nfrom));
+                    auto np2(omMesh.point(nto));
+                    math::Point3 nextNormal(
+                        math::normalize(math::Point3(np2[0]-np1[0], np2[1]-np1[1], np2[2]-np1[2])));
+                    dirChangeFrom = std::abs(ublas::inner_prod(nextNormal,curNormal))<(1.0f-epsNormal);
+                }
+            }
 
             bool p1Border[4];
             bool p2Border[4];
@@ -131,14 +164,19 @@ void lockBorder(OMMesh &omMesh, bool inner, bool outer){
             for (int i = 0; i < 4; i++) {
                 onBorder = (onBorder || (p1Border[i]==p2Border[i] && p1Border[i]));
             }
+
             if((inner && !onBorder) || (outer && onBorder)){
                 //if they don't lie on the border, lock them
-                omMesh.status(from).set_locked(true);
-                omMesh.status(to).set_locked(true);
+                if(dirChangeFrom){
+                    omMesh.status(from).set_locked(true);
+                }
+
+                if(dirChangeTo){
+                    omMesh.status(to).set_locked(true);
+                }
             }
         }
     }
-
 }
 
 void lockCorners(OMMesh &omMesh)
