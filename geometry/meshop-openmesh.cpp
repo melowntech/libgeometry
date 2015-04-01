@@ -221,7 +221,7 @@ void lockCorners(OMMesh &omMesh)
     {
         auto handle = corners[i][j].handle;
         if (handle == OMMesh::VertexHandle()) continue;
-        LOG(info2) << "Locking corner vertex " << handle.idx();
+        LOG(info1) << "Locking corner vertex " << handle.idx();
         omMesh.status(handle).set_locked(true);
     }
 }
