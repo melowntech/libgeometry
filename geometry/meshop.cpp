@@ -354,6 +354,47 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
 }
 
 
+Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
+    auto pmesh(std::make_shared<geometry::Mesh>());
+    auto & mesh(*pmesh);
+
+    std::map<uint,uint> vertexMap;
+    std::map<uint,uint> tCoordsMap;
+
+    for( const auto& face: imesh.faces ){
+        math::Points3::size_type vindices[3] { face.a , face.b, face.c };
+        math::Points2::size_type tindices[3] { face.ta , face.tb, face.tc };
+
+        for(uint i=0; i<3; ++i){
+            auto vit = vertexMap.find(vindices[i]);
+            auto tit = tCoordsMap.find(tindices[i]);
+
+            if(vit == vertexMap.end()){
+                mesh.vertices.push_back(imesh.vertices[vindices[i]]);
+                vit = vertexMap.insert(std::make_pair(vindices[i],mesh.vertices.size()-1)).first;
+            }
+            if(tit == tCoordsMap.end()){
+                mesh.tCoords.push_back(imesh.vertices[tindices[i]]);
+                tit = vertexMap.insert(std::make_pair(tindices[i],mesh.tCoords.size()-1)).first;
+            }
+
+            vindices[i] = vit->second;
+            tindices[i] = tit->second;
+        }
+
+        if(imesh.tCoords.size() > 0){
+            mesh.addFace( vindices[0], vindices[1], vindices[2] 
+                        , tindices[0], tindices[1], tindices[2] );
+        }
+        else{
+            mesh.addFace( vindices[0], vindices[1], vindices[2] );
+        }
+    }
+
+    return pmesh;
+}
+
+
 Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));
     auto & mesh(*pmesh);

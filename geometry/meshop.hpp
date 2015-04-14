@@ -66,6 +66,14 @@ Mesh::pointer refine( const Mesh &mesh, uint maxFacesCount);
  */
 Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
 
+/** Removes isolated vertices, e.g vertices incidental with 0 faces 
+ * Works with untextured meshes
+ *
+ * \param mesh mesh to process
+ * \return processed mesh
+ */
+Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
+
 /** Clips mesh to the given 3d extents 
  *
  * \param mesh mesh to clip

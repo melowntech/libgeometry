@@ -39,8 +39,6 @@ void erosion( Container_t & container
     (void) volumeUnit;
     Container_t result( container.sizeX(), container.sizeY(), container.sizeZ()
                       , volumeUnit.empty());
-
-    utility::Progress progress(container.sizeZ());
     //for each cell in the volume
 #ifdef _OPENMP
     #pragma omp parallel for schedule( dynamic, 5 )
@@ -49,29 +47,20 @@ void erosion( Container_t & container
         for(int y=0; y< container.sizeY(); ++y){
             for(int x=0; x< container.sizeX(); ++x){
                 //find out if in the radius is empty voxel
-                bool set = false;
                 //only full pixels can be eroded
-                if(container.get(x,y,z)>=volumeUnit.middle()){
-                    for(const auto & offset: se.offsets()){
-                        //take into account only values inside volume
-                        math::Point3i lookup(x+offset(0),y+offset(1),z+offset(2));
-                        if( lookup(0) >= 0 && lookup(0) < container.sizeX()
-                            && lookup(1) >= 0 && lookup(1) < container.sizeY()
-                            && lookup(2) >= 0 && lookup(2) < container.sizeZ()
-                            && container.get(lookup(0),lookup(1),lookup(2))
-                            < volumeUnit.middle()){
-
-                            result.set(x,y,z,volumeUnit.empty());
-                            set = true;
-                            break;
-                        }
+                Value_t cvalue = container.get(x,y,z);
+                for(const auto & offset: se.offsets()){
+                    //take into account only values inside volume
+                    math::Point3i lookup(x+offset(0),y+offset(1),z+offset(2));
+                    if( lookup(0) >= 0 && lookup(0) < container.sizeX()
+                        && lookup(1) >= 0 && lookup(1) < container.sizeY()
+                        && lookup(2) >= 0 && lookup(2) < container.sizeZ()){
+                        cvalue = std::min(container.get(lookup(0),lookup(1),lookup(2)),cvalue);
                     }
-                    if(!set)
-                        result.set(x,y,z,volumeUnit.full());
                 }
+                result.set(x,y,z,cvalue);
             }
         }
-        progress.incrementAndReport(0.01);
     }
     container=std::move(result);
 }
@@ -85,7 +74,6 @@ void dilatation( Container_t & container
     Container_t result( container.sizeX(), container.sizeY(), container.sizeZ()
                       , volumeUnit.empty());
 
-    utility::Progress progress(container.sizeZ());
     //for each cell in the volume
 #ifdef _OPENMP
     #pragma omp parallel for schedule( dynamic, 5 )
@@ -94,32 +82,20 @@ void dilatation( Container_t & container
         for(int y=0; y< container.sizeY(); ++y){
             for(int x=0; x< container.sizeX(); ++x){
                 //find out if in the radius is empty voxel
-                bool set = false;
                 //only empty pixels can become full
-                if(container.get(x,y,z)<volumeUnit.middle()){
-                    for(const auto & offset: se.offsets()){
-                        //take into account only values inside volume
-                        math::Point3i lookup(x+offset(0),y+offset(1),z+offset(2));
-                        if( lookup(0) >= 0 && lookup(0) < container.sizeX()
-                            && lookup(1) >= 0 && lookup(1) < container.sizeY()
-                            && lookup(2) >= 0 && lookup(2) < container.sizeZ()
-                            && container.get(lookup(0),lookup(1),lookup(2))
-                            >= volumeUnit.middle()){
-
-                            result.set(x,y,z,volumeUnit.full());
-                            set = true;
-                            break;
-                        }
+                Value_t cvalue = container.get(x,y,z);
+                for(const auto & offset: se.offsets()){
+                    //take into account only values inside volume
+                    math::Point3i lookup(x+offset(0),y+offset(1),z+offset(2));
+                    if( lookup(0) >= 0 && lookup(0) < container.sizeX()
+                        && lookup(1) >= 0 && lookup(1) < container.sizeY()
+                        && lookup(2) >= 0 && lookup(2) < container.sizeZ()){
+                        cvalue = std::max(container.get(lookup(0),lookup(1),lookup(2)),cvalue);
                     }
-                    if(!set)
-                        result.set(x,y,z,volumeUnit.empty());
                 }
-                else{
-                    result.set(x,y,z,volumeUnit.full());
-                }
+                result.set(x,y,z,cvalue);
             }
         }
-        progress.incrementAndReport(0.01);
     }
     container=std::move(result);
 }
