@@ -1154,7 +1154,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     LOG( info2 )<<"Collecting filtered data.";
 
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
-    typedef typename VolumeBase_t::Position_s Position_s;
+    // typedef typename VolumeBase_t::Position_s Position_s;
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
     typedef Giterator_t<Value_t,Container_t> Giterator_t;
 
@@ -1730,7 +1730,7 @@ std::vector<typename VolumeBase_t::FPosition_s>
 ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
     const SurfaceOrientation_t orientation ){
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
-    typedef typename VolumeBase_t::Position_s Position_s;
+    // typedef typename VolumeBase_t::Position_s Position_s;
 
     std::vector<FPosition_s> retval;
 
