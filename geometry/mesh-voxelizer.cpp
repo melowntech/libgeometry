@@ -125,10 +125,38 @@ void MeshVoxelizer::voxelize(){
 
 
     //create new volume
-    volume_ = std::unique_ptr<Volume>( new Volume( extents.ll, extents.ur
-                                                 , params_.voxelSize
-                                                 , VoxelizerUnit::empty()));
-
+    /**************
+     * Ugly hack
+     * 
+     * Voxelization has problems with edges - create volume 2*cells 
+     * smaller from both x and y directions
+     * 
+     * Voxelization itself should be fixed instead
+     **************************/ 
+    {
+        math::Size3i volSize( std::ceil( size(extents)(0)/params_.voxelSize ) - 4
+                            , std::ceil( size(extents)(1)/params_.voxelSize ) - 4
+                            , std::ceil( size(extents)(2)/params_.voxelSize ));
+        // prepare volume for filtering and downsampling: reserve space so all
+        // dimensions can be inflated to closest larger odd value
+        math::Size3i capacity( volSize(0) + !(volSize(0) % 2) 
+                             , volSize(1) + !(volSize(1) % 2)
+                             , volSize(2) + !(volSize(2) % 2));
+        
+        LOG(info2) << "Creating volume of size " << volSize 
+                   << " and capacity " << capacity;
+        
+        // shift extents's ll by 2 voxel size because that is what we stripped
+        math::Point3 ll( extents.ll(0) + 2*params_.voxelSize
+                       , extents.ll(1) + 2*params_.voxelSize
+                       , extents.ll(2));
+        volume_ = std::unique_ptr<Volume>( new Volume( ll
+                                                     , params_.voxelSize
+                                                     , volSize
+                                                     , VoxelizerUnit::empty()
+                                                     , capacity));
+    }
+    
     math::Size3i vSize = volume_->cSize();
     long volMem = (long)vSize.width * vSize.height
                     * vSize.depth * sizeof(unsigned short);
