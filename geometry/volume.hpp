@@ -932,7 +932,9 @@ VolumeArray<Value_t>::VolumeArray( const int sizeX
                                   , capacity, offset, border)
 {
     const auto & capacity_(this->capacity_);
-    std::size_t vol(capacity_(0) * capacity_(1) * capacity_(2));
+    std::size_t vol( std::size_t(capacity_(0)) 
+                   * std::size_t(capacity_(1)) 
+                   * std::size_t(capacity_(2)));
     
     data = std::vector<Value_t>(vol,initValue);
 }
@@ -955,7 +957,7 @@ Value_t VolumeArray<Value_t>::get( int i, int j, int k ) const{
         cj(std::min(std::max(j,0), size_(1) - 1)),
         ck(std::min(std::max(k,0), size_(2) - 1));
     
-    return this->data[ ck + offset_(2)
+    return this->data[ std::size_t(ck + offset_(2))
                      + std::size_t(cj + offset_(1)) * capacity_(2)
                      + std::size_t(ci + offset_(0)) * capacity_(2) * capacity_(1)];
 }
@@ -972,7 +974,7 @@ void VolumeArray<Value_t>::set( int i, int j, int k, const Value_t & value  ){
                 << "Setting value outside the volume.";
     }
     
-    this->data[ k + offset_(2)
+    this->data[ std::size_t(k + offset_(2))
               + std::size_t(j + offset_(1)) * capacity_(2)
               + std::size_t(i + offset_(0)) * capacity_(2) * capacity_(1)] = value;
 }
