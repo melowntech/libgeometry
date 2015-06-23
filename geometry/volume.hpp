@@ -2069,28 +2069,28 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
                 typename VolumeBase_t::FPosition_s vertices[8];
                 Value_t values[8];
 
-                vertices[0] = grid2geo(
+                vertices[0] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i, j, k ) );
                 values[0] = this->get( i, j, k );
-                vertices[1] = grid2geo(
+                vertices[1] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i + 1, j, k ) );
                 values[1] = this->get( i + 1, j, k );
-                vertices[2] = grid2geo(
+                vertices[2] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i+1, j + 1, k ) );
                 values[2] = this->get( i+1, j + 1, k );
-                vertices[3] = grid2geo(
+                vertices[3] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i, j + 1, k ) );
                 values[3] = this->get( i, j + 1, k );
-                vertices[4] = grid2geo(
+                vertices[4] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i, j, k + 1 ) );
                 values[4] = this->get( i, j, k + 1 );
-                vertices[5] = grid2geo(
+                vertices[5] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i + 1, j, k + 1 ) );
                 values[5] = this->get( i + 1, j, k + 1 );
-                vertices[6] = grid2geo(
+                vertices[6] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i+1, j + 1, k + 1 ) );
                 values[6] = this->get( i + 1, j + 1, k + 1 );
-                vertices[7] = grid2geo(
+                vertices[7] = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i, j + 1, k + 1 ) );
                 values[7] = this->get( i, j + 1 , k + 1 );
 

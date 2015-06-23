@@ -11,6 +11,10 @@ if (OPENMESH_FOUND)
     meshop-openmesh.cpp
     )
 
+  # handle() is deprecated -> no warning
+  set_source_files_properties(meshop-openmesh.cpp PROPERTIES
+    COMPILE_FLAGS -Wno-deprecated-declarations)
+
   list(APPEND geometry_EXTRA_DEPENDS OPENMESH)
 else()
   message(STATUS "geometry: compiling without OpenMesh support")
