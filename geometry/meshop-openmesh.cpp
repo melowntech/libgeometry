@@ -294,20 +294,20 @@ namespace {
 struct Tiling {
     math::Size2_<long> size;
     math::Point2 origin;
-    double tileSize;
+    math::Size2f tileSize;
     FacesPerCell facesPerCell;
 
     Tiling() : tileSize() {}
 
     Tiling(const math::Size2_<long> &size, const math::Point2 &origin
-           , double tileSize, const FacesPerCell &facesPerCell)
+           , const math::Size2f &tileSize, const FacesPerCell &facesPerCell)
         : size(size), origin(origin), tileSize(tileSize)
         , facesPerCell(facesPerCell)
     {}
 
     inline std::size_t gridIndex(double x, double y) const {
-        long xx((x - origin(0)) / tileSize);
-        long yy((y - origin(1)) / tileSize);
+        long xx(std::round((x - origin(0)) / tileSize.width));
+        long yy(std::round((y - origin(1)) / tileSize.height));
 
 #ifndef NDEBUG
         // sanity check (only in debug mode)
@@ -323,21 +323,23 @@ struct Tiling {
     };
 
     inline math::Point2 tileLowerLeft(int index){
-        int y = index/size.width;
-        int x = index%size.width;
+        int y = index / size.width;
+        int x = index % size.width;
 
-        return math::Point2( x*tileSize+origin(0)
-                           , y*tileSize+origin(1));
+        return math::Point2(x * tileSize.width + origin(0)
+                            , y * tileSize.height + origin(1));
     }
 
     inline std::vector<std::size_t> intersectingCells(math::Point2 triangle[3]) const{
         std::vector<std::size_t> result;
 
-        for(uint x=0; x<size.width; ++x){
-            for(uint y=0; y<size.height; ++y){
-                math::Point2 offset(x*tileSize, y*tileSize);
+        for(uint x = 0; x < size.width; ++x){
+            for(uint y = 0; y < size.height; ++y){
+                math::Point2 offset(x * tileSize.width
+                                    , y * tileSize.height);
                 math::Point2 ll = origin + offset;
-                math::Point2 ur = ll+math::Point2(tileSize, tileSize);
+                math::Point2 ur = ll + math::Point2
+                    (tileSize.width, tileSize.height);
 
                 if(math::triangleRectangleCollision(triangle,ll,ur)){
                     result.push_back(x + y * size.width);
@@ -361,10 +363,10 @@ struct Tiling {
                 max.push_back
                     (std::min
                      (facesPerCell
-                      (math::Extents2(origin(0) + i * tileSize
-                                      , origin(1) + j * tileSize
-                                      , origin(0) + (i + 1) * tileSize
-                                      , origin(1) + (j + 1) * tileSize))
+                      (math::Extents2(origin(0) + i * tileSize.width
+                                      , origin(1) + j * tileSize.height
+                                      , origin(0) + (i + 1) * tileSize.width
+                                      , origin(1) + (j + 1) * tileSize.height))
                       , *ireal));
             }
         }
@@ -728,20 +730,20 @@ double gridExtentsDown(double value, double origin, double size)
 
 math::Extents2 gridExtents(const math::Extents2 &extents
                            , const math::Point2 &alignment
-                           , double size)
+                           , const math::Size2f &cellSize)
 {
     return {
-        gridExtentsDown(extents.ll(0), alignment(0), size)
-        , gridExtentsDown(extents.ll(1), alignment(1), size)
-        , gridExtentsUp(extents.ur(0), alignment(0), size)
-        , gridExtentsUp(extents.ur(1), alignment(1), size)
+        gridExtentsDown(extents.ll(0), alignment(0), cellSize.width)
+        , gridExtentsDown(extents.ll(1), alignment(1), cellSize.height)
+        , gridExtentsUp(extents.ur(0), alignment(0), cellSize.width)
+        , gridExtentsUp(extents.ur(1), alignment(1), cellSize.height)
     };
 }
 
 } // namespace
 
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
-                             , double cellSize
+                             , const math::Size2f &cellSize
                              , const FacesPerCell &facesPerCell
                              , SimplifyOptions simplifyOptions)
 {
@@ -768,8 +770,8 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
 
     // grid size
     const math::Size2_<long> gsize
-        (long((ge.ur(0) - ge.ll(0)) / cellSize)
-         , long((ge.ur(1) - ge.ll(1)) / cellSize));
+        (long(std::round(((ge.ur(0) - ge.ll(0)) / cellSize.width)))
+         , long(std::round((ge.ur(1) - ge.ll(1)) / cellSize.width)));
 
     LOG(info2) << "[simplify] mesh extents: " << me;
     LOG(info2) << "[simplify] gridded mesh extents: "

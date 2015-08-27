@@ -96,7 +96,7 @@ typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
  * \return simplified mesh
  */
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
-                             , double cellSize
+                             , const math::Size2f &cellSize
                              , const FacesPerCell &facesPerCell
                              , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
                                                                 | SimplifyOption::RMNONMANIFOLDEDGES )
@@ -107,7 +107,7 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
 
 Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                              , const math::Point2 &alignment
-                             , double cellSize
+                             , const math::Size2f &cellSize
                              , const FacesPerCell &facesPerCell
                              , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
                                                                 | SimplifyOption::RMNONMANIFOLDEDGES );
@@ -160,7 +160,7 @@ inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
 
 inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                                     , const math::Point2 &alignment
-                                    , double cellSize
+                                    , const math::Size2f &cellSize
                                     , const FacesPerCell &facesPerCell
                                     , SimplifyOptions simplifyOptions)
 {
