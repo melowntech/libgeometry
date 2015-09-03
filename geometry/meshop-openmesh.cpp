@@ -12,8 +12,11 @@
 #include <OpenMesh/Tools/Decimater/DecimaterT.hh>
 #include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
 #include <OpenMesh/Tools/Decimater/ModNormalFlippingT.hh>
-#include "./meshop.hpp"
 #include <boost/numeric/ublas/vector.hpp>
+
+#include "math/math.hpp"
+
+#include "./meshop.hpp"
 
 namespace geometry {
 
@@ -306,18 +309,13 @@ struct Tiling {
     {}
 
     inline std::size_t gridIndex(double x, double y) const {
-        long xx(std::round((x - origin(0)) / tileSize.width));
-        long yy(std::round((y - origin(1)) / tileSize.height));
+        long xx((x - origin(0)) / tileSize.width);
+        long yy((y - origin(1)) / tileSize.height);
 
-#ifndef NDEBUG
-        // sanity check (only in debug mode)
-        if ((xx < 0) || (xx >= size.width)
-            || (yy < 0) || (yy >= size.height))
-        {
-            LOGTHROW(err2, std::runtime_error)
-                << "Grid index out of bounds!";
-        }
-#endif
+        // clamp to grid (values can be outside of grid in case non-integer
+        // tileSize
+        xx = math::clamp(xx, long(0), long(size.width - 1));
+        yy = math::clamp(yy, long(0), long(size.height -1));
 
         return xx + yy * size.width;
     };
