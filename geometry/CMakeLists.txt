@@ -35,35 +35,54 @@ else()
   message(STATUS "geometry: compiling without CGAL support")
 endif()
 
+if (OpenCV_FOUND)
+  message(STATUS "geometry: compiling in OpenCV support")
+
+  # add definitions
+  list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_OPENCV=1)
+
+  set(geometry_OPENCV_SOURCES
+    faceclip.hpp faceclip.cpp
+    pointindex.hpp
+    )
+
+  list(APPEND geometry_EXTRA_DEPENDS OpenCV)
+else()
+  message(STATUS "geometry: compiling without OpenCV support")
+endif()
+
 
 define_module(LIBRARY geometry DEPENDS math utility dbglog
   ${geometry_EXTRA_DEPENDS}
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
 set(geometry_SOURCES
-	  pointcloud.cpp
-	  volume.cpp
-    parse-obj.cpp
+  pointcloud.cpp
+  volume.cpp
+  parse-obj.cpp
 
-    polygon.hpp
-    polyclip.cpp
+  polygon.hpp
+  polyclip.cpp
 
-    triclip.hpp
+  triclip.hpp
 
-    mesh.hpp mesh.cpp
-    meshop.hpp meshop.cpp
+  mesh.hpp mesh.cpp
+  meshop.hpp meshop.cpp
 
-    neighbors.hpp
+  neighbors.hpp
 
-    smoothcloud.hpp smoothcloud.cpp
+  smoothcloud.hpp smoothcloud.cpp
 
-    mesh-voxelizer.hpp mesh-voxelizer.cpp
+  mesh-voxelizer.hpp mesh-voxelizer.cpp
 
-    volumeop.hpp volumeop.cpp
-    detail/volume.mcubes.hpp detail/volume.mcubes.cpp
+  volumeop.hpp volumeop.cpp
+  detail/volume.mcubes.hpp detail/volume.mcubes.cpp
 
-    ${geometry_OPENMESH_SOURCES}
-    ${geometry_CGAL_SOURCES}
+  binmesh.hpp binmesh.cpp
+
+  ${geometry_OPENMESH_SOURCES}
+  ${geometry_CGAL_SOURCES}
+  ${geometry_OPENCV_SOURCES}
 )
 
 add_library(geometry STATIC ${geometry_SOURCES})
