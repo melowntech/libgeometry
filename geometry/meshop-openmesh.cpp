@@ -238,7 +238,7 @@ Mesh::pointer simplify( const Mesh &mesh, int faceCount
 
     //preprocess mesh - remove non-manifold edges
     if (simplifyOptions & SimplifyOption::RMNONMANIFOLDEDGES) {
-        auto pmesh(removeNonManifoldEdges(mesh));
+        auto pmesh(geometry::removeNonManifoldEdges(mesh));
         toOpenMesh(*pmesh, omMesh);
     }
     else{
@@ -294,30 +294,39 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr)
 
 namespace {
 
+inline std::size_t gridIndexImpl(const math::Size2_<long> &size
+                                 , const math::Point2 origin
+                                 , const math::Size2f tileSize
+                                 , double x, double y)
+{
+    long xx((x - origin(0)) / tileSize.width);
+    long yy((y - origin(1)) / tileSize.height);
+
+    // clamp to grid (values can be outside of grid in case non-integer
+    // tileSize
+    xx = math::clamp(xx, long(0), long(size.width - 1));
+    yy = math::clamp(yy, long(0), long(size.height -1));
+
+    return xx + yy * size.width;
+}
+
 struct Tiling {
     math::Size2_<long> size;
     math::Point2 origin;
     math::Size2f tileSize;
-    FacesPerCell facesPerCell;
+    FacesPerCell::Functor facesPerCell;
 
     Tiling() : tileSize() {}
 
     Tiling(const math::Size2_<long> &size, const math::Point2 &origin
-           , const math::Size2f &tileSize, const FacesPerCell &facesPerCell)
+           , const math::Size2f &tileSize
+           , const FacesPerCell::Functor &facesPerCell)
         : size(size), origin(origin), tileSize(tileSize)
         , facesPerCell(facesPerCell)
     {}
 
     inline std::size_t gridIndex(double x, double y) const {
-        long xx((x - origin(0)) / tileSize.width);
-        long yy((y - origin(1)) / tileSize.height);
-
-        // clamp to grid (values can be outside of grid in case non-integer
-        // tileSize
-        xx = math::clamp(xx, long(0), long(size.width - 1));
-        yy = math::clamp(yy, long(0), long(size.height -1));
-
-        return xx + yy * size.width;
+        return gridIndexImpl(size, origin, tileSize, x, y);
     };
 
     inline math::Point2 tileLowerLeft(int index){
@@ -328,7 +337,9 @@ struct Tiling {
                             , y * tileSize.height + origin(1));
     }
 
-    inline std::vector<std::size_t> intersectingCells(math::Point2 triangle[3]) const{
+    inline std::vector<std::size_t> intersectingCells(math::Point2 triangle[3])
+        const
+    {
         std::vector<std::size_t> result;
 
         for(uint x = 0; x < size.width; ++x){
@@ -350,26 +361,21 @@ struct Tiling {
     /** Calculate maximum face count in all cells of grid. If real value is
      *  lower than maximum, set maximum to real value.
      */
-    std::vector<std::size_t> getMax(const std::vector<std::size_t> &real)
+    std::vector<std::size_t> getMax(const std::vector<std::size_t> &current)
         const
     {
-        std::vector<std::size_t> max;
+        FacesPerCell fpc(size, origin, tileSize);
+        facesPerCell(fpc);
 
-        auto ireal(real.begin());
-        for (long j(0); j < size.height; ++j) {
-            for (long i(0); i < size.width; ++i, ++ireal) {
-                max.push_back
-                    (std::min
-                     (facesPerCell
-                      (math::Extents2(origin(0) + i * tileSize.width
-                                      , origin(1) + j * tileSize.height
-                                      , origin(0) + (i + 1) * tileSize.width
-                                      , origin(1) + (j + 1) * tileSize.height))
-                      , *ireal));
-            }
+        // merge minimum values from current and expected face counts
+        auto out(fpc.get());
+        auto icurrent(current.begin());
+        for (auto &value : out) {
+            value = std::min(value, *icurrent++);
         }
 
-        return max;
+        // done
+        return out;
     }
 
     static OpenMesh::MPropHandleT<Tiling> Property;
@@ -527,7 +533,7 @@ private:
 };
 
 
-/*
+ /*
  * OpenMesh module for decimation mesh in grid.
  * Each cell has defined maximal face count and
  * once this face count is reached, incident faces
@@ -654,16 +660,16 @@ private:
             return;
         }
 
-        //decrement facecount in old cells
-        for(auto &cell : cellList(fh)){
+        // decrement facecount in old cells
+        for(auto &cell : cellList(fh)) {
             --current_[cell];
             cellFaces_[cell].erase(fh);
         }
-        //recalculate cells
+        // recalculate cells
         calculateCells(fh);
 
-        //increment facecount in new cells
-        for(auto &cell : cellList(fh)){
+        // increment facecount in new cells
+        for(auto &cell : cellList(fh)) {
             ++current_[cell];
             cellFaces_[cell].insert(fh);
         }
@@ -740,9 +746,27 @@ math::Extents2 gridExtents(const math::Extents2 &extents
 
 } // namespace
 
+std::size_t FacesPerCell::cellIndex(double x, double y) const
+{
+    return gridIndexImpl(gridSize_, origin_, cellSize_, x, y);
+}
+
+math::Extents2 FacesPerCell::cellExtents(std::size_t index) const
+{
+    // convert linear index to grid index
+    auto i(index % gridSize_.width);
+    auto j(index / gridSize_.width);
+
+    // return extents
+    return math::Extents2(origin_(0) + i * cellSize_.width
+                          , origin_(1) + j * cellSize_.height
+                          , origin_(0) + (i + 1) * cellSize_.width
+                          , origin_(1) + (j + 1) * cellSize_.height);
+}
+
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
                              , const math::Size2f &cellSize
-                             , const FacesPerCell &facesPerCell
+                             , const FacesPerCell::Functor &facesPerCell
                              , SimplifyOptions simplifyOptions)
 {
     LOG(info2) << "[simplify] alignment: "
@@ -753,7 +777,7 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     OMMesh omMesh;
     math::Extents2 me;
     if (simplifyOptions & SimplifyOption::RMNONMANIFOLDEDGES) {
-        auto pmesh(removeNonManifoldEdges(mesh));
+        auto pmesh(geometry::removeNonManifoldEdges(mesh));
         me =toOpenMesh(*pmesh, omMesh);
     }
     else{
@@ -799,7 +823,8 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
         decimator.module( hModNormalFlippingT ).set_max_normal_deviation(90);
     }
 
-    ModGrid2<OMMesh>::Handle hModGrid;
+    // ModGrid2<OMMesh>::Handle hModGrid;
+    ModGrid<OMMesh>::Handle hModGrid;
     decimator.add(hModGrid);
 
     decimator.initialize();

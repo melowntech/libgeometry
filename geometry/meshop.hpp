@@ -82,9 +82,42 @@ Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
  */
 Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents);
 
+/** Support structure for faces-per-tile calculation.
+ */
+class FacesPerCell {
+public:
+    typedef std::function<void (FacesPerCell&)> Functor;
+
+    typedef std::vector<std::size_t> PerCellCount;
+
+    FacesPerCell(const math::Size2_<long> &gridSize, const math::Point2 &origin
+                 , const math::Size2f &cellSize)
+        : gridSize_(gridSize), origin_(origin), cellSize_(cellSize)
+        , goal_(math::area(gridSize))
+    {}
+
+    /** Returns cell index.
+     */
+    std::size_t cellIndex(double x, double y) const;
+
+    std::size_t& operator[](std::size_t index) { return goal_[index]; }
+    std::size_t operator[](std::size_t index) const { return goal_[index]; }
+
+    const PerCellCount& get() const { return goal_; }
+    std::size_t size() const { return goal_.size(); }
+
+    const math::Size2f& cellSize() const { return cellSize_; }
+    math::Extents2 cellExtents(std::size_t index) const;
+
+private:
+    const math::Size2_<long> &gridSize_;
+    const math::Point2 &origin_;
+    const math::Size2f &cellSize_;
+    PerCellCount goal_;
+};
+
 /** Function that tells how many faces should given cell have.
  */
-typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
 
 /** Simplify mesh with custom number of faces in cell.
  *
@@ -97,7 +130,7 @@ typedef std::function<std::size_t (const math::Extents2&)> FacesPerCell;
  */
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
                              , const math::Size2f &cellSize
-                             , const FacesPerCell &facesPerCell
+                             , const FacesPerCell::Functor &facesPerCell
                              , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
                                                                 | SimplifyOption::RMNONMANIFOLDEDGES )
 #ifndef GEOMETRY_HAS_OPENMESH
@@ -108,7 +141,7 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
 Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                              , const math::Point2 &alignment
                              , const math::Size2f &cellSize
-                             , const FacesPerCell &facesPerCell
+                             , const FacesPerCell::Functor &facesPerCell
                              , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
                                                                 | SimplifyOption::RMNONMANIFOLDEDGES );
 
@@ -161,7 +194,7 @@ inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
 inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                                     , const math::Point2 &alignment
                                     , const math::Size2f &cellSize
-                                    , const FacesPerCell &facesPerCell
+                                    , const FacesPerCell::Functor &facesPerCell
                                     , SimplifyOptions simplifyOptions)
 {
     return simplifyInGrid(*mesh, alignment, cellSize, facesPerCell
