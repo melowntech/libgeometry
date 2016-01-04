@@ -8,6 +8,8 @@
 #ifndef geometry_meshop_hpp_included_
 #define geometry_meshop_hpp_included_
 
+#include <boost/optional.hpp>
+
 #include "utility/gccversion.hpp"
 
 #include "./mesh.hpp"
@@ -24,11 +26,41 @@ enum SimplifyOption
     RMNONMANIFOLDEDGES = 8,
     PREVENTFACEFLIP = 16
 };
-typedef long SimplifyOptions;
-  
+
+class SimplifyOptions {
+public:
+    SimplifyOptions(long flags = 0) : flags_(flags) {}
+
+    SimplifyOptions& flags(long flags) { flags_ = flags; return *this; }
+    bool check(long flag) const { return flags_ & flag; }
+
+    SimplifyOptions& maxEdgeLength(const boost::optional<float> &maxEdgeLength)
+    {
+        maxEdgeLength_ = maxEdgeLength; return *this;
+    }
+    const boost::optional<float>& maxEdgeLength() const {
+        return maxEdgeLength_;
+    }
+
+    SimplifyOptions&
+    minAspectRatio(const boost::optional<float> &minAspectRatio)
+    {
+        minAspectRatio_ = minAspectRatio; return *this;
+    }
+    const boost::optional<float>& minAspectRatio() const {
+        return minAspectRatio_;
+    }
+
+private:
+    long flags_;
+    boost::optional<float> maxEdgeLength_;
+    boost::optional<float> minAspectRatio_;
+};
+
 Mesh::pointer simplify(const Mesh &mesh, int faceCount
-                      , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
-                                                        | SimplifyOption::RMNONMANIFOLDEDGES )
+                      , const SimplifyOptions &simplifyOptions
+                       =  SimplifyOption::CORNERS
+                       | SimplifyOption::RMNONMANIFOLDEDGES)
 #ifndef GEOMETRY_HAS_OPENMESH
     UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
 #endif
@@ -40,8 +72,9 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount
  * \return simplified mesh
  */
 Mesh::pointer simplify( const Mesh::pointer &mesh, int faceCount
-                      , SimplifyOptions simplifyOptions = SimplifyOption::CORNERS 
-                                                        | SimplifyOption::RMNONMANIFOLDEDGES );
+                      , const SimplifyOptions &simplifyOptions
+                        = SimplifyOption::CORNERS
+                        | SimplifyOption::RMNONMANIFOLDEDGES);
 
 /** Simplify mesh with maximal geometric error
  * \param mesh mesh to simplify
@@ -142,8 +175,9 @@ Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                              , const math::Point2 &alignment
                              , const math::Size2f &cellSize
                              , const FacesPerCell::Functor &facesPerCell
-                             , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
-                                                                | SimplifyOption::RMNONMANIFOLDEDGES );
+                             , const SimplifyOptions &simplifyOptions
+                             = SimplifyOption::CORNERS
+                             | SimplifyOption::RMNONMANIFOLDEDGES);
 
 
 /** TODO: remove this once geometry::Obj is no longer used for modeling.
@@ -181,7 +215,7 @@ Mesh loadObj( const boost::filesystem::path &filepath );
 // inline stuff
 
 inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount
-                      , SimplifyOptions simplifyOptions)
+                      , const SimplifyOptions &simplifyOptions)
 {
     return simplify(*mesh, faceCount, simplifyOptions);
 }
@@ -195,7 +229,7 @@ inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                                     , const math::Point2 &alignment
                                     , const math::Size2f &cellSize
                                     , const FacesPerCell::Functor &facesPerCell
-                                    , SimplifyOptions simplifyOptions)
+                                    , const SimplifyOptions &simplifyOptions)
 {
     return simplifyInGrid(*mesh, alignment, cellSize, facesPerCell
                          , simplifyOptions);

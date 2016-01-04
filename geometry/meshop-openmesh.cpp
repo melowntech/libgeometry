@@ -12,6 +12,8 @@
 #include <OpenMesh/Tools/Decimater/DecimaterT.hh>
 #include <OpenMesh/Tools/Decimater/ModQuadricT.hh>
 #include <OpenMesh/Tools/Decimater/ModNormalFlippingT.hh>
+#include <OpenMesh/Tools/Decimater/ModAspectRatioT.hh>
+#include <OpenMesh/Tools/Decimater/ModEdgeLengthT.hh>
 #include <boost/numeric/ublas/vector.hpp>
 
 #include "math/math.hpp"
@@ -34,7 +36,8 @@ typedef OpenMesh::TriMesh_ArrayKernelT<NormalTraits> OMMesh;
 typedef OpenMesh::Decimater::DecimaterT<OMMesh> Decimator;
 typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
 typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippingT;
-
+typedef OpenMesh::Decimater::ModAspectRatioT<OMMesh>::Handle HModAspectRatioT;
+typedef OpenMesh::Decimater::ModEdgeLengthT<OMMesh>::Handle HModEdgeLengthT;
 
 /** Convert mesh to OpenMesh data structure and return mesh extents (2D bounding
  *  box)
@@ -229,37 +232,74 @@ void lockCorners(OMMesh &omMesh)
     }
 }
 
-} // namespace
-
-Mesh::pointer simplify( const Mesh &mesh, int faceCount
-                      , SimplifyOptions simplifyOptions)
+math::Extents2 prepareMesh(OMMesh omMesh, const Mesh &mesh
+                           , const SimplifyOptions &options)
 {
-    OMMesh omMesh;
+    math::Extents2 me;
 
-    //preprocess mesh - remove non-manifold edges
-    if (simplifyOptions & SimplifyOption::RMNONMANIFOLDEDGES) {
+    // preprocess mesh - remove non-manifold edges
+    if (options.check(SimplifyOption::RMNONMANIFOLDEDGES)) {
         auto pmesh(geometry::removeNonManifoldEdges(mesh));
-        toOpenMesh(*pmesh, omMesh);
-    }
-    else{
-        toOpenMesh(mesh, omMesh);
+        me = toOpenMesh(*pmesh, omMesh);
+    } else{
+        me = toOpenMesh(mesh, omMesh);
     }
     omMesh.update_normals();
 
-    // lock the corner vertices of the window to prevent simplifying the corners
-    if (simplifyOptions & SimplifyOption::CORNERS) lockCorners(omMesh);
-    if (simplifyOptions & SimplifyOption::INNERBORDER) lockBorder(omMesh, true, false);
-    if (simplifyOptions & SimplifyOption::OUTERBORDER) lockBorder(omMesh, false, true);
+    // lock the corner and/or border vertices based on flags
+    if (options.check(SimplifyOption::CORNERS)) {
+        lockCorners(omMesh);
+    }
+    if (options.check(SimplifyOption::INNERBORDER)) {
+        lockBorder(omMesh, true, false);
+    }
+    if (options.check(SimplifyOption::OUTERBORDER)) {
+        lockBorder(omMesh, false, true);
+    }
 
-    Decimator decimator(omMesh);
-    HModQuadric hModQuadric; // collapse priority based on vertex error quadric
-    
+    // return accumulated extents
+    return me;
+}
+
+void prepareDecimator(Decimator &decimator
+                         , const SimplifyOptions &options)
+{
+    // collapse priority based on vertex error quadric
+    HModQuadric hModQuadric;
     decimator.add(hModQuadric);
-    if (simplifyOptions & SimplifyOption::PREVENTFACEFLIP) {
+
+    // apply normal flipping prevention (if configured)
+    if (options.check(SimplifyOption::PREVENTFACEFLIP)) {
         HModNormalFlippingT hModNormalFlippingT;
         decimator.add(hModNormalFlippingT);
-        decimator.module( hModNormalFlippingT ).set_max_normal_deviation(90);
+        decimator.module(hModNormalFlippingT).set_max_normal_deviation(90);
     }
+
+    // apply aspect ratio (if configured)
+    if (options.minAspectRatio()) {
+        HModAspectRatioT h;
+        decimator.add(h);
+        decimator.module(h).set_aspect_ratio(*options.minAspectRatio());
+    }
+
+    // apply max edge lenght (if configured)
+    if (options.maxEdgeLength()) {
+        HModEdgeLengthT h;
+        decimator.add(h);
+        decimator.module(h).set_edge_length(*options.maxEdgeLength());
+    }
+}
+
+} // namespace
+
+Mesh::pointer simplify(const Mesh &mesh, int faceCount
+                       , const SimplifyOptions &options)
+{
+    OMMesh omMesh;
+    prepareMesh(omMesh, mesh, options);
+
+    Decimator decimator(omMesh);
+    prepareDecimator(decimator, options);
     decimator.initialize();
 
     decimator.decimate_to_faces(0, faceCount);
@@ -767,22 +807,15 @@ math::Extents2 FacesPerCell::cellExtents(std::size_t index) const
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
                              , const math::Size2f &cellSize
                              , const FacesPerCell::Functor &facesPerCell
-                             , SimplifyOptions simplifyOptions)
+                             , const SimplifyOptions &options)
 {
     LOG(info2) << "[simplify] alignment: "
                << std::setprecision(15) << alignment;
     LOG(info2) << "[simplify] cellSize: " << cellSize;
 
-    // convert tom openmesh structure
+    // convert to openmesh structure
     OMMesh omMesh;
-    math::Extents2 me;
-    if (simplifyOptions & SimplifyOption::RMNONMANIFOLDEDGES) {
-        auto pmesh(geometry::removeNonManifoldEdges(mesh));
-        me =toOpenMesh(*pmesh, omMesh);
-    }
-    else{
-        me =toOpenMesh(mesh, omMesh);
-    }
+    math::Extents2 me(prepareMesh(omMesh, mesh, options));
 
     // calculate grid extents
     const auto ge(gridExtents(me, alignment, cellSize));
@@ -801,32 +834,21 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     LOG(info2) << "[simplify] grid size: " << gsize;
     LOG(info2) << "[simplify] grid origin: " << gorigin;
 
-    // lock the corner vertices of the window to prevent simplifying the corners
-    if (simplifyOptions & SimplifyOption::CORNERS) lockCorners(omMesh);
-    if (simplifyOptions & SimplifyOption::INNERBORDER) lockBorder(omMesh, true, false);
-    if (simplifyOptions & SimplifyOption::OUTERBORDER) lockBorder(omMesh, false, true);
-
     // create and add tiling as a mesh property to mesh
     omMesh.add_property(Tiling::Property);
     omMesh.mproperty(Tiling::Property).push_back();
     omMesh.mproperty(Tiling::Property)[0]
         = Tiling(gsize, gorigin, cellSize, facesPerCell);
 
+    // create and prepare decimator
     Decimator decimator(omMesh);
+    prepareDecimator(decimator, options);
 
-    // collapse priority based on vertex error quadric
-    HModQuadric hModQuadric;
-    decimator.add(hModQuadric);
-    if (simplifyOptions & SimplifyOption::PREVENTFACEFLIP) {
-        HModNormalFlippingT hModNormalFlippingT;
-        decimator.add(hModNormalFlippingT);
-        decimator.module( hModNormalFlippingT ).set_max_normal_deviation(90);
-    }
-
-    // ModGrid2<OMMesh>::Handle hModGrid;
-    ModGrid<OMMesh>::Handle hModGrid;
+    // add decimator grid module
+    ModGrid2<OMMesh>::Handle hModGrid;
     decimator.add(hModGrid);
 
+    // initialized
     decimator.initialize();
 
     auto fc(decimator.module(hModGrid).desiredCount());
