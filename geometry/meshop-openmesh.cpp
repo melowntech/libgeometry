@@ -232,7 +232,7 @@ void lockCorners(OMMesh &omMesh)
     }
 }
 
-math::Extents2 prepareMesh(OMMesh omMesh, const Mesh &mesh
+math::Extents2 prepareMesh(OMMesh &omMesh, const Mesh &mesh
                            , const SimplifyOptions &options)
 {
     math::Extents2 me;
@@ -262,7 +262,7 @@ math::Extents2 prepareMesh(OMMesh omMesh, const Mesh &mesh
 }
 
 void prepareDecimator(Decimator &decimator
-                         , const SimplifyOptions &options)
+                      , const SimplifyOptions &options)
 {
     // collapse priority based on vertex error quadric
     HModQuadric hModQuadric;
