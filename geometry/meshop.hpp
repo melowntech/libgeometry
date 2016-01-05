@@ -164,8 +164,9 @@ private:
 Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
                              , const math::Size2f &cellSize
                              , const FacesPerCell::Functor &facesPerCell
-                             , SimplifyOptions simplifyOptions =  SimplifyOption::CORNERS 
-                                                                | SimplifyOption::RMNONMANIFOLDEDGES )
+                             , const SimplifyOptions &simplifyOptions
+                             =  SimplifyOption::CORNERS
+                             | SimplifyOption::RMNONMANIFOLDEDGES)
 #ifndef GEOMETRY_HAS_OPENMESH
     UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
 #endif
@@ -215,7 +216,7 @@ Mesh loadObj( const boost::filesystem::path &filepath );
 // inline stuff
 
 inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount
-                      , const SimplifyOptions &simplifyOptions)
+                              , const SimplifyOptions &simplifyOptions)
 {
     return simplify(*mesh, faceCount, simplifyOptions);
 }
@@ -232,7 +233,7 @@ inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
                                     , const SimplifyOptions &simplifyOptions)
 {
     return simplifyInGrid(*mesh, alignment, cellSize, facesPerCell
-                         , simplifyOptions);
+                          , simplifyOptions);
 }
 
 inline Obj asObj(const Mesh::pointer &mesh)
