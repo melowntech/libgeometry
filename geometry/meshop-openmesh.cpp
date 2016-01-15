@@ -845,7 +845,7 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     prepareDecimator(decimator, options);
 
     // add decimator grid module
-    ModGrid2<OMMesh>::Handle hModGrid;
+    ModGrid<OMMesh>::Handle hModGrid;
     decimator.add(hModGrid);
 
     // initialized
