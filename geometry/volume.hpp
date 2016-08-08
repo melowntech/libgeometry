@@ -1383,37 +1383,11 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     directions[1] = typename VolumeBase_t::Displacement_s(0,1,0);
     directions[2] = typename VolumeBase_t::Displacement_s(0,0,1);
     
-#if 0
-    auto printCorners = [&]() {
-        int X(this->cSize()(0) - 1), Y(this->cSize()(1) - 1);//, Z(this->cSize()(2) - 1);
-        LOG(info2) << "Corners: \n"
-            << "lower ul: " << this->container_.get(0,Y,0) << " -- "
-            << "lower ur: " << this->container_.get(X,Y,0) << " \n"
-            << "lower ll: " << this->container_.get(0,0,0) << " -- "
-            << "lower lr: " << this->container_.get(X,0,0) << " ";
-    };
-    
-    auto printSide = [&](const std::string &name) {
-        cv::Mat image(this->cSize()(1), this->cSize()(0), CV_8U);
-        for (int i = 0; i < this->cSize()(0); ++i) {
-            for (int j = 0; j < this->cSize()(1); ++j) {
-                image.at<char>(j,i) = this->container_.get(i,j,0) * 255.0 / 32768.0;
-            }
-        }
-        
-        imwrite(name, image);
-    };
-#endif
-    
-    //printSide("after-voxelization.png");
-    
     // to get right values in whole output, border condition has to be applied 
     // the capacity is already prepared to right value
     {
         auto offset(this->container_.offset());
         auto capacity(this->container_.capacity());
-//        LOG(info2) << "Corners before grow";
-//        printCorners();
         
         this->container_.setBorderType(BorderType::BORDER_REPLICATE);
         for (int i = 0; i < 3; ++i) {
@@ -1430,10 +1404,6 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
         }
         this->container_.setBorderType(BorderType::BORDER_CONSTANT);
     }
-//    LOG(info2) << "Corners after grow";
-//    printCorners();
-    
-//    printSide("after-grow.png");
 
     for(uint fAxis = 0; fAxis<3; ++fAxis){
         LOG( info2 )<<"Filtering volume in axis "<<fAxis;
@@ -1441,10 +1411,6 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
         filterInplace(filter,directions[fAxis],this->container_);
     }
     
-//    LOG(info2) << "Corners after filtering";
-//    printCorners();
-//    printSide("after-filtering.png");
-
     LOG( info2 )<<"Collecting filtered data.";
 
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
@@ -1458,10 +1424,11 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
                    , this->lower().y-shift
                    , this->lower().z-shift);
     
-    // make the new volume ready for next filtering (reserve space so the volume 
-    // can inflate to odd dimensions)
-    // plus reserve space for 2 layers of floor cells to prevent floor vanishing
-    // due to thinning when simplifying large flat surfaces
+    // make the new volume ready for next filtering (reserve space so the volume
+    // can be inflated to odd dimensions)
+    // plus reserve space for 2 layers of floor cells and 2 for ceil cells 
+    // to prevent floor and ceiling vanishing due to thinning when simplifying
+    // large flat surfaces
     double newVoxel(this->voxelSize()*factor);
     math::Size3i volSize( std::ceil((this->upper().x - ll.x) / newVoxel ) 
                        , std::ceil((this->upper().y - ll.y) / newVoxel )
@@ -1469,8 +1436,9 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     math::Size3i capacity( volSize(0) + !(volSize(0) % 2) 
                          , volSize(1) + !(volSize(1) % 2)
                          , volSize(2) + !(volSize(2) % 2));
-    // floor layers, they go under ll corner -> add offset to the volume
-    capacity(2) += 2;
+    // floor layers go under ll corner -> add offset to the volume
+    // add 2 floor and 2 ceil layers
+    capacity(2) += 4;
     math::Point3i offset(0,0,2);
     
     LOG(info2) << "Creating volume of size " << volSize 
@@ -1496,7 +1464,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
      * here. Imagine sizeX = 9 and displ = (2,0,0), pos = (0,0,0).             >
      * 
      * End iterator is then 8 which is valid last item in the array!
-     * Fix the iterators, when there is enough time. All their usage needs to be 
+     * Fix the iterators, when there is enough time. All their usage needs to be
      * checked.
      */
     
@@ -1527,9 +1495,6 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     }
     *this = std::move(tmp);
     
-//    LOG(info2) << "Corners after subsampling";
-//    printCorners();
-//    printSide("after-subsampling.png");
 }
 
 template <class Value_t, class Container_t>

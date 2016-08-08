@@ -139,9 +139,11 @@ void MeshVoxelizer::voxelize(){
                             , std::ceil( size(extents)(2)/params_.voxelSize ));
         // prepare volume for filtering and downsampling: reserve space so all
         // dimensions can be inflated to closest larger odd value
+        // add few layers of cells on the ceiling of the volume as a margin
+        // for subsampling.
         math::Size3i capacity( volSize(0) + !(volSize(0) % 2) 
                              , volSize(1) + !(volSize(1) % 2)
-                             , volSize(2) + !(volSize(2) % 2));
+                             , volSize(2) + !(volSize(2) % 2) + 4);
         
         LOG(info2) << "Creating volume of size " << volSize 
                    << " and capacity " << capacity;
