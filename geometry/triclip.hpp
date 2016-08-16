@@ -141,8 +141,8 @@ ClipTriangle::list clipTriangles( const ClipTriangle::list &triangles
             continue;
         }
 
-        int a, b, c;
-        double t;
+        int a = 0, b = 0, c = 0;
+        double t = 0.0;
 
         // case 1: one vertex on positive side, just adjust the other two
         if (count == 1)
@@ -174,7 +174,8 @@ ClipTriangle::list clipTriangles( const ClipTriangle::list &triangles
             auto x1uv((1.0 - t)*tri.uv[a] + t*tri.uv[b]);
 
             auto x2pos(detail::intersection(tri.pos[c], tri.pos[a], plane, t));
-            auto x2uv((1.0 - t)*tri.uv[c] + t*tri.uv[a]);
+            auto tmp(1.0 - t);
+            auto x2uv(tmp*tri.uv[c] + t*tri.uv[a]);
 
             result.emplace_back(x1pos, tri.pos[b], tri.pos[c],
                                 x1uv,  tri.uv[b],  tri.uv[c]);
