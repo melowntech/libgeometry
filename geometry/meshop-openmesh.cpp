@@ -201,9 +201,10 @@ void lockCorners(OMMesh &omMesh)
     }
 
     // find vertices nearest to the four corners of the bounding box
-    const OMMesh::VertexHandle zero(0);
+    typedef OMMesh::VertexHandle VHandle;
     struct { double dist; OMMesh::VertexHandle handle; } corners[2][2]
-        = {{{INFINITY, zero}, {INFINITY, zero}}, {{INFINITY, zero}, {INFINITY, zero}}};
+        = { {{INFINITY, VHandle()}, {INFINITY, VHandle()}},
+            {{INFINITY, VHandle()}, {INFINITY, VHandle()}} };
 
     omMesh.request_vertex_status();
     for (auto v_it = omMesh.vertices_begin();
@@ -227,7 +228,7 @@ void lockCorners(OMMesh &omMesh)
     for (int j = 0; j < 2; j++)
     {
         auto handle = corners[i][j].handle;
-        if (handle == OMMesh::VertexHandle()) continue;
+        if (handle == VHandle()) continue;
         LOG(info1) << "Locking corner vertex " << handle.idx();
         omMesh.status(handle).set_locked(true);
     }
