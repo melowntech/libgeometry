@@ -71,7 +71,7 @@ Mesh::pointer asMesh(const Obj &obj){
 void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
                , const std::string &mtlName)
 {
-    LOG(info4) << "Saving mesh to file <" << filepath << ">.";
+    LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
     std::ofstream out(filepath.string().c_str());
     out.setf(std::ios::scientific, std::ios::floatfield);
@@ -110,7 +110,7 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
 }
 
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
-    LOG(info4) << "Saving mesh to file <" << filepath << ">.";
+    LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
     std::ofstream out(filepath.string().c_str());
     out.setf(std::ios::scientific, std::ios::floatfield);

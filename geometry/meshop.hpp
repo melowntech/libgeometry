@@ -29,10 +29,19 @@ enum SimplifyOption
 
 class SimplifyOptions {
 public:
-    SimplifyOptions(long flags = 0) : flags_(flags) {}
+    SimplifyOptions(long flags = 0)
+        : flags_(flags), alternativeVertices_() {}
 
     SimplifyOptions& flags(long flags) { flags_ = flags; return *this; }
     bool check(long flag) const { return flags_ & flag; }
+
+    SimplifyOptions& maxError(const boost::optional<double> &maxError)
+    {
+        maxError_ = maxError; return *this;
+    }
+    const boost::optional<double>& maxError() const {
+        return maxError_;
+    }
 
     SimplifyOptions& maxEdgeLength(const boost::optional<float> &maxEdgeLength)
     {
@@ -51,10 +60,21 @@ public:
         return minAspectRatio_;
     }
 
+    SimplifyOptions&
+    alternativeVertices(const math::Points3 *alternativeVertices)
+    {
+        alternativeVertices_ = alternativeVertices; return *this;
+    }
+    const math::Points3* alternativeVertices() const {
+        return alternativeVertices_;
+    }
+
 private:
     long flags_;
+    boost::optional<double> maxError_;
     boost::optional<float> maxEdgeLength_;
     boost::optional<float> minAspectRatio_;
+    const math::Points3 *alternativeVertices_;
 };
 
 Mesh::pointer simplify(const Mesh &mesh, int faceCount

@@ -19,6 +19,7 @@
 #include "math/math.hpp"
 
 #include "./meshop.hpp"
+#include "./detail/hybrid-decimater.hpp"
 
 namespace geometry {
 
@@ -35,6 +36,7 @@ struct NormalTraits : public OpenMesh::DefaultTraits
 typedef OpenMesh::TriMesh_ArrayKernelT<NormalTraits> OMMesh;
 typedef OpenMesh::Decimater::DecimaterT<OMMesh> Decimator;
 typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
+typedef detail::ModQuadricHybrid<OMMesh>::Handle HModQuadricHybrid;
 typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippingT;
 typedef OpenMesh::Decimater::ModAspectRatioT<OMMesh>::Handle HModAspectRatioT;
 typedef OpenMesh::Decimater::ModEdgeLengthT<OMMesh>::Handle HModEdgeLengthT;
@@ -266,9 +268,25 @@ math::Extents2 prepareMesh(OMMesh &omMesh, const Mesh &mesh
 void prepareDecimator(Decimator &decimator
                       , const SimplifyOptions &options)
 {
-    // collapse priority based on vertex error quadric
-    HModQuadric hModQuadric;
-    decimator.add(hModQuadric);
+    if (options.alternativeVertices()) {
+        HModQuadricHybrid hModQuadricHybrid;
+        decimator.add(hModQuadricHybrid);
+        decimator.module(hModQuadricHybrid)
+            .setAlternativeVertices(options.alternativeVertices());
+
+        if (options.maxError()) {
+            decimator.module(hModQuadricHybrid)
+                .set_max_err(*options.maxError(), false);
+        }
+    } else {
+        // collapse priority based on vertex error quadric
+        HModQuadric hModQuadric;
+        decimator.add(hModQuadric);
+        if (options.maxError()) {
+            decimator.module(hModQuadric)
+                .set_max_err(*options.maxError(), false);
+        }
+    }
 
     // apply normal flipping prevention (if configured)
     if (options.check(SimplifyOption::PREVENTFACEFLIP)) {
