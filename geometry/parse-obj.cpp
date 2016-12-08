@@ -5,7 +5,11 @@
  *  Boost.Spirit-based OBJ file format parser.
  */
 
-#include <geometry/detail/parse-obj.hpp>
+#include <cstdio>
+
+#include "utility/expect.hpp"
+
+#include "./detail/parse-obj.hpp"
 
 namespace geometry {
 

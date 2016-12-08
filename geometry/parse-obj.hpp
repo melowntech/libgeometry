@@ -49,6 +49,7 @@ public:
 
     virtual void useMaterial(const std::string&) = 0;
 
+    // parses OBJ file from a stream, returns true if everything went OK
     bool parse(std::istream &is);
 };
 

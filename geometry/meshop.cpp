@@ -604,4 +604,55 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
 }
 
 
+void loadPly(ObjParserBase &parser, std::istream &is
+             , const boost::filesystem::path &path)
+{
+    // read header
+    std::string line;
+    int nvert = -1, ntris = -1;
+    do {
+        if (getline(is, line).eof()) break;
+        std::sscanf(line.c_str(), "element vertex %d", &nvert);
+        std::sscanf(line.c_str(), "element face %d", &ntris);
+    } while (line != "end_header");
+
+    if (nvert < 0 || ntris < 0) {
+        LOGTHROW(err2, std::runtime_error)
+            << "Unknown PLY format in file " << path << ".";
+    }
+
+    // load points
+    ObjParserBase::Vector3d v;
+    for (int i = 0; i < nvert; i++) {
+        is >> v.x >> v.y >> v.z;
+        parser.addVertex(v);
+    }
+
+    // load triangles
+    ObjParserBase::Facet f;
+    int n;
+    for (int i = 0; i < ntris; i++) {
+        is >> n >> f.v[0] >> f.v[1] >> f.v[2];
+        utility::expect(n == 3
+                        , "Only triangles are supported in PLY files (&s)."
+                        , path);
+        parser.addFacet(f);
+    }
+}
+
+void loadPly(ObjParserBase &parser, const boost::filesystem::path &path)
+{
+    std::ifstream f(path.string());
+    if (!f.good()) {
+        LOGTHROW(err2, std::runtime_error)
+            << "Can't open PLY file " << path << ".";
+    }
+
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+
+    loadPly(parser, f, path);
+
+    f.close();
+}
+
 } // namespace geometry
