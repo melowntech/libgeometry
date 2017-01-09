@@ -51,6 +51,9 @@ public:
 
     // parses OBJ file from a stream, returns true if everything went OK
     bool parse(std::istream &is);
+
+    // parses OBJ file from a stream, returns true if everything went OK
+    bool parse(const boost::filesystem::path &path);
 };
 
 struct Obj : public ObjParserBase {

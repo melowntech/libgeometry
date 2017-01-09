@@ -18,4 +18,19 @@ bool ObjParserBase::parse(std::istream &is)
     return detail::parse(is, *this);
 }
 
+bool ObjParserBase::parse(const boost::filesystem::path &path)
+{
+    LOG(info1) << "Loading OBJ file from " << path << ".";
+
+    std::ifstream f(path.string());
+    if (!f.good()) {
+        return false;
+    }
+
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+    auto res(parse(f));
+    f.close();
+    return res;
+}
+
 } // namespace geometry
