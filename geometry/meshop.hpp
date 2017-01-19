@@ -8,6 +8,8 @@
 #ifndef geometry_meshop_hpp_included_
 #define geometry_meshop_hpp_included_
 
+#include <iostream>
+
 #include <boost/optional.hpp>
 
 #include "utility/gccversion.hpp"
@@ -223,6 +225,14 @@ void saveAsObj(const Mesh::pointer &mesh
                , const boost::filesystem::path &filepath
                , const std::string &mtlName);
 
+void saveAsObj(const Mesh &mesh, std::ostream &os
+               , const std::string &mtlName
+               , const boost::filesystem::path &filepath = "UNKNOWN");
+
+void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
+               , const std::string &mtlName
+               , const boost::filesystem::path &filepath = "UNKNOWN");
+
 void saveAsPly( const Mesh::pointer &mesh
               , const boost::filesystem::path &filepath);
 
@@ -271,8 +281,16 @@ inline void saveAsObj(const Mesh::pointer &mesh
     return saveAsObj(*mesh, filepath, mtlName);
 }
 
+inline void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
+                      , const std::string &mtlName
+                      , const boost::filesystem::path &filepath)
+{
+    return saveAsObj(*mesh, os, mtlName, filepath);
+}
+
 inline void saveAsPly( const Mesh::pointer &mesh
-                      , const boost::filesystem::path &filepath){
+                      , const boost::filesystem::path &filepath)
+{
     return saveAsPly(*mesh, filepath);
 }
 

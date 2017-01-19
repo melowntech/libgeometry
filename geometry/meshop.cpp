@@ -68,12 +68,10 @@ Mesh::pointer asMesh(const Obj &obj){
     return newMesh;
 }
 
-void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
-               , const std::string &mtlName)
+void saveAsObj(const Mesh &mesh, std::ostream &out
+               , const std::string &mtlName
+               , const boost::filesystem::path &filepath)
 {
-    LOG(info2) << "Saving mesh to file <" << filepath << ">.";
-
-    std::ofstream out(filepath.string().c_str());
     out.setf(std::ios::scientific, std::ios::floatfield);
 
     out << "mtllib " << mtlName << '\n';
@@ -107,6 +105,22 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
         LOGTHROW(err3, std::runtime_error)
             << "Unable to save mesh to <" << filepath << ">.";
     }
+}
+
+void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
+               , const std::string &mtlName)
+{
+    LOG(info2) << "Saving mesh to file <" << filepath << ">.";
+
+    std::ofstream f;
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+    try {
+        f.open(filepath.string(), std::ios_base::out | std::ios_base::trunc);
+    } catch (const std::exception&) {
+        LOGTHROW(err3, std::runtime_error)
+            << "Unable to save mesh to <" << filepath << ">.";
+    }
+    saveAsObj(mesh, f, mtlName, filepath);
 }
 
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
