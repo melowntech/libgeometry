@@ -80,6 +80,8 @@ set(geometry_SOURCES
 
   binmesh.hpp binmesh.cpp
 
+  forsyth.hpp forsyth.cpp
+
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}
   ${geometry_OPENCV_SOURCES}
