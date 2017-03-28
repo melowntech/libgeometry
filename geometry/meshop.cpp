@@ -617,9 +617,7 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
     return pmesh;
 }
 
-
-void loadPly(ObjParserBase &parser, std::istream &is
-             , const boost::filesystem::path &path)
+MeshInfo measurePly(std::istream &is, const boost::filesystem::path &path)
 {
     // read header
     std::string line;
@@ -635,9 +633,17 @@ void loadPly(ObjParserBase &parser, std::istream &is
             << "Unknown PLY format in file " << path << ".";
     }
 
+    return MeshInfo(nvert, ntris);
+}
+
+void loadPly(ObjParserBase &parser, std::istream &is
+             , const boost::filesystem::path &path)
+{
+    const auto mi(measurePly(is, path));
+
     // load points
     ObjParserBase::Vector3d v;
-    for (int i = 0; i < nvert; i++) {
+    for (std::size_t i = 0; i < mi.vertexCount; i++) {
         is >> v.x >> v.y >> v.z;
         parser.addVertex(v);
     }
@@ -645,13 +651,28 @@ void loadPly(ObjParserBase &parser, std::istream &is
     // load triangles
     ObjParserBase::Facet f;
     int n;
-    for (int i = 0; i < ntris; i++) {
+    for (std::size_t i = 0; i < mi.faceCount; i++) {
         is >> n >> f.v[0] >> f.v[1] >> f.v[2];
         utility::expect(n == 3
                         , "Only triangles are supported in PLY files (&s)."
                         , path);
         parser.addFacet(f);
     }
+}
+
+MeshInfo measurePly(const boost::filesystem::path &path)
+{
+    std::ifstream f(path.string());
+    if (!f.good()) {
+        LOGTHROW(err2, std::runtime_error)
+            << "Can't open PLY file " << path << ".";
+    }
+
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+    const auto mi(measurePly(f, path));
+    f.close();
+
+    return mi;
 }
 
 void loadPly(ObjParserBase &parser, const boost::filesystem::path &path)

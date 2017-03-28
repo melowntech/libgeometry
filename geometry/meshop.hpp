@@ -246,6 +246,17 @@ Mesh loadObj( const boost::filesystem::path &filepath );
 // parses PLY from a file, throws on any error
 void loadPly(ObjParserBase &parser, const boost::filesystem::path &path);
 
+struct MeshInfo {
+    std::size_t vertexCount;
+    std::size_t faceCount;
+
+    MeshInfo(std::size_t vertexCount, std::size_t faceCount)
+        : vertexCount(vertexCount), faceCount(faceCount)
+    {}
+};
+
+MeshInfo measurePly(const boost::filesystem::path &path);
+
 // inline stuff
 
 inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount
