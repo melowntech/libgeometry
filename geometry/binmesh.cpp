@@ -106,7 +106,7 @@ void writeBinaryMesh(const boost::filesystem::path &path,
 
 geometry::Obj loadBinaryMesh(std::istream &f
                              , const boost::filesystem::path &path
-                             , MeshInfo *meshInfo)
+                             , BinMeshInfo *meshInfo)
 {
     // load header and check version
     char magic[8];
@@ -189,7 +189,7 @@ geometry::Obj loadBinaryMesh(std::istream &f
 }
 
 geometry::Obj loadBinaryMesh(const boost::filesystem::path &path
-                             , MeshInfo *meshInfo)
+                             , BinMeshInfo *meshInfo)
 {
     utility::ifstreambuf f(path.string());
     auto mesh(loadBinaryMesh(f, path, meshInfo));

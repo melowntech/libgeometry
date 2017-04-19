@@ -40,7 +40,7 @@ void writeBinaryMesh(const boost::filesystem::path &path,
 
 void writeBinaryMesh(std::ostream &out, const geometry::Obj &mesh);
 
-struct MeshInfo {
+struct BinMeshInfo {
     math::Extents3 bbox;
     std::size_t vertexCount;
     std::size_t faceCount;
@@ -49,7 +49,7 @@ struct MeshInfo {
 
 //! Loads an OBJ mesh from a compact binary format.
 geometry::Obj loadBinaryMesh(const boost::filesystem::path &path
-                             , MeshInfo *meshInfo = nullptr);
+                             , BinMeshInfo *meshInfo = nullptr);
 
 
 /** Loads an OBJ mesh from a compact binary format
@@ -58,7 +58,7 @@ geometry::Obj loadBinaryMesh(const boost::filesystem::path &path
 geometry::Obj loadBinaryMesh(std::istream &in
                              , const boost::filesystem::path &path
                              = "unknown"
-                             , MeshInfo *meshInfo = nullptr);
+                             , BinMeshInfo *meshInfo = nullptr);
 
 } // namespace geometry
 
