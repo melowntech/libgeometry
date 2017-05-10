@@ -433,6 +433,43 @@ protected:
     int _rootSize;
 };
 
+
+template <typename Value_t, typename Volume_t>
+class VolumeProxy : public VolumeContainer<Value_t>
+{
+public:
+    typedef typename VolumeContainer<Value_t>::BorderType BorderType;
+
+    VolumeProxy(const int sizeX, const int sizeY, const int sizeZ
+                , const Value_t & initValue
+                , const math::Size3i & capacity = math::Size3i()
+                , const math::Point3i & offset = math::Point3i()
+                , const BorderType & border = BorderType::BORDER_CONSTANT)
+
+        : VolumeContainer<Value_t>(sizeX, sizeY, sizeZ, initValue
+                                   , capacity, offset, border)
+    {}
+
+    void setVolume(const Volume_t &volume) {
+        volume_ = &volume;
+    }
+
+    Value_t get(int i, int j, int k) const
+    {
+        if (this->border_ == BorderType::BORDER_REPLICATE) {
+            const auto &size(this->size_);
+            i = std::min(std::max(i, 0), size(0)-1);
+            j = std::min(std::max(j, 0), size(1)-1);
+            k = std::min(std::max(k, 0), size(2)-1);
+        }
+        return (*volume_)(i, j, k);
+    }
+
+private:
+    const Volume_t* volume_;
+};
+
+
 /** GeoVolume_t is a volume with defined floating point georeferencing. */
 template <typename Value_t, class Container_t = VolumeOctree<Value_t>>
 class GeoVolume_t {
