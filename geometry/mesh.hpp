@@ -176,11 +176,11 @@ struct Mesh {
 
     /** Calculate face area.
      */
-    double area(const Face &face);
+    double area(const Face &face) const;
 
     /** Calculate face barycenter.
      */
-    math::Point3 barycenter(const Face &face);
+    math::Point3 barycenter(const Face &face) const;
 };
 
 inline void Mesh::addFace(math::Points3::size_type a

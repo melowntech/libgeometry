@@ -218,14 +218,14 @@ void Mesh::skirt( const math::Point3 & down ) {
     LOG( info1 ) << evenc << " even, " << oddc << " odd.";
 }
 
-double Mesh::area(const Face &face)
+double Mesh::area(const Face &face) const
 {
     return (norm_2(math::crossProduct(b(face) - a(face)
                                      , c(face) - a(face)))
             * 0.5);
 }
 
-math::Point3 Mesh::barycenter(const Face &face)
+math::Point3 Mesh::barycenter(const Face &face) const
 {
     const auto &va(a(face));
     const auto &vb(b(face));
