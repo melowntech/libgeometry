@@ -88,6 +88,7 @@
 #include <OpenMesh/Core/Geometry/QuadricT.hh>
 
 #include <boost/optional.hpp>
+#include <boost/utility/in_place_factory.hpp>
 
 #include "math/geometry_core.hpp"
 
