@@ -47,6 +47,11 @@ if (OpenCV_FOUND)
   set(geometry_OPENCV_SOURCES
     faceclip.hpp faceclip.cpp
     pointindex.hpp
+
+    volume.cpp
+    volumeop.hpp volumeop.cpp
+
+    mesh-voxelizer.hpp mesh-voxelizer.cpp
     )
 
   list(APPEND geometry_EXTRA_DEPENDS OpenCV)
@@ -62,7 +67,6 @@ define_module(LIBRARY geometry=${geometry_VERSION}
 
 set(geometry_SOURCES
   pointcloud.cpp
-  volume.cpp
   parse-obj.cpp
 
   polygon.hpp
@@ -77,9 +81,7 @@ set(geometry_SOURCES
 
   smoothcloud.hpp smoothcloud.cpp
 
-  mesh-voxelizer.hpp mesh-voxelizer.cpp
 
-  volumeop.hpp volumeop.cpp
   detail/volume.mcubes.hpp detail/volume.mcubes.cpp
 
   binmesh.hpp binmesh.cpp
