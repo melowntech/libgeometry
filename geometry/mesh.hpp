@@ -100,6 +100,7 @@ struct Face {
  */
 struct Mesh {
     typedef std::shared_ptr<Mesh> pointer;
+    typedef std::vector<Mesh> list;
 
     /** vertices */
     math::Points3 vertices;
