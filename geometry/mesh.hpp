@@ -58,7 +58,7 @@ struct Face {
     // Indices of texture coordinates.
     math::Points2::size_type ta, tb, tc;
 
-    Face() : a(), b(), c(), ta(), tb(), tc() {}
+    Face() : imageId(), a(), b(), c(), ta(), tb(), tc() {}
 
     Face(math::Points3::size_type a, math::Points3::size_type b
          , math::Points3::size_type c)
