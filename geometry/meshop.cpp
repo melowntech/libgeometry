@@ -273,9 +273,8 @@ Mesh loadObj( const boost::filesystem::path &filename )
 }
 
 
-Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents){
-    auto pmesh(std::make_shared<geometry::Mesh>());
-
+Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents)
+{
     ClipPlane planes[6];
     planes[0] = {+1.,  0., 0., extents.ll[0]};
     planes[1] = {-1.,  0., 0., -extents.ur[0]};
@@ -283,6 +282,7 @@ Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents){
     planes[3] = {0.,  -1., 0., -extents.ur[1]};
     planes[4] = {0.,  0., +1., extents.ll[2]};
     planes[5] = {0.,  0., -1., -extents.ur[2]};
+
     ClipTriangle::list clipped;
     for (const auto& face : omesh.faces) {
         clipped.emplace_back(
@@ -296,25 +296,32 @@ Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents){
         clipped = clipTriangles(clipped, planes[i], tinfos);
     }
     
-    std::map<math::Point3, math::Points3::size_type> pMap;
-    math::Points3::size_type next=0;
+    auto pmesh(std::make_shared<geometry::Mesh>());
 
-    for (const auto &triangle : clipped) {
-        math::Points3::size_type indices[3];
-        for (int i = 0; i < 3; i++) {
-            
+    typedef math::Points3::size_type Index;
+    std::map<math::Point3, Index> pMap;
+    Index next = 0;
+
+    for (const auto &triangle : clipped)
+    {
+        Index indices[3];
+        for (int i = 0; i < 3; i++)
+        {
             auto pair = pMap.insert(std::make_pair(triangle.pos[i], next));
-            if (pair.second) next++;
+            if (pair.second) {
+                next++;
+            }
             indices[i] = pair.first->second;
             
             if (indices[i] >= pmesh->vertices.size()) {
-                pmesh->vertices.push_back( triangle.pos[i] );
+                pmesh->vertices.push_back(triangle.pos[i]);
             }
         }
-        //do not add degenerated faces
-        if ( (indices[0] != indices[1])
-            && (indices[1] != indices[2])
-            && (indices[0] != indices[2])) {  
+        // do not add degenerated faces
+        if ((indices[0] != indices[1]) &&
+            (indices[1] != indices[2]) &&
+            (indices[0] != indices[2]))
+        {
             pmesh->addFace(indices[0], indices[1], indices[2]);
         }
     }

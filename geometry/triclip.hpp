@@ -27,8 +27,7 @@
  *  @file triclip.hpp
  *  @author Tomas Drinovsky <tomas.drinovsky@citationtech.net>
  *
- *  Triangle clipping stuff
- *  based on Jakub Cerveny's code
+ *  Triangle clipping stuff based on Jakub Cerveny's code
  */
 
 #ifndef geometry_triclip_hpp_included_
@@ -41,6 +40,7 @@
 namespace ublas = boost::numeric::ublas;
 
 namespace geometry { 
+
 /** Textured 3D triangle representation suitable for clipping algorithm.
  *
  * Triangle holds positions and tex. coordinates of its vertices.
@@ -48,29 +48,26 @@ namespace geometry {
 struct ClipTriangle
 {
         typedef std::vector<ClipTriangle> list;
-        // Indices of vertices.
-        math::Point3 pos[3];
-        // Indices of texture coordinates.
-        math::Point2 uv[3];
+        math::Point3 pos[3]; // vertices
+        math::Point2 uv[3];  // texture coordinates
 
         bool texCoordsAvailable;
 
-        ClipTriangle(math::Point3 a, math::Point3 b
-         , math::Point3 c)
-        : texCoordsAvailable(false)
+        ClipTriangle(math::Point3 a, math::Point3 b, math::Point3 c)
+            : texCoordsAvailable(false)
         {
             pos[0] = a, pos[1] = b, pos[2] = c;
         }
 
-        ClipTriangle(math::Point3 a, math::Point3 b
-         , math::Point3 c, math::Point2 ta
-         , math::Point2 tb, math::Point2 tc)
-        : texCoordsAvailable(true)
+        ClipTriangle(math::Point3 a, math::Point3 b, math::Point3 c,
+                     math::Point2 ta, math::Point2 tb, math::Point2 tc)
+            : texCoordsAvailable(true)
         {
             pos[0] = a, pos[1] = b, pos[2] = c;
             uv[0] = ta, uv[1] = tb, uv[2] = tc;
         }
 };
+
 /** Clipping plane
  *
  * Plane is defined by it's normal and the shift in the direction of the normal
@@ -89,7 +86,7 @@ struct ClipPlane
         {}
 };
 
-namespace detail{
+namespace detail {
     inline double signedDistance(const math::Point3 &point, const ClipPlane &plane)
     {
         return ublas::inner_prod(point,plane.normal) - plane.d;
