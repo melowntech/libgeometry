@@ -222,18 +222,14 @@ void lockCorners(OMMesh &omMesh)
     {
         const auto& pt = omMesh.point(v_it.handle());
         for (int i = 0; i < 2; i++) {
-            if (pt[i] < box[i][0]) box[i][0] = pt[i];
-            if (pt[i] > box[i][1]) box[i][1] = pt[i];
+            box[i][0] = std::min(double(pt[i]), box[i][0]);
+            box[i][1] = std::max(double(pt[i]), box[i][1]);
         }
     }
 
-    // find vertices nearest to the four corners of the bounding box
-    typedef OMMesh::VertexHandle VHandle;
-    struct { double dist; OMMesh::VertexHandle handle; } corners[2][2]
-        = { {{INFINITY, VHandle()}, {INFINITY, VHandle()}},
-            {{INFINITY, VHandle()}, {INFINITY, VHandle()}} };
+    // calculate smallest distances to the four corners of the bounding box
+    double dist[2][2] = { {INFINITY, INFINITY}, {INFINITY, INFINITY} };
 
-    omMesh.request_vertex_status();
     for (auto v_it = omMesh.vertices_begin();
               v_it != omMesh.vertices_end();  ++v_it)
     {
@@ -242,22 +238,31 @@ void lockCorners(OMMesh &omMesh)
         for (int i = 0; i < 2; i++)
         for (int j = 0; j < 2; j++)
         {
-            double dist = std::hypot(pt[0] - box[0][i], pt[1] - box[1][j]);
-            if (dist < corners[i][j].dist) {
-                corners[i][j].dist = dist;
-                corners[i][j].handle = v_it.handle();
-            }
+            double d = std::hypot(pt[0] - box[0][i], pt[1] - box[1][j]);
+            dist[i][j] = std::min(d, dist[i][j]);
         }
     }
 
-    // lock the corners
-    for (int i = 0; i < 2; i++)
-    for (int j = 0; j < 2; j++)
+    omMesh.request_vertex_status();
+
+    // lock vertices closest to the corners
+    // (note: multiple vertices can have the same minimum distance to a corner)
+    for (auto v_it = omMesh.vertices_begin();
+              v_it != omMesh.vertices_end();  ++v_it)
     {
-        auto handle = corners[i][j].handle;
-        if (handle == VHandle()) continue;
-        LOG(info1) << "Locking corner vertex " << handle.idx();
-        omMesh.status(handle).set_locked(true);
+        const auto& pt = omMesh.point(v_it.handle());
+
+        for (int i = 0; i < 2; i++)
+        for (int j = 0; j < 2; j++)
+        {
+            double d = std::hypot(pt[0] - box[0][i], pt[1] - box[1][j]);
+            if (std::abs(d - dist[i][j]) < 1e-12)
+            {
+                auto handle = v_it.handle();
+                LOG(info1) << "Locking corner vertex " << handle.idx();
+                omMesh.status(handle).set_locked(true);
+            }
+        }
     }
 }
 
