@@ -88,6 +88,8 @@ set(geometry_SOURCES
 
   forsyth.hpp forsyth.cpp
 
+  triangulate.hpp triangulate.cpp
+
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}
   ${geometry_OPENCV_SOURCES}
