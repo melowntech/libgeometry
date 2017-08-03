@@ -88,6 +88,7 @@ set(geometry_SOURCES
 
   forsyth.hpp forsyth.cpp
 
+  nonconvexclip.hpp nonconvexclip.cpp
   triangulate.hpp triangulate.cpp
 
   ${geometry_OPENMESH_SOURCES}

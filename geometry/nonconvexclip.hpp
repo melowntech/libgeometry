@@ -24,27 +24,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  @file triangulate.hpp
+ *  @file polyclip.hpp
  *  @author Jakub Cerveny <jakub.cerveny@melown.com>
  *
- *  Triangulation of a simple polygon.
+ *  Triangle clipping by a general nonconvex region.
  */
 
-#ifndef geometry_triangulate_hpp_included_
-#define geometry_triangulate_hpp_included_
+#ifndef geometry_nonconvexclip_hpp_included_
+#define geometry_nonconvexclip_hpp_included_
 
 #include "math/geometry.hpp"
 
+#include <tuple>
+
 namespace geometry {
 
-/** Perform triangulation of a simple polygon by the ear clipping algorithm (see
- *  https://en.wikipedia.org/wiki/Polygon_triangulation#Ear_clipping_method)
- *  The polygon may be non-convex, but it must be non-self-intersecting and
- *  must not contain holes.
- */
-math::Triangles2d simplePolyTriangulate(const math::Points2d &polygon);
+typedef std::vector<math::Points2d> Region; // TODO: include from somewhere else
 
+/** Clips a 3D triangle by a region in the XY plane. The result may be zero or
+ *  more triangles covering the result of the boolean operation. The clip region
+ *  may consist of multiple polygons. TODO: holes?
+ */
+math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
+                                        const Region &clipRegion);
+
+/** Similar to clipTriangleNonconvex, but handles texture coordinates as well.
+ */
+std::tuple<math::Triangles3d, math::Triangles2d>
+    clipTexturedTriangleNonconvex(const math::Triangle3d &tri,
+                                  const math::Triangle2d &uv,
+                                  const Region &clipRegion);
 
 } // namespace geometry
 
-#endif // geometry_triangulate_hpp_included_
+#endif // geometry_nonconvexclip_hpp_included_
