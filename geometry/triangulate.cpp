@@ -105,7 +105,7 @@ math::Triangles2d simplePolyTriangulate(const math::Points2d &polygon)
 
         if (isEar(vert, i, j, k))
         {
-            result.push_back({vert[i].pt, vert[j].pt, vert[k].pt});
+            result.push_back({{vert[i].pt, vert[j].pt, vert[k].pt}});
             vert.erase(vert.begin() + j);
             loop = 0;
         }
