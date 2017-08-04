@@ -204,7 +204,7 @@ math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
                 math::Point2d c = (tri[0] + tri[1] + tri[2]) * (1.0 / 3);
                 if (pointInMultiPolygon(c, mpolygon))
                 {
-                    result.push_back({tri[0], tri[1], tri[2]});
+                    result.push_back({{tri[0], tri[1], tri[2]}});
                 }
                 tri.erase(tri.begin() + 1);
             }

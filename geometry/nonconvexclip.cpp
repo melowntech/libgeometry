@@ -28,12 +28,18 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
+#if BOOST_VERSION < 105600
+#  include <boost/geometry/multi/geometries/multi_polygon.hpp>
+#else
+#  include <boost/geometry/geometries/multi_polygon.hpp>
+#endif
+
 #include "nonconvexclip.hpp"
 #include "triangulate.hpp"
 
-namespace geometry {
-
 namespace bg = boost::geometry;
+
+namespace geometry {
 
 typedef bg::model::d2::point_xy<double> Point;
 typedef bg::model::polygon<Point, false, false> Polygon; // ccw, unclosed
