@@ -184,6 +184,8 @@ struct Mesh {
     math::Point3 barycenter(const Face &face) const;
 };
 
+// inlines
+
 inline void Mesh::addFace(math::Points3::size_type a
                           , math::Points3::size_type b
                           , math::Points3::size_type c)

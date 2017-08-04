@@ -115,8 +115,6 @@ void load(const fs::path &path, std::vector<std::string> &imagePaths
 
 void Mesh::skirt( const math::Point3 & down ) {
 
-    (void) down;
-
     enum class Status {
             FW, BW, BI
     };
