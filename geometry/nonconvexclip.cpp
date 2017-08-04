@@ -28,58 +28,17 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
-//#include <boost/polygon/polygon.hpp>
-
 #include "nonconvexclip.hpp"
 #include "triangulate.hpp"
 
 namespace geometry {
 
-#if 0
-namespace bp = boost::polygon;
-
-typedef bp::point_data<int> Point;
-typedef bp::polygon_with_holes_data<int> Polygon;
-typedef bp::polygon_set_data<int> PolygonSet;
-
-const double Multiplier = 1024;
-
-math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
-                                        const Region &clipRegion)
-{
-    std::vector<Point> points;
-
-    // convert the triangle to a Polygon
-    points.reserve(3);
-    for (const auto &p : tri) {
-        points.emplace_back(p(0)*Multiplier, p(1)*Multiplier);
-    }
-    Polygon poly(points.begin(), points.end());
-
-    // convert the clip region to a PolygonSet
-    PolygonSet pset;
-    for (const auto pts : clipRegion)
-    {
-        points.clear();
-        points.reserve(pts.size());
-        for (const auto& p : pts) {
-            points.emplace_back(p(0)*Multiplier, p(1)*Multiplier);
-        }
-        pset.insert_vertex_sequence(points.begin(), points.end(),
-                                    bp::COUNTERCLOCKWISE, false);
-    }
-
-    // calculate intersection
-    std::vector<Polygon> clipped;
-    PolygonSet intersection(pset & poly);
-    intersection.get(clipped);
-}
-#endif
-
 namespace bg = boost::geometry;
 
 typedef bg::model::d2::point_xy<double> Point;
-typedef bg::model::polygon<Point, false, false> Polygon;
+typedef bg::model::polygon<Point, false, false> Polygon; // ccw, unclosed
+typedef bg::model::multi_polygon<Polygon> MultiPolygon;
+typedef Polygon::ring_type Ring;
 
 template<typename List>
 std::vector<Point> bgPoints(const List &list)
@@ -92,19 +51,21 @@ std::vector<Point> bgPoints(const List &list)
     return result;
 }
 
-math::Points2d outerPoints(const Polygon &poly)
+math::Points2d ringPoints(const Ring &ring)
 {
     math::Points2d result;
-    result.reserve(poly.outer().size());
-    for (const auto &p : poly.outer()) {
+    result.reserve(ring.size());
+    for (const auto &p : ring) {
         result.emplace_back(p.x(), p.y());
     }
     return result;
 }
 
-math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
-                                        const Region &clipRegion)
+math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
+                                        const math::MultiPolygon &clipRegion)
 {
+    math::Triangle3d tri(tri_);
+
     // tri -> tri2
     math::Triangle2d tri2;
     for (int i = 0; i < 3; i++) {
@@ -112,11 +73,29 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
         tri2[i](1) = tri[i](1);
     }
 
+    bool flip = false;
+    double ccw = math::ccw(tri2[0], tri2[1], tri2[2]);
+
+    if (std::abs(ccw) < 1e-10) {
+        return {}; // TODO: handle exactly vertical triangles
+    }
+
+    // ensure counter-clockwise orientation for clipping
+    if (ccw < 0.0) {
+        std::swap(tri[1], tri[2]);
+        std::swap(tri2[1], tri2[2]);
+        flip = true;
+    }
+
     // convert input to 2D polygons
-    Polygon poly1, poly2;
-    bg::append(poly1, bgPoints(tri));
-    for (const auto &ring : clipRegion) {
-        bg::append(poly2, bgPoints(ring));
+    Polygon poly1;
+    bg::assign_points(poly1, bgPoints(tri));
+
+    MultiPolygon poly2;
+    for (const auto &pts : clipRegion) {
+        Polygon part;
+        bg::assign_points(part, bgPoints(pts));
+        poly2.push_back(part);
     }
 
     // calculate intersection
@@ -124,11 +103,15 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
     bg::intersection(poly1, poly2, isect);
 
     // triangulate
-    math::Triangles2d tris2;
+    math::MultiPolygon isect2;
+    isect2.reserve(isect.size());
     for (const auto &poly : isect) {
-        auto tr(simplePolyTriangulate(outerPoints(poly)));
-        tris2.insert(tris2.end(), tr.begin(), tr.end());
+        isect2.push_back(ringPoints(poly.outer()));
+        for (const auto &ring : poly.inners()) {
+            isect2.push_back(ringPoints(ring));
+        }
     }
+    math::Triangles2d tris2(generalPolyTriangulate(isect2));
 
     // restore Z coords
     math::Triangles3d tris3;
@@ -144,6 +127,9 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
             t3[i](2) = l(0)*tri[0](2) +
                        l(1)*tri[1](2) +
                        l(2)*tri[2](2);
+        }
+        if (flip) {
+            std::swap(t3[1], t3[2]);
         }
         tris3.push_back(t3);
     }
@@ -167,7 +153,7 @@ math::Point3 barycentric3D(const math::Point3 &p, const math::Point3 &a,
 std::tuple<math::Triangles3d, math::Triangles2d>
     clipTexturedTriangleNonconvex(const math::Triangle3d &tri,
                                   const math::Triangle2d &uv,
-                                  const Region &clipRegion)
+                                  const math::MultiPolygon &clipRegion)
 {
     std::tuple<math::Triangles3d, math::Triangles2d> result;
     auto &tris3(std::get<0>(result));

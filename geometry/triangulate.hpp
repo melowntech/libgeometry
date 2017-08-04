@@ -27,7 +27,7 @@
  *  @file triangulate.hpp
  *  @author Jakub Cerveny <jakub.cerveny@melown.com>
  *
- *  Triangulation of a simple polygon.
+ *  Triangulation polygons.
  */
 
 #ifndef geometry_triangulate_hpp_included_
@@ -39,10 +39,16 @@ namespace geometry {
 
 /** Perform triangulation of a simple polygon by the ear clipping algorithm (see
  *  https://en.wikipedia.org/wiki/Polygon_triangulation#Ear_clipping_method)
- *  The polygon may be non-convex, but it must be non-self-intersecting and
- *  must not contain holes.
+ *  The polygon must be CCW oriented, must not self-intersect and must not
+ *  contain holes. It may be nonconvex.
  */
-math::Triangles2d simplePolyTriangulate(const math::Points2d &polygon);
+math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon);
+
+/** Triangulate a general multipolygon (with holes). The function first performs
+ *  Delaunay triangulation of all points in the multipolygon and then returns
+ *  those that lie inside.
+ */
+math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon);
 
 
 } // namespace geometry
