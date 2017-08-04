@@ -79,7 +79,8 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
 namespace bg = boost::geometry;
 
 typedef bg::model::d2::point_xy<double> Point;
-typedef bg::model::polygon<Point, false, false> Polygon;
+typedef bg::model::polygon<Point, false, false> Polygon; // ccw, unclosed
+typedef bg::model::multi_polygon<Polygon> MultiPolygon;
 
 template<typename List>
 std::vector<Point> bgPoints(const List &list)
@@ -113,10 +114,14 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
     }
 
     // convert input to 2D polygons
-    Polygon poly1, poly2;
-    bg::append(poly1, bgPoints(tri));
-    for (const auto &ring : clipRegion) {
-        bg::append(poly2, bgPoints(ring));
+    Polygon poly1;
+    bg::assign_points(poly1, bgPoints(tri));
+
+    MultiPolygon poly2;
+    for (const auto &pts : clipRegion) {
+        Polygon part;
+        bg::assign_points(part, bgPoints(pts));
+        poly2.push_back(part);
     }
 
     // calculate intersection

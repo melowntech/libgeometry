@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  @file polyclip.hpp
+ *  @file nonconvexclip.hpp
  *  @author Jakub Cerveny <jakub.cerveny@melown.com>
  *
  *  Triangle clipping by a general nonconvex region.
@@ -43,7 +43,7 @@ typedef std::vector<math::Points2d> Region; // TODO: include from somewhere else
 
 /** Clips a 3D triangle by a region in the XY plane. The result may be zero or
  *  more triangles covering the result of the boolean operation. The clip region
- *  may consist of multiple polygons. TODO: holes?
+ *  may consist of multiple nonconvex (but simple) polygons. TODO: holes?
  */
 math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
                                         const Region &clipRegion);
