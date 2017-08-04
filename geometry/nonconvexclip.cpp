@@ -51,16 +51,6 @@ std::vector<Point> bgPoints(const List &list)
     return result;
 }
 
-/*math::Points2d outerPoints(const Polygon &poly)
-{
-    math::Points2d result;
-    result.reserve(poly.outer().size());
-    for (const auto &p : poly.outer()) {
-        result.emplace_back(p.x(), p.y());
-    }
-    return result;
-}*/
-
 math::Points2d ringPoints(const Ring &ring)
 {
     math::Points2d result;
@@ -71,14 +61,30 @@ math::Points2d ringPoints(const Ring &ring)
     return result;
 }
 
-math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
+math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
                                         const math::MultiPolygon &clipRegion)
 {
+    math::Triangle3d tri(tri_);
+
     // tri -> tri2
     math::Triangle2d tri2;
     for (int i = 0; i < 3; i++) {
         tri2[i](0) = tri[i](0);
         tri2[i](1) = tri[i](1);
+    }
+
+    bool flip = false;
+    double ccw = math::ccw(tri2[0], tri2[1], tri2[2]);
+
+    if (std::abs(ccw) < 1e-10) {
+        return {}; // TODO: handle exactly vertical triangles
+    }
+
+    // ensure counter-clockwise orientation for clipping
+    if (ccw < 0.0) {
+        std::swap(tri[1], tri[2]);
+        std::swap(tri2[1], tri2[2]);
+        flip = true;
     }
 
     // convert input to 2D polygons
@@ -97,13 +103,6 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
     bg::intersection(poly1, poly2, isect);
 
     // triangulate
-#if 0
-    math::Triangles2d tris2;
-    for (const auto &poly : isect) {
-        auto tr(simplePolyTriangulate(outerPoints(poly)));
-        tris2.insert(tris2.end(), tr.begin(), tr.end());
-    }
-#else
     math::MultiPolygon isect2;
     isect2.reserve(isect.size());
     for (const auto &poly : isect) {
@@ -113,7 +112,6 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
         }
     }
     math::Triangles2d tris2(generalPolyTriangulate(isect2));
-#endif
 
     // restore Z coords
     math::Triangles3d tris3;
@@ -129,6 +127,9 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
             t3[i](2) = l(0)*tri[0](2) +
                        l(1)*tri[1](2) +
                        l(2)*tri[2](2);
+        }
+        if (flip) {
+            std::swap(t3[1], t3[2]);
         }
         tris3.push_back(t3);
     }

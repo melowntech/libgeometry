@@ -175,8 +175,6 @@ const double InvMultiplier = 1.0 / Multiplier;
 
 math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
 {
-    LOG(info2) << "generalPolyTriangulate, " << mpolygon.size();
-
     std::vector<bp::point_data<int> > vertices;
     for (const auto &poly : mpolygon) {
         for (const auto &p : poly) {
