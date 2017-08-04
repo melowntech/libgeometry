@@ -24,6 +24,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "boost/polygon/voronoi.hpp"
+
 #include "dbglog/dbglog.hpp"
 
 #include "triangulate.hpp"
@@ -82,7 +84,7 @@ bool isEar(const Vertices &vert, int i, int j, int k)
 
 } // namespace
 
-math::Triangles2d simplePolyTriangulate(const math::Points2d &polygon)
+math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon)
 {
     std::vector<Vertex> vert;
     vert.reserve(polygon.size());
@@ -103,6 +105,8 @@ math::Triangles2d simplePolyTriangulate(const math::Points2d &polygon)
         if (i < 0) { i = n-1; }
         if (k >= n) { k = 0; }
 
+        // TODO: process ears with shorter diagnoals first, for better quality
+
         if (isEar(vert, i, j, k))
         {
             result.push_back({vert[i].pt, vert[j].pt, vert[k].pt});
@@ -117,6 +121,99 @@ math::Triangles2d simplePolyTriangulate(const math::Points2d &polygon)
                 break;
             }
         }
+    }
+    return result;
+}
+
+namespace {
+
+// based on https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
+// TODO: maybe move to polygon.hpp
+bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
+{
+    bool c = false;
+    int nvert = poly.size();
+    for (int i = 0, j = nvert-1; i < nvert; j = i++)
+    {
+        if ( ((poly[i](1) > test(1)) != (poly[j](1) > test(1))) &&
+             (test(0) < (poly[j](0) - poly[i](0)) * (test(1) - poly[i](1)) /
+                        (poly[j](1) - poly[i](1)) + poly[i](0)) )
+        {
+           c = !c;
+        }
+    }
+    return c;
+}
+
+bool pointInMultiPolygon(const math::Point2d &test,
+                         const math::MultiPolygon &mpoly)
+{
+    bool c = false;
+    for (const auto &poly : mpoly)
+    {
+        int nvert = poly.size();
+        for (int i = 0, j = nvert-1; i < nvert; j = i++)
+        {
+            if ( ((poly[i](1) > test(1)) != (poly[j](1) > test(1))) &&
+                 (test(0) < (poly[j](0) - poly[i](0)) * (test(1) - poly[i](1)) /
+                            (poly[j](1) - poly[i](1)) + poly[i](0)) )
+            {
+               c = !c;
+            }
+        }
+    }
+    return c;
+}
+
+} // namespace
+
+namespace bp = boost::polygon;
+
+const double Multiplier = (1 << 16);
+const double InvMultiplier = 1.0 / Multiplier;
+
+
+math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
+{
+    LOG(info2) << "generalPolyTriangulate, " << mpolygon.size();
+
+    std::vector<bp::point_data<int> > vertices;
+    for (const auto &poly : mpolygon) {
+        for (const auto &p : poly) {
+            vertices.emplace_back(p(0)*Multiplier, p(1)*Multiplier);
+        }
+    }
+
+    bp::voronoi_diagram<double> voronoi;
+    bp::construct_voronoi(vertices.begin(), vertices.end(), &voronoi);
+
+    math::Triangles2d result;
+
+    for (const auto& vertex : voronoi.vertices())
+    {
+        std::vector<math::Point2d> tri;
+        auto edge = vertex.incident_edge();
+        do
+        {
+            auto cell = edge->cell();
+            assert(cell->contains_point());
+
+            const auto &v = vertices[cell->source_index()];
+            tri.emplace_back(v.x()*InvMultiplier, v.y()*InvMultiplier);
+
+            if (tri.size() == 3)
+            {
+                math::Point2d c = (tri[0] + tri[1] + tri[2]) * (1.0 / 3);
+                if (pointInMultiPolygon(c, mpolygon))
+                {
+                    result.push_back({tri[0], tri[1], tri[2]});
+                }
+                tri.erase(tri.begin() + 1);
+            }
+
+            edge = edge->rot_next();
+        }
+        while (edge != vertex.incident_edge());
     }
     return result;
 }

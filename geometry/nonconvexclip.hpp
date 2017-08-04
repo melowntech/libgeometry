@@ -27,7 +27,7 @@
  *  @file nonconvexclip.hpp
  *  @author Jakub Cerveny <jakub.cerveny@melown.com>
  *
- *  Triangle clipping by a general nonconvex region.
+ *  Triangle clipping by a general region.
  */
 
 #ifndef geometry_nonconvexclip_hpp_included_
@@ -39,21 +39,19 @@
 
 namespace geometry {
 
-typedef std::vector<math::Points2d> Region; // TODO: include from somewhere else
-
 /** Clips a 3D triangle by a region in the XY plane. The result may be zero or
  *  more triangles covering the result of the boolean operation. The clip region
- *  may consist of multiple nonconvex (but simple) polygons. TODO: holes?
+ *  may consist of multiple nonconvex CCW polygons and reverse oriented holes.
  */
 math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
-                                        const Region &clipRegion);
+                                        const math::MultiPolygon &clipRegion);
 
 /** Similar to clipTriangleNonconvex, but handles texture coordinates as well.
  */
 std::tuple<math::Triangles3d, math::Triangles2d>
     clipTexturedTriangleNonconvex(const math::Triangle3d &tri,
                                   const math::Triangle2d &uv,
-                                  const Region &clipRegion);
+                                  const math::MultiPolygon &clipRegion);
 
 } // namespace geometry
 
