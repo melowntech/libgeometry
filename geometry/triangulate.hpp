@@ -44,9 +44,9 @@ namespace geometry {
  */
 math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon);
 
-/** Triangulate a general multipolygon (with holes). The function first performs
- *  Delaunay triangulation of all points in the multipolygon and then returns
- *  those that lie inside.
+/** Triangulate a general multipolygon (possibly with holes). The function first
+ *  performs Delaunay triangulation of all points in the multipolygon and then
+ *  returns triangles that lie inside.
  */
 math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon);
 
