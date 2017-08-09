@@ -38,17 +38,12 @@ const double eps = 1e-12;
 
 typedef math::Point2d Point;
 
-double convex(const Point &a, const Point &b, const Point &c)
-{
-    return (b(0) - a(0))*(c(1) - a(1)) - (b(1) - a(1))*(c(0) - a(0));
-}
-
 bool insideTriangle(const Point &a, const Point &b, const Point &c,
                     const Point &pt)
 {
-    return convex(a, b, pt) > eps &&
-           convex(b, c, pt) > eps &&
-           convex(c, a, pt) > eps;
+    return math::ccw(a, b, pt) > eps &&
+           math::ccw(b, c, pt) > eps &&
+           math::ccw(c, a, pt) > eps;
 }
 
 struct Vertex
@@ -65,7 +60,7 @@ typedef std::vector<Vertex> Vertices;
 bool isEar(const Vertices &vert, int i, int j, int k)
 {
     // the vertex must be convex
-    if (convex(vert[i].pt, vert[j].pt, vert[k].pt) < eps) {
+    if (math::ccw(vert[i].pt, vert[j].pt, vert[k].pt) < eps) {
         return false;
     }
 
@@ -169,23 +164,22 @@ bool pointInMultiPolygon(const math::Point2d &test,
 
 namespace bp = boost::polygon;
 
-const double Multiplier = (1 << 16);
-const double InvMultiplier = 1.0 / Multiplier;
-
-
 math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
 {
-    std::vector<bp::point_data<int> > vertices;
+    std::vector<bp::point_data<double> > points;
     for (const auto &poly : mpolygon) {
         for (const auto &p : poly) {
-            vertices.emplace_back(p(0)*Multiplier, p(1)*Multiplier);
+            points.emplace_back(p(0), p(1));
         }
     }
 
     bp::voronoi_diagram<double> voronoi;
-    bp::construct_voronoi(vertices.begin(), vertices.end(), &voronoi);
+    bp::construct_voronoi(points.begin(), points.end(), &voronoi);
 
     math::Triangles2d result;
+
+    // TODO: we should really do constrained Delaunay triangulation here to
+    // make sure all required edges are contained in the output.
 
     for (const auto& vertex : voronoi.vertices())
     {
@@ -196,8 +190,8 @@ math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
             auto cell = edge->cell();
             assert(cell->contains_point());
 
-            const auto &v = vertices[cell->source_index()];
-            tri.emplace_back(v.x()*InvMultiplier, v.y()*InvMultiplier);
+            const auto &v = points[cell->source_index()];
+            tri.emplace_back(v.x(), v.y());
 
             if (tri.size() == 3)
             {
