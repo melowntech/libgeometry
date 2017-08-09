@@ -1,5 +1,5 @@
 # bump version here
-set(geometry_VERSION 1.9)
+set(geometry_VERSION 1.10)
 
 set(geometry_EXTRA_DEPENDS)
 set(geometry_EXTRA_DEFINITIONS)
@@ -61,7 +61,7 @@ endif()
 
 
 define_module(LIBRARY geometry=${geometry_VERSION}
-  DEPENDS math>=1.2 utility>=1.11 dbglog>=1.4
+  DEPENDS math>=1.4 utility>=1.11 dbglog>=1.4
   ${geometry_EXTRA_DEPENDS}
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
