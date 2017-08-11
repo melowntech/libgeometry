@@ -164,12 +164,15 @@ bool pointInMultiPolygon(const math::Point2d &test,
 
 namespace bp = boost::polygon;
 
+const double Mult = 1 << 16; // work around boost polygon integer nature
+const double InvMult = 1.0 / Mult;
+
 math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
 {
     std::vector<bp::point_data<double> > points;
     for (const auto &poly : mpolygon) {
         for (const auto &p : poly) {
-            points.emplace_back(p(0), p(1));
+            points.emplace_back(p(0)*Mult, p(1)*Mult);
         }
     }
 
@@ -191,7 +194,7 @@ math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
             assert(cell->contains_point());
 
             const auto &v = points[cell->source_index()];
-            tri.emplace_back(v.x(), v.y());
+            tri.emplace_back(v.x()*InvMult, v.y()*InvMult);
 
             if (tri.size() == 3)
             {
