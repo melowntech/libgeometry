@@ -51,6 +51,8 @@ public:
         operator math::Point3d() const {
             return math::Point3d(x, y, z);
         }
+
+        bool operator<(const Vector3d &p) const;
     };
 
     struct Facet {
@@ -114,6 +116,8 @@ struct Obj : public ObjParserBase {
     }
 };
 
+// io
+
 template <typename E, typename T>
 std::basic_ostream<E, T>&
 operator<<(std::basic_ostream<E,T> &os
@@ -138,6 +142,16 @@ operator<<(std::basic_ostream<E,T> &os
     }
 
     return os;
+}
+
+// inlines
+inline bool ObjParserBase::Vector3d::operator<(const Vector3d &p) const
+{
+    if (x < p.x) { return true; }
+    if (p.x < x) { return false; }
+    if (y < p.y) { return true; }
+    if (p.y < y) { return false; }
+    return (z < p.z);
 }
 
 } // namespace geometry
