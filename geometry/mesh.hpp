@@ -67,8 +67,9 @@ struct Face {
 
     Face(math::Points3::size_type a, math::Points3::size_type b
          , math::Points3::size_type c, math::Points2::size_type ta
-         , math::Points2::size_type tb, math::Points2::size_type tc)
-        : imageId(), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
+         , math::Points2::size_type tb, math::Points2::size_type tc
+         , unsigned int imageId = 0)
+        : imageId(imageId), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
     {}
 
     /** Calculate normal of this face.
