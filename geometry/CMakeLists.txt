@@ -1,5 +1,5 @@
 # bump version here
-set(geometry_VERSION 1.10)
+set(geometry_VERSION 1.11)
 
 set(geometry_EXTRA_DEPENDS)
 set(geometry_EXTRA_DEFINITIONS)
@@ -50,11 +50,23 @@ if (OpenCV_FOUND)
 
     volume.cpp
     volumeop.hpp volumeop.cpp
-
-    mesh-voxelizer.hpp mesh-voxelizer.cpp
     )
 
   list(APPEND geometry_EXTRA_DEPENDS OpenCV)
+
+  # extra sources that need imgproc
+  if(MODULE_imgproc_FOUND)
+    message(STATUS "geometry: compiling in imgproc support")
+    list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_IMGPROC=1)
+
+    list(APPEND geometry_OPENCV_SOURCES
+      mesh-voxelizer.hpp mesh-voxelizer.cpp
+      )
+
+    list(APPEND geometry_EXTRA_DEPENDS imgproc=>1.23)
+  else()
+    message(STATUS "geometry: compiling without imgproc support")
+  endif()
 else()
   message(STATUS "geometry: compiling without OpenCV support")
 endif()

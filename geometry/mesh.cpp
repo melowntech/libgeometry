@@ -149,6 +149,13 @@ double Mesh::area(const Face &face) const
             * 0.5);
 }
 
+double Mesh::txArea(const Face &face) const
+{
+    return (norm_2(math::crossProduct(tb(face) - ta(face)
+                                     , tc(face) - ta(face)))
+            * 0.5);
+}
+
 math::Point3 Mesh::barycenter(const Face &face) const
 {
     const auto &va(a(face));
