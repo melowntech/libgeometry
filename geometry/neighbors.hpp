@@ -23,6 +23,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
  *  @file neighbors.hpp
  *  @author Vaclav Blazek <vaclav.blazek@citationtech.net>
@@ -44,23 +45,24 @@ namespace geometry {
 
 /** Find neighbors of a point in given radius.
  */
-template <typename PointType>
-double collectNeighbors(const KdTree<PointType> &kdtree
+template <typename PointType, unsigned int K, typename G, typename C>
+double collectNeighbors(const KdTree<PointType, K, G, C> &kdtree
                         , const PointType &point
-                        , typename KdTree<PointType>::Neighbors &neighbors
+                        , typename KdTree<PointType, K, G, C>
+                        ::Neighbors &neighbors
                         , size_t max, double radius
                         , bool dontCutFirstRadius);
 
 // implementation
 
-template <typename PointType>
+template <typename PointType, unsigned int K, typename G, typename C>
 inline double
-collectNeighbors(const KdTree<PointType> &kdtree
+collectNeighbors(const KdTree<PointType, K, G, C> &kdtree
                  , const PointType &point
-                 , typename KdTree<PointType>::Neighbors &neighbors
+                 , typename KdTree<PointType, K, G, C>::Neighbors &neighbors
                  , size_t max, double radius, bool dontCutFirstRadius)
 {
-    typedef typename KdTree<PointType>::Neighbor Neighbor;
+    typedef typename KdTree<PointType, K, G, C>::Neighbor Neighbor;
 
     // we need to limit max number of neighbors to same sane value
     max = std::min(max, kdtree.size() / 2);
