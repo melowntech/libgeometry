@@ -124,6 +124,7 @@ math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon)
 
 namespace {
 
+#if 0
 // based on https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
 // TODO: maybe move to polygon.hpp
 bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
@@ -143,6 +144,7 @@ bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
     }
     return c;
 }
+#endif
 
 bool pointInMultiPolygon(const math::Point2d &test,
                          const math::MultiPolygon &mpoly)

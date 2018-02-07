@@ -144,6 +144,24 @@ struct Mesh {
         return vertices[face.c];
     }
 
+    /** First face texture point.
+    */
+    const math::Point2& ta(const Face &face) const {
+        return tCoords[face.ta];
+    }
+
+    /** Second face texture point.
+     */
+    const math::Point2& tb(const Face &face) const {
+        return tCoords[face.tb];
+    }
+
+    /** Third face texture point.
+     */
+    const math::Point2& tc(const Face &face) const {
+        return tCoords[face.tc];
+    }
+
     /** Is given face not a triangle?
      */
     bool degenerate(const Face &face) const {
@@ -176,9 +194,13 @@ struct Mesh {
 
     FaceVertexConstIterator end(const Face&) const;
 
-    /** Calculate face area.
+    /** Calculate face area (in 3D space).
      */
     double area(const Face &face) const;
+
+    /** Calculate face area (in UV space).;
+     */
+    double txArea(const Face &face) const;
 
     /** Calculate face barycenter.
      */

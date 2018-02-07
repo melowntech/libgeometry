@@ -58,7 +58,6 @@
 
 #include "geometry/detail/volume.mcubes.hpp"
 
-#include <imgproc/transformation.hpp>
 #include <boost/foreach.hpp>
 #include <set>
 #include <vector>
