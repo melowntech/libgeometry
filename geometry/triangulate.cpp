@@ -28,6 +28,8 @@
 
 #include "dbglog/dbglog.hpp"
 
+#include "utility/gccversion.hpp"
+
 #include "triangulate.hpp"
 
 namespace geometry {
@@ -125,6 +127,8 @@ namespace {
 // based on https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
 // TODO: maybe move to polygon.hpp
 bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
+    UTILITY_POSSIBLY_UNUSED;
+bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
 {
     bool c = false;
     int nvert = poly.size();
@@ -140,6 +144,9 @@ bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
     return c;
 }
 
+bool pointInMultiPolygon(const math::Point2d &test,
+                         const math::MultiPolygon &mpoly)
+    UTILITY_POSSIBLY_UNUSED;
 bool pointInMultiPolygon(const math::Point2d &test,
                          const math::MultiPolygon &mpoly)
 {
