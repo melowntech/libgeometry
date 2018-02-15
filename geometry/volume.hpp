@@ -2130,8 +2130,8 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
             }
 
     std::vector<FPosition_s> retval;
-    for(auto vec : tVertices){
-        retval.insert(retval.end(),vec.begin(), vec.end());
+    for(const auto &vec : tVertices){
+        retval.insert(retval.end(), vec.begin(), vec.end());
     }
 
     return retval;
