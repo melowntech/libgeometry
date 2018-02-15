@@ -258,9 +258,8 @@ void filterInplace(
 
     std::vector<VolumeBase_t::Position_s> poss
         = Giterator::iteratorPositions( container, diff );
-#ifdef _OPENMP
-    #pragma omp parallel for schedule( dynamic, 20 )
-#endif
+
+    UTILITY_OMP(parallel for schedule( dynamic, 20 ))
     for(uint p=0; p<poss.size(); ++p){
         VolumeBase_t::Position_s pos = poss[p];
         Giterator sit( container, pos, diff );

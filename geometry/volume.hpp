@@ -38,19 +38,13 @@
 #ifndef GEOMETRY_VOLUME_HPP
 #define GEOMETRY_VOLUME_HPP
 
-#ifdef _OPENMP
-# include <omp.h>
-#else
-# define omp_get_max_threads() 1
-# define omp_get_thread_num() 0
-#endif
-
 #include "math/math_all.hpp"
 #include "dbglog/dbglog.hpp"
 #include "geometry/pointcloud.hpp"
 #include "geometry/mesh.hpp"
 #include <memory>
 #include "utility/progress.hpp"
+#include "utility/openmp.hpp"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -314,7 +308,11 @@ public:
      */
     void grow(const int axis, bool front = false);
     
-    void setBorderType(const BorderType & border) { border_ = border; }
+    BorderType setBorderType(const BorderType & border) {
+        auto old(border_);
+        border_ = border;
+        return old;
+    }
     
 protected:
     math::Size3i size_, capacity_;
@@ -515,16 +513,17 @@ public :
     Position_s geo2grid(
         const FPosition_s & gpos,
         const int roundingX = 0, const int roundingY = 0,
-        const int roundingZ = 0 );
+        const int roundingZ = 0 ) const;
 
     FPosition_s geo2gridf(
-        const FPosition_s & gpos );
+        const FPosition_s & gpos ) const;
 
     FPosition_s grid2geo(
-        const Position_s & pos );
-    FPosition_s grid2geo( const FPosition_s & pos );
+        const Position_s & pos ) const;
+    FPosition_s grid2geo( const FPosition_s & pos ) const;
 
     Container_t & container(){ return container_; }
+    const Container_t& container() const { return container_; }
     const Container_t & constContainer() const { return container_; }
 
     math::Size3i cSize(){
@@ -599,7 +598,7 @@ public :
      * The output is geometry::mesh class.
      */
     geometry::Mesh getQuadsAsMesh( const Value_t & threshold,
-                       const SurfaceOrientation_t orientation = TO_MIN );
+                       const SurfaceOrientation_t orientation = TO_MIN ) const;
 
     /**
      * Extract isosurface with a marching tetrahedrons algorithm.
@@ -608,7 +607,7 @@ public :
      */
     std::vector<FPosition_s>
         isosurfaceTetrahedrons( const Value_t & threshold,
-            const SurfaceOrientation_t orientation = TO_MIN );
+            const SurfaceOrientation_t orientation = TO_MIN ) const;
 
     /**
      * Extract isosurface with a marching cubes algorithm.
@@ -617,7 +616,7 @@ public :
      */
     std::vector<FPosition_s>
         isosurfaceCubes( const Value_t & threshold,
-            const SurfaceOrientation_t orientation = TO_MIN );
+            const SurfaceOrientation_t orientation = TO_MIN ) const;
 
     /**
      * Extract isosurface with a marching tetrahedrons algorithm.
@@ -632,7 +631,7 @@ private:
             std::vector<FPosition_s> & retval
             , const FPosition_s * vertices
             , const Value_t * values
-            , const Value_t & threshold, const SurfaceOrientation_t orientation);
+            , const Value_t & threshold, const SurfaceOrientation_t orientation) const;
 
 
     /** Used for isosurface extraction */
@@ -646,7 +645,7 @@ private:
         const Value_t & value2,
         const FPosition_s & vx3,
         const Value_t & value3,
-        const Value_t & threshold, const SurfaceOrientation_t orientation );
+        const Value_t & threshold, const SurfaceOrientation_t orientation ) const;
 
     /** used for isosurface extraction */
     FPosition_s interpolate(
@@ -654,7 +653,7 @@ private:
             const Value_t & value1,
             const FPosition_s & p2,
             const Value_t & value2,
-            Value_t midval );
+            Value_t midval ) const;
 };
 
 
@@ -1357,7 +1356,7 @@ template <class Value_t,class Container_t>
 typename VolumeBase_t::Position_s GeoVolume_t<Value_t,Container_t>::geo2grid(
     const VolumeBase_t::FPosition_s & gpos,
     const int roundingX, const int roundingY,
-    const int roundingZ  ) {
+    const int roundingZ  ) const {
 
     typename VolumeBase_t::FPosition_s fpos = geo2gridf( gpos );
 
@@ -1398,7 +1397,7 @@ typename VolumeBase_t::Position_s GeoVolume_t<Value_t,Container_t>::geo2grid(
 
 template <class Value_t,class Container_t>
 typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::geo2gridf(
-        const VolumeBase_t::FPosition_s & gpos )
+        const VolumeBase_t::FPosition_s & gpos ) const
 {
     return VolumeBase_t::FPosition_s(
         ( gpos.x - _lower.x ) / ( _upper.x - _lower.x )
@@ -1411,7 +1410,7 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::geo2gridf(
 
 template <class Value_t,class Container_t>
 typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
-    const typename VolumeBase_t::Position_s & pos ) {
+    const typename VolumeBase_t::Position_s & pos ) const {
 
     return VolumeBase_t::FPosition_s( _lower.x + ( pos.x + 0.5 )
             / this->container_.sizeX() * ( _upper.x - _lower.x ),
@@ -1423,7 +1422,7 @@ typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
 
 template <class Value_t,class Container_t>
 typename VolumeBase_t::FPosition_s GeoVolume_t<Value_t, Container_t>::grid2geo(
-    const VolumeBase_t::FPosition_s & pos ) {
+    const VolumeBase_t::FPosition_s & pos ) const {
     return VolumeBase_t::FPosition_s(
         _lower.x + ( pos.x + 0.5 )
             / this->container_.sizeX() * ( _upper.x - _lower.x ),
@@ -1449,8 +1448,9 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     {
         auto offset(this->container_.offset());
         auto capacity(this->container_.capacity());
-        
-        this->container_.setBorderType(BorderType::BORDER_REPLICATE);
+
+        const auto oldBorderType
+            (this->container_.setBorderType(BorderType::BORDER_REPLICATE));
         for (int i = 0; i < 3; ++i) {
             while (capacity(i) > this->cSize()(i) + offset(i)) {
                 LOG(info2) << "Applying border condition in direction " << i;
@@ -1463,7 +1463,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
                 --offset(i);
             }
         }
-        this->container_.setBorderType(BorderType::BORDER_CONSTANT);
+        this->container_.setBorderType(oldBorderType);
     }
 
     for(uint fAxis = 0; fAxis<3; ++fAxis){
@@ -1717,7 +1717,8 @@ ScalarField_t<Value_t,Container_t>::interpolate(
     const Value_t & value1,
     const typename VolumeBase_t::FPosition_s & p2,
     const Value_t & value2,
-    Value_t midval ) {
+    Value_t midval ) const
+{
 
     double alpha1,alpha2;
 
@@ -1750,7 +1751,9 @@ void ScalarField_t<Value_t, Container_t>::isoFromTetrahedron(
     const Value_t & value2,
     const typename VolumeBase_t::FPosition_s & vx3,
     const Value_t & value3,
-    const Value_t & threshold, const SurfaceOrientation_t orientation ) {
+    const Value_t & threshold, const SurfaceOrientation_t orientation )
+    const
+{
 
     // case 0000, 1111
     if ( ( value0 > threshold && value1 > threshold && value2 > threshold
@@ -2000,7 +2003,9 @@ void ScalarField_t<Value_t, Container_t>::isoFromCube(
         std::vector<typename VolumeBase_t::FPosition_s> & retval
         , const typename VolumeBase_t::FPosition_s * vertices
         , const Value_t * values
-        , const Value_t & threshold, const SurfaceOrientation_t orientation){
+        , const Value_t & threshold, const SurfaceOrientation_t orientation)
+const
+{
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
 
     int cubeIndex;
@@ -2079,16 +2084,15 @@ void ScalarField_t<Value_t, Container_t>::isoFromCube(
 template <typename Value_t, class Container_t>
 std::vector<typename VolumeBase_t::FPosition_s>
 ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
-    const SurfaceOrientation_t orientation ){
+    const SurfaceOrientation_t orientation ) const
+{
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
     // typedef typename VolumeBase_t::Position_s Position_s;
 
-    std::vector<FPosition_s> retval;
+    std::vector<std::vector<FPosition_s>>
+        tVertices(this->container_.sizeX() + 1);
 
-    std::vector<std::vector<FPosition_s>> tVertices(omp_get_max_threads());
-#ifdef _OPENMP
-    #pragma omp parallel for schedule( dynamic, 5 )
-#endif
+    UTILITY_OMP(parallel for schedule( dynamic, 5 ))
     for ( int i = -1; i < this->container_.sizeX(); i++ )
         for ( int j = -1; j < this->container_.sizeY(); j++ )
             for ( int k = -1; k < this->container_.sizeZ(); k++ ) {
@@ -2120,11 +2124,12 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
                     typename VolumeOctree<Value_t>::Position_s( i, j + 1, k + 1 ) );
                 values[7] = this->get( i, j + 1 , k + 1 );
 
-                isoFromCube(tVertices[omp_get_thread_num()], vertices, values
+                isoFromCube(tVertices[i + 1], vertices, values
                             , threshold, orientation);
 
             }
 
+    std::vector<FPosition_s> retval;
     for(auto vec : tVertices){
         retval.insert(retval.end(),vec.begin(), vec.end());
     }
@@ -2135,7 +2140,9 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
 template <typename Value_t, class Container_t>
 std::vector<typename VolumeBase_t::FPosition_s>
 ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons( const Value_t & threshold,
-            const SurfaceOrientation_t orientation ) {
+            const SurfaceOrientation_t orientation )
+    const
+{
 
     std::vector<typename VolumeBase_t::FPosition_s> retval;
 
@@ -2224,14 +2231,19 @@ ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons( const Value_t & thr
     return retval;
 }
 
+/** Cannot be made const since there is a manipulation with border
+ *  condition. *sigh*
+ */
 template <typename Value_t, class Container_t>
 geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh( const Value_t & threshold
             , const SurfaceOrientation_t orientation
-            , const IsosurfaceAlgorithm_t algorithm) {
+            , const IsosurfaceAlgorithm_t algorithm)
+{
 
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
 
-    this->container_.setBorderType(BorderType::BORDER_REPLICATE);
+    const auto oldBorderType
+        (this->container_.setBorderType(BorderType::BORDER_REPLICATE));
     std::vector<FPosition_s> vertices;
     switch(algorithm){
     case M_CUBES:
@@ -2241,7 +2253,7 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh( const Valu
         vertices = this->isosurfaceTetrahedrons(threshold,orientation);
         break;
     }
-    this->container_.setBorderType(BorderType::BORDER_CONSTANT);
+    this->container_.setBorderType(oldBorderType);
 
     geometry::Mesh ret;
 
@@ -2279,7 +2291,8 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh( const Valu
 
 template<typename Value_t, class Container_t>
 geometry::Mesh ScalarField_t<Value_t, Container_t>::getQuadsAsMesh( const Value_t & threshold
-             , const SurfaceOrientation_t orientation){
+             , const SurfaceOrientation_t orientation) const
+{
 
     std::vector<typename VolumeBase_t::FPosition_s> vertices
             = this->getQuads(threshold,orientation);
