@@ -78,6 +78,11 @@ inline double checkCcw(const math::Point2 &a, const math::Point2 &b
                               , math::Point2(math::normalize(c - a)));
 }
 
+inline double area(const math::Triangle2d &t) {
+    return 0.5 * std::abs(math::crossProduct( math::Point2(t[1] - t[0])
+                                            , math::Point2(t[2] - t[0])));
+}
+
 } // namespace
 
 math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
@@ -132,6 +137,20 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     }
 
     math::Triangles2d tris2(generalPolyTriangulate(isect2));
+
+    // work around boost errorneously returning whole polygon as intersection
+    // check area of input triangle against area of the result, should be same
+    // or less. Definitelly it should not be significantly bigger.
+    double interArea(0.0);
+    for (const auto &t2 : tris2) {
+        interArea += area(t2);
+    }
+    if (interArea > (area(tri2) * 1.1) ) { // 1.1 for numerical stability
+        LOG(warn1) << "Throwing away spurious intersection (ratio of areas: "
+                   << interArea / area(tri2) << ").";
+        return {};
+    }
+
 
     // restore Z coords
     math::Triangles3d tris3;
