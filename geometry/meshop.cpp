@@ -67,8 +67,13 @@ Obj asObj(const Mesh &mesh)
 
         geometry::Obj::Facet facet;
 
-        facet.v[0] = face.a; facet.v[1] = face.b; facet.v[2] = face.c;
-        facet.t[0] = face.ta; facet.t[1] = face.tb; facet.t[2] = face.tc;
+        facet.v[0] = int(face.a);
+        facet.v[1] = int(face.b);
+        facet.v[2] = int(face.c);
+
+        facet.t[0] = int(face.ta);
+        facet.t[1] = int(face.tb);
+        facet.t[2] = int(face.tc);
 
         obj.addFacet( facet );
     }
@@ -356,7 +361,7 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
 
     //count faces for each edge
     std::map<EdgeKey,Edge> edgeMap;
-    for(uint fi=0; fi<mesh.faces.size(); fi++){
+    for(unsigned int fi=0; fi<mesh.faces.size(); fi++){
         const auto & face(mesh.faces[fi]);
         EdgeKey edgeKeys[3] = { EdgeKey(face.a,face.b)
                            , EdgeKey(face.b,face.c)
@@ -388,7 +393,7 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
     }
 
     mesh.faces.clear();
-    for(uint fi=0; fi<omesh.faces.size(); fi++){
+    for(unsigned int fi=0; fi<omesh.faces.size(); fi++){
         const auto & face(omesh.faces[fi]);
         if(facesToOmit.find(fi)==facesToOmit.end()){
             mesh.addFace( face.a, face.b, face.c
@@ -404,14 +409,14 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
     auto pmesh(std::make_shared<geometry::Mesh>());
     auto & mesh(*pmesh);
 
-    std::map<uint,uint> vertexMap;
-    std::map<uint,uint> tCoordsMap;
+    std::map<unsigned int,unsigned int> vertexMap;
+    std::map<unsigned int,unsigned int> tCoordsMap;
 
     for( const auto& face: imesh.faces ){
         math::Points3::size_type vindices[3] { face.a , face.b, face.c };
         math::Points2::size_type tindices[3] { face.ta , face.tb, face.tc };
 
-        for(uint i=0; i<3; ++i){
+        for(unsigned int i=0; i<3; ++i){
             auto vit = vertexMap.find(vindices[i]);
             auto tit = tCoordsMap.find(tindices[i]);
 
@@ -441,7 +446,7 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
 }
 
 
-Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
+Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount){
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));
     auto & mesh(*pmesh);
 
@@ -537,7 +542,7 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
             return *heap[0];
         }
 
-        void addFaceEdges(const Mesh & mesh, uint fid){
+        void addFaceEdges(const Mesh & mesh, unsigned int fid){
             const auto& f = mesh.faces[fid];
             float e1Length =  ublas::norm_2(mesh.vertices[f.a]-mesh.vertices[f.b]);
             addFaceEdge(f.a, f.b, fid, Edge::EdgeType::AB, e1Length);
@@ -620,7 +625,7 @@ Mesh::pointer refine( const Mesh & omesh, uint maxFacesCount){
         }
     };
 
-    for (uint i=0; i<mesh.faces.size(); ++i ) {
+    for (unsigned int i=0; i<mesh.faces.size(); ++i ) {
         //add all 3 edges
         edgeMap.addFaceEdges(mesh, i);
     }

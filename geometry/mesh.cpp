@@ -40,22 +40,23 @@ namespace fs = boost::filesystem;
 namespace geometry {
 
 void Mesh::skirt( const math::Point3 & down ) {
+    typedef std::size_t Index;
 
     enum class Status {
             FW, BW, BI
     };
 
     struct Edge {
-        int v1, v2;
-        int t1, t2;
+        Index v1, v2;
+        Index t1, t2;
         mutable Status status;
 
-        Edge(int pv1, int pv2, int pt1, int pt2)
+        Edge(Index pv1, Index pv2, Index pt1, Index pt2)
             : v1( std::min( pv1, pv2 ) ), v2( std::max( pv1, pv2 ) ),
               t1( pv1 <= pv2 ? pt1 : pt2 ), t2( pv1 <= pv2 ? pt2 : pt1 ),
               status( pv1 <= pv2 ? Status::FW : Status::BW ) {}
 
-        void update( int pv1, int pv2 ) const {
+        void update( Index pv1, Index pv2 ) const {
 
             if ( pv1 <= pv2 && status == Status::BW ) status = Status::BI;
             if ( pv1 > pv2 && status == Status::FW ) status = Status::BI;
@@ -71,7 +72,7 @@ void Mesh::skirt( const math::Point3 & down ) {
 
 
     typedef std::set<Edge> Edges;
-    typedef std::map<int,int> DownMap;
+    typedef std::map<Index, Index> DownMap;
 
     Edges edges;
     DownMap vdownmap, tdownmap;
