@@ -486,7 +486,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
             f2 = -1;
         }
 
-        void addFace(std::size_t pv1, std::size_t pv2, std::size_t fid, EdgeType type)
+        void addFace(std::size_t pv1, std::size_t pv2, int fid, EdgeType type)
         {
             if(pv1<pv2){
                 f1=fid;
@@ -512,7 +512,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
             return a->length<b->length;
         }
 
-        void addFaceEdge(std::size_t pv1, std::size_t pv2, std::size_t fid
+        void addFaceEdge(std::size_t pv1, std::size_t pv2, int fid
                          , Edge::EdgeType type, float length)
         {
             EdgeKey key(pv1, pv2);
@@ -546,7 +546,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
             return *heap[0];
         }
 
-        void addFaceEdges(const Mesh & mesh, std::size_t fid){
+        void addFaceEdges(const Mesh & mesh, int fid){
             const auto& f = mesh.faces[fid];
             auto e1Length =  float(ublas::norm_2(mesh.vertices[f.a]-mesh.vertices[f.b]));
             addFaceEdge(f.a, f.b, fid, Edge::EdgeType::AB, e1Length);
@@ -566,7 +566,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
 
     EdgeMap edgeMap;
 
-    auto splitEdge = [&mesh,&edgeMap]( std::size_t fid, Edge::EdgeType type
+    auto splitEdge = [&mesh,&edgeMap]( int fid, Edge::EdgeType type
                        , std::size_t vid) mutable -> void{
         auto & face = mesh.faces[fid];
         switch(type){
@@ -586,7 +586,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
                     mesh.faces[fid].tb = mesh.tCoords.size()-1;
 
                     edgeMap.addFaceEdges(mesh, fid);
-                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);
+                    edgeMap.addFaceEdges(mesh, int(mesh.faces.size()-1));
                 }
                 break;
             case Edge::EdgeType::BC:
@@ -604,7 +604,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
                     mesh.faces[fid].tc = mesh.tCoords.size()-1;
 
                     edgeMap.addFaceEdges(mesh, fid);
-                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);
+                    edgeMap.addFaceEdges(mesh, int(mesh.faces.size()-1));
                 }
                 break;
             case Edge::EdgeType::CA:
@@ -623,7 +623,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
                     mesh.faces[fid].ta = mesh.tCoords.size()-1;
 
                     edgeMap.addFaceEdges(mesh, fid);
-                    edgeMap.addFaceEdges(mesh, mesh.faces.size()-1);
+                    edgeMap.addFaceEdges(mesh, int(mesh.faces.size()-1));
                 }
                 break;
         }
@@ -631,7 +631,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
 
     for (std::size_t i=0; i<mesh.faces.size(); ++i ) {
         //add all 3 edges
-        edgeMap.addFaceEdges(mesh, i);
+        edgeMap.addFaceEdges(mesh, int(i));
     }
 
     //sort edges by length
