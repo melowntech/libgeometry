@@ -475,7 +475,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
         } EdgeType;
 
         std::size_t v1, v2;
-        std::size_t f1, f2;
+        int f1, f2;
         EdgeType et1, et2;
 
         float length;
