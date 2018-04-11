@@ -341,9 +341,9 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
 
     struct EdgeKey
     {
-        int v1, v2; // vertex indices
+        std::size_t v1, v2; // vertex indices
 
-        EdgeKey(int v1, int v2)
+        EdgeKey(std::size_t v1, std::size_t v2)
         {
             this->v1 = std::min(v1, v2);
             this->v2 = std::max(v1, v2);
@@ -409,8 +409,8 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
     auto pmesh(std::make_shared<geometry::Mesh>());
     auto & mesh(*pmesh);
 
-    std::map<unsigned int,unsigned int> vertexMap;
-    std::map<unsigned int,unsigned int> tCoordsMap;
+    std::map<math::Points3::size_type, math::Points3::size_type> vertexMap;
+    std::map<math::Points2::size_type, math::Points2::size_type> tCoordsMap;
 
     for( const auto& face: imesh.faces ){
         math::Points3::size_type vindices[3] { face.a , face.b, face.c };
@@ -446,15 +446,16 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
 }
 
 
-Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount){
+Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
+{
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));
     auto & mesh(*pmesh);
 
     struct EdgeKey
     {
-        int v1, v2; // vertex indices
+        std::size_t v1, v2; // vertex indices
 
-        EdgeKey(int v1, int v2)
+        EdgeKey(std::size_t v1, std::size_t v2)
         {
             this->v1 = std::min(v1, v2);
             this->v2 = std::max(v1, v2);
@@ -473,19 +474,20 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount){
             CA
         } EdgeType;
 
-        int v1, v2;
-        int f1, f2;
+        std::size_t v1, v2;
+        std::size_t f1, f2;
         EdgeType et1, et2;
 
         float length;
 
-        Edge(int pv1, int pv2, float plength)
+        Edge(std::size_t pv1, std::size_t pv2, float plength)
             :v1(std::min(pv1,pv2)),v2(std::max(pv1,pv2)), length(plength){
             f1 = -1;
             f2 = -1;
         }
 
-        void addFace(int pv1, int pv2, int fid, EdgeType type){
+        void addFace(std::size_t pv1, std::size_t pv2, std::size_t fid, EdgeType type)
+        {
             if(pv1<pv2){
                 f1=fid;
                 et1 = type;
@@ -510,14 +512,16 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount){
             return a->length<b->length;
         }
 
-        void addFaceEdge(int pv1, int pv2, int fid, Edge::EdgeType type, float length){
-            auto key(EdgeKey(pv1,pv2));
+        void addFaceEdge(std::size_t pv1, std::size_t pv2, std::size_t fid
+                         , Edge::EdgeType type, float length)
+        {
+            EdgeKey key(pv1, pv2);
             auto it(map.find(key));
             if(it!=map.end()){
                 it->second->addFace(pv1, pv2, fid, type );
             }
             else{
-                heap.push_back(std::make_shared<Edge>(Edge(pv1, pv2, length)));
+                heap.push_back(std::make_shared<Edge>(pv1, pv2, length));
                 heap.back()->addFace(pv1, pv2, fid, type );
                 map.insert(std::make_pair(key,heap.back()));
                 std::push_heap(heap.begin(),heap.end(), [this]( const std::shared_ptr<Edge> &a
@@ -542,15 +546,15 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount){
             return *heap[0];
         }
 
-        void addFaceEdges(const Mesh & mesh, unsigned int fid){
+        void addFaceEdges(const Mesh & mesh, std::size_t fid){
             const auto& f = mesh.faces[fid];
-            float e1Length =  ublas::norm_2(mesh.vertices[f.a]-mesh.vertices[f.b]);
+            auto e1Length =  float(ublas::norm_2(mesh.vertices[f.a]-mesh.vertices[f.b]));
             addFaceEdge(f.a, f.b, fid, Edge::EdgeType::AB, e1Length);
 
-            float e2Length =  ublas::norm_2(mesh.vertices[f.b]-mesh.vertices[f.c]);
+            auto e2Length =  float(ublas::norm_2(mesh.vertices[f.b]-mesh.vertices[f.c]));
             addFaceEdge(f.b, f.c, fid, Edge::EdgeType::BC, e2Length);
 
-            float e3Length =  ublas::norm_2(mesh.vertices[f.c]-mesh.vertices[f.a]);
+            auto e3Length =  float(ublas::norm_2(mesh.vertices[f.c]-mesh.vertices[f.a]));
             addFaceEdge(f.c, f.a, fid, Edge::EdgeType::CA, e3Length);
         }
 
@@ -562,8 +566,8 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount){
 
     EdgeMap edgeMap;
 
-    auto splitEdge = [&mesh,&edgeMap]( int fid, Edge::EdgeType type
-                       , int vid) mutable -> void{
+    auto splitEdge = [&mesh,&edgeMap]( std::size_t fid, Edge::EdgeType type
+                       , std::size_t vid) mutable -> void{
         auto & face = mesh.faces[fid];
         switch(type){
             case Edge::EdgeType::AB:
@@ -625,7 +629,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount){
         }
     };
 
-    for (unsigned int i=0; i<mesh.faces.size(); ++i ) {
+    for (std::size_t i=0; i<mesh.faces.size(); ++i ) {
         //add all 3 edges
         edgeMap.addFaceEdges(mesh, i);
     }

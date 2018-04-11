@@ -97,7 +97,7 @@ math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon)
         if (j >= int(vert.size())) {
             j = 0;
         }
-        int n = vert.size();
+        auto n = int(vert.size());
         int i = j-1, k = j+1;
         if (i < 0) { i = n-1; }
         if (k >= n) { k = 0; }
@@ -155,7 +155,7 @@ bool pointInMultiPolygon(const math::Point2d &test,
     bool c = false;
     for (const auto &poly : mpoly)
     {
-        int nvert = poly.size();
+        auto nvert = int(poly.size());
         for (int i = 0, j = nvert-1; i < nvert; j = i++)
         {
             if ( ((poly[i](1) > test(1)) != (poly[j](1) > test(1))) &&

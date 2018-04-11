@@ -59,7 +59,7 @@ void writeBinaryMesh(std::ostream &f, const geometry::Obj &mesh)
     }
 
     // write vertices
-    int nv(std::min(mesh.vertices.size(), size_t(USHRT_MAX)));
+    auto nv(std::min(mesh.vertices.size(), size_t(USHRT_MAX)));
     bin::write(f, uint16_t(nv));
 
     for (int i = 0; i < nv; i++) {
@@ -71,7 +71,7 @@ void writeBinaryMesh(std::ostream &f, const geometry::Obj &mesh)
     }
 
     // write texture coords
-    int ntv(std::min(mesh.texcoords.size(), size_t(USHRT_MAX)));
+    auto ntv(std::min(mesh.texcoords.size(), size_t(USHRT_MAX)));
     bin::write(f, uint16_t(ntv));
 
     for (int i = 0; i < ntv; i++) {
@@ -82,7 +82,7 @@ void writeBinaryMesh(std::ostream &f, const geometry::Obj &mesh)
     }
 
     // write faces
-    int nf(std::min(mesh.facets.size(), size_t(USHRT_MAX)));
+    auto nf(std::min(mesh.facets.size(), size_t(USHRT_MAX)));
     bin::write(f, uint16_t(nf));
 
     for (int i = 0; i < nf; i++) {
