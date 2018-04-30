@@ -146,7 +146,7 @@ Mesh::pointer refine( const Mesh &mesh, uint maxFacesCount);
  */
 Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
 
-/** Removes isolated vertices, e.g vertices incidental with 0 faces 
+/** Removes isolated vertices, e.g vertices incidental with 0 faces
  * Works with untextured meshes
  *
  * \param mesh mesh to process
@@ -154,7 +154,7 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
  */
 Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
 
-/** Clips mesh to the given 3d extents 
+/** Clips mesh to the given 3d extents
  *
  * \param mesh mesh to clip
  * \param extents extents defining where to keep geometry
@@ -244,7 +244,8 @@ Mesh::pointer asMesh(const Obj &obj);
 
 void saveAsObj(const Mesh &mesh
                , const boost::filesystem::path &filepath
-               , const std::string &mtlName);
+               , const std::string &mtlName
+               , const int precision = -1);
 
 void saveAsObj(const Mesh::pointer &mesh
                , const boost::filesystem::path &filepath
@@ -252,7 +253,8 @@ void saveAsObj(const Mesh::pointer &mesh
 
 void saveAsObj(const Mesh &mesh, std::ostream &os
                , const std::string &mtlName
-               , const boost::filesystem::path &filepath = "UNKNOWN");
+               , const boost::filesystem::path &filepath = "UNKNOWN"
+               , const int precision = -1);
 
 void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
                , const std::string &mtlName

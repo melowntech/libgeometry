@@ -95,16 +95,26 @@ Mesh::pointer asMesh(const Obj &obj){
 
 void saveAsObj(const Mesh &mesh, std::ostream &out
                , const std::string &mtlName
-               , const boost::filesystem::path &filepath)
+               , const boost::filesystem::path &filepath
+               , const int precision)
 {
     out.setf(std::ios::scientific, std::ios::floatfield);
 
     out << "mtllib " << mtlName << '\n';
 
+    auto oldPrecision(out.precision());
+
+    if (precision != -1) {
+        out.precision(precision);
+    }
+
     for (const auto &vertex : mesh.vertices) {
         out << "v " << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2)
             << '\n';
     }
+
+    // reset precision
+    out.precision(oldPrecision);
 
     for (const auto &tCoord : mesh.tCoords) {
         out << "vt " << tCoord(0) << ' ' << tCoord(1) << '\n';
@@ -133,7 +143,7 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
 }
 
 void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
-               , const std::string &mtlName)
+               , const std::string &mtlName, const int precision)
 {
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
@@ -145,7 +155,7 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
         LOGTHROW(err3, std::runtime_error)
             << "Unable to save mesh to <" << filepath << ">.";
     }
-    saveAsObj(mesh, f, mtlName, filepath);
+    saveAsObj(mesh, f, mtlName, filepath, precision);
 }
 
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
@@ -290,12 +300,12 @@ Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents)
             , omesh.vertices[face.b]
             , omesh.vertices[face.c]);
     }
-    
+
     std::vector<double> tinfos;
     for (int i = 0; i < 6; i++) {
         clipped = clipTriangles(clipped, planes[i], tinfos);
     }
-    
+
     auto pmesh(std::make_shared<geometry::Mesh>());
 
     typedef math::Points3::size_type Index;
@@ -312,7 +322,7 @@ Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents)
                 next++;
             }
             indices[i] = pair.first->second;
-            
+
             if (indices[i] >= pmesh->vertices.size()) {
                 pmesh->vertices.push_back(triangle.pos[i]);
             }
@@ -429,7 +439,7 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
         }
 
         if(imesh.tCoords.size() > 0){
-            mesh.addFace( vindices[0], vindices[1], vindices[2] 
+            mesh.addFace( vindices[0], vindices[1], vindices[2]
                         , tindices[0], tindices[1], tindices[2] );
         }
         else{
