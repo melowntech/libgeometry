@@ -67,8 +67,9 @@ struct Face {
 
     Face(math::Points3::size_type a, math::Points3::size_type b
          , math::Points3::size_type c, math::Points2::size_type ta
-         , math::Points2::size_type tb, math::Points2::size_type tc)
-        : imageId(), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
+         , math::Points2::size_type tb, math::Points2::size_type tc
+         , unsigned int imageId = 0)
+        : imageId(imageId), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
     {}
 
     /** Calculate normal of this face.
@@ -143,6 +144,24 @@ struct Mesh {
         return vertices[face.c];
     }
 
+    /** First face texture point.
+    */
+    const math::Point2& ta(const Face &face) const {
+        return tCoords[face.ta];
+    }
+
+    /** Second face texture point.
+     */
+    const math::Point2& tb(const Face &face) const {
+        return tCoords[face.tb];
+    }
+
+    /** Third face texture point.
+     */
+    const math::Point2& tc(const Face &face) const {
+        return tCoords[face.tc];
+    }
+
     /** Is given face not a triangle?
      */
     bool degenerate(const Face &face) const {
@@ -175,9 +194,13 @@ struct Mesh {
 
     FaceVertexConstIterator end(const Face&) const;
 
-    /** Calculate face area.
+    /** Calculate face area (in 3D space).
      */
     double area(const Face &face) const;
+
+    /** Calculate face area (in UV space).;
+     */
+    double txArea(const Face &face) const;
 
     /** Calculate face barycenter.
      */

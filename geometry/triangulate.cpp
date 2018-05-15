@@ -28,6 +28,8 @@
 
 #include "dbglog/dbglog.hpp"
 
+#include "utility/gccversion.hpp"
+
 #include "triangulate.hpp"
 
 namespace geometry {
@@ -95,7 +97,7 @@ math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon)
         if (j >= int(vert.size())) {
             j = 0;
         }
-        int n = vert.size();
+        auto n = int(vert.size());
         int i = j-1, k = j+1;
         if (i < 0) { i = n-1; }
         if (k >= n) { k = 0; }
@@ -122,8 +124,11 @@ math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon)
 
 namespace {
 
+#if 0
 // based on https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
 // TODO: maybe move to polygon.hpp
+bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
+    UTILITY_POSSIBLY_UNUSED;
 bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
 {
     bool c = false;
@@ -139,14 +144,18 @@ bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
     }
     return c;
 }
+#endif
 
+bool pointInMultiPolygon(const math::Point2d &test,
+                         const math::MultiPolygon &mpoly)
+    UTILITY_POSSIBLY_UNUSED;
 bool pointInMultiPolygon(const math::Point2d &test,
                          const math::MultiPolygon &mpoly)
 {
     bool c = false;
     for (const auto &poly : mpoly)
     {
-        int nvert = poly.size();
+        auto nvert = int(poly.size());
         for (int i = 0, j = nvert-1; i < nvert; j = i++)
         {
             if ( ((poly[i](1) > test(1)) != (poly[j](1) > test(1))) &&

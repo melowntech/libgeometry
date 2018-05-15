@@ -123,11 +123,11 @@ double PointCloud::samplingDelta( float bulkThreshold ) const {
 
     // obtain array of closest neighbour distances
     double maxDist = ublas::norm_2( extents_.ur - extents_.ll );
-    for ( uint i = 0; i < size(); i++ )
+    for ( unsigned int i = 0; i < size(); i++ )
         distArray[i] = ThreeDistance( maxDist );
 
-    for ( uint i = 0; i < size(); i++ )
-        for ( uint j = 0; j < i; j++ ) {
+    for ( unsigned int i = 0; i < size(); i++ )
+        for ( unsigned int j = 0; j < i; j++ ) {
 
             distArray[i].update( at( i ) - at( j ) );
             distArray[j].update( at( i ) - at( j ) );

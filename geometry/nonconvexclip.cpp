@@ -34,6 +34,8 @@
 #  include <boost/geometry/geometries/multi_polygon.hpp>
 #endif
 
+#include "dbglog/dbglog.hpp"
+
 #include "nonconvexclip.hpp"
 #include "triangulate.hpp"
 
@@ -46,6 +48,8 @@ typedef bg::model::polygon<Point, false, false> Polygon; // ccw, unclosed
 typedef bg::model::multi_polygon<Polygon> MultiPolygon;
 typedef Polygon::ring_type Ring;
 
+namespace {
+
 template<typename List>
 std::vector<Point> bgPoints(const List &list)
 {
@@ -57,7 +61,7 @@ std::vector<Point> bgPoints(const List &list)
     return result;
 }
 
-math::Points2d ringPoints(const Ring &ring)
+inline math::Points2d ringPoints(const Ring &ring)
 {
     math::Points2d result;
     result.reserve(ring.size());
@@ -66,6 +70,20 @@ math::Points2d ringPoints(const Ring &ring)
     }
     return result;
 }
+
+inline double checkCcw(const math::Point2 &a, const math::Point2 &b
+                       , const math::Point2 &c)
+{
+    return math::crossProduct(math::Point2(math::normalize(b - a))
+                              , math::Point2(math::normalize(c - a)));
+}
+
+inline double area(const math::Triangle2d &t) {
+    return 0.5 * std::abs(math::crossProduct( math::Point2(t[1] - t[0])
+                                            , math::Point2(t[2] - t[0])));
+}
+
+} // namespace
 
 math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
                                         const math::MultiPolygon &clipRegion)
@@ -80,9 +98,9 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     }
 
     bool flip = false;
-    double ccw = math::ccw(tri2[0], tri2[1], tri2[2]);
+    double ccw(checkCcw(tri2[0], tri2[1], tri2[2]));
 
-    if (std::abs(ccw) < 1e-10) {
+    if (std::abs(ccw) < 1e-4) {
         return {}; // TODO: handle exactly vertical triangles
     }
 
@@ -117,7 +135,22 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
             isect2.push_back(ringPoints(ring));
         }
     }
+
     math::Triangles2d tris2(generalPolyTriangulate(isect2));
+
+    // work around boost errorneously returning whole polygon as intersection
+    // check area of input triangle against area of the result, should be same
+    // or less. Definitelly it should not be significantly bigger.
+    double interArea(0.0);
+    for (const auto &t2 : tris2) {
+        interArea += area(t2);
+    }
+    if (interArea > (area(tri2) * 1.1) ) { // 1.1 for numerical stability
+        LOG(warn1) << "Throwing away spurious intersection (ratio of areas: "
+                   << interArea / area(tri2) << ").";
+        return {};
+    }
+
 
     // restore Z coords
     math::Triangles3d tris3;

@@ -127,8 +127,8 @@ static void forsythInit() {
     for (int i = 1; i < FORSYTH_VALENCE_SCORE_TABLE_SIZE; i++) {
         // Bonus points for having a low number of tris still to
         // use the vert, so we get rid of lone verts quickly
-        float valenceBoost = powf(i, -FORSYTH_VALENCE_BOOST_POWER);
-        float score = FORSYTH_VALENCE_BOOST_SCALE * valenceBoost;
+        auto valenceBoost = powf(float(i), -FORSYTH_VALENCE_BOOST_POWER);
+        auto score = float(FORSYTH_VALENCE_BOOST_SCALE * valenceBoost);
         forsythValenceScore[i] = (ForsythScoreType)(FORSYTH_SCORE_SCALING * score);
     }
 }

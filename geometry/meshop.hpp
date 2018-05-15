@@ -136,7 +136,7 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr);
  * \param maxFacesCount target faces count of the refined mesh
  * \return refined mesh
  */
-Mesh::pointer refine( const Mesh &mesh, uint maxFacesCount);
+Mesh::pointer refine( const Mesh &mesh, unsigned int maxFacesCount);
 
 /** Removes non manifold edges (edges with more than 2 incident faces)
  ** and their incident faces.
@@ -292,7 +292,7 @@ inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount
 
 inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
 {
-    return simplify(*mesh, maxErr);
+    return simplifyToError(*mesh, maxErr);
 }
 
 inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
