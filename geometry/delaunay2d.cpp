@@ -44,7 +44,7 @@ typedef Kernel::Point_2                                                Point;
 
 namespace geometry {
 
-std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 points)
+std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
 {
     std::vector<std::pair<Point, unsigned> > cgalPoints;
     {

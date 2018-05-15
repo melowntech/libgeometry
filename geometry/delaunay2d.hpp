@@ -46,7 +46,7 @@
 namespace geometry {
 
 typedef std::array<unsigned, 3> DTriangle;
-typedef std::pair<unsigned, unsigned> DEdge;
+typedef std::array<unsigned, 2> DEdge;
 
 /** Calculates the 2D Delaunay triangulation of a set of points.
  *  Returns a list of (finite) triangles. Each triangle indexes three
@@ -61,11 +61,11 @@ std::vector<DTriangle>
     ;
 
 /** Calculates the 2D constrained Delaunay triangulation of a set of points,
- *  where some of the edges are prescribed and will appear in the output.
+ *  where some of the edges are prescribed and affect the triangulantion.
  *  Returns a list of (finite) triangles. Each triangle references three
  *  points of the original set.
  */
-/*std::vector<DTriangle>
+std::vector<DTriangle>
     constrainedDelaunayTriangulation2d(
             const math::Points2 &points,
             const std::vector<DEdge> &constrained_edges)
@@ -73,7 +73,7 @@ std::vector<DTriangle>
     UTILITY_FUNCTION_ERROR("Constrained Delaunay triangulation is only "
                            "available when compiling with CGAL.")
 #endif
-    ;*/
+    ;
 
 } // namespace geometry
 
