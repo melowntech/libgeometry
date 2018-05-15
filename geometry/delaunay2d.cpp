@@ -23,10 +23,9 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * This is workaround for CGAL Assertions currently ruining debug mode because
- * CGAL expects flags which are not currently set
- */
+
+// This is a workaround for CGAL Assertions currently ruining debug mode because
+// CGAL expects flags which are not currently set
 #ifndef NDEBUG
 #  define NDEBUG
 #endif
@@ -73,5 +72,7 @@ std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 points)
 
     return result;
 }
+
+
 
 } // namespace geometry
