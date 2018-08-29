@@ -50,10 +50,9 @@ typedef std::array<unsigned, 2> DEdge;
 
 /** Calculates the 2D Delaunay triangulation of a set of points.
  *  Returns a list of (finite) triangles. Each triangle indexes three
- *  points of the original set.
+ *  points from the original set.
  */
-std::vector<DTriangle>
-    delaunayTriangulation2d(const math::Points2 &points)
+std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
 #ifndef GEOMETRY_HAS_CGAL
     UTILITY_FUNCTION_ERROR("Delaunay triangulation is only available when "
                            "compiling with CGAL.")
@@ -62,13 +61,18 @@ std::vector<DTriangle>
 
 /** Calculates the 2D constrained Delaunay triangulation of a set of points,
  *  where some of the edges are prescribed and affect the triangulantion.
- *  Returns a list of (finite) triangles. Each triangle references three
- *  points of the original set.
+ *  Note that if the constrained edges intersect, new points may need to be
+ *  created, which is why the triangles reference a new set of points.
+ *  Returns the new points and a list of finite triangles. Each triangle
+ *  indexes three points from the new set.
  */
-std::vector<DTriangle>
-    constrainedDelaunayTriangulation2d(
-            const math::Points2 &points,
-            const std::vector<DEdge> &constrained_edges)
+void constrainedDelaunayTriangulation2d
+(
+    const math::Points2 &points,
+    const std::vector<DEdge> &constrained_edges,
+    math::Points2 &out_points,
+    std::vector<DTriangle> &triangles
+)
 #ifndef GEOMETRY_HAS_CGAL
     UTILITY_FUNCTION_ERROR("Constrained Delaunay triangulation is only "
                            "available when compiling with CGAL.")

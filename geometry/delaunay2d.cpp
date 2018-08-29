@@ -30,22 +30,28 @@
 #  define NDEBUG
 #endif
 
+// WARNING: CGAL is GPL
+// TODO: consider using the GNU Triangulated Surface Library, which is LGPL
+
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Delaunay_triangulation_2.h>
 #include <CGAL/Triangulation_vertex_base_with_info_2.h>
+#include <CGAL/Delaunay_triangulation_2.h>
+#include <CGAL/Constrained_Delaunay_triangulation_2.h>
+#include <CGAL/Constrained_triangulation_plus_2.h>
 
 #include "delaunay2d.hpp"
-
-typedef CGAL::Exact_predicates_inexact_constructions_kernel            Kernel;
-typedef CGAL::Triangulation_vertex_base_with_info_2<unsigned int, Kernel> Vb;
-typedef CGAL::Triangulation_data_structure_2<Vb>                       Tds;
-typedef CGAL::Delaunay_triangulation_2<Kernel, Tds>                    Delaunay;
-typedef Kernel::Point_2                                                Point;
 
 namespace geometry {
 
 std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
 {
+    typedef CGAL::Exact_predicates_inexact_constructions_kernel      K;
+    typedef CGAL::Triangulation_vertex_base_with_info_2<unsigned, K> Vb;
+    typedef CGAL::Triangulation_data_structure_2<Vb>                 Tds;
+    typedef CGAL::Delaunay_triangulation_2<K, Tds>                   Delaunay;
+    typedef K::Point_2                                               Point;
+
     std::vector<std::pair<Point, unsigned> > cgalPoints;
     {
         unsigned index = 0;
@@ -57,8 +63,8 @@ std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
     Delaunay triangulation;
     triangulation.insert(cgalPoints.begin(), cgalPoints.end());
 
-    std::vector<DTriangle> result;
-    result.reserve(triangulation.number_of_faces());
+    std::vector<DTriangle> triangles;
+    triangles.reserve(triangulation.number_of_faces());
 
     for (auto fit = triangulation.finite_faces_begin();
               fit != triangulation.finite_faces_end(); ++fit)
@@ -67,12 +73,64 @@ std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
         for (int i = 0; i < 3; i++) {
             indices[i] = fit->vertex(i)->info();
         }
-        result.push_back(indices);
+        triangles.push_back(indices);
     }
 
-    return result;
+    return triangles;
 }
 
 
+void constrainedDelaunayTriangulation2d(
+        const math::Points2 &points,
+        const std::vector<DEdge> &constrained_edges,
+        math::Points2 &out_points,
+        std::vector<DTriangle> &triangles)
+{
+    // adapted from
+    // cgal/Triangulation_2/examples/Triangulation_2/polylines_triangulation.cpp
+
+    typedef CGAL::Exact_predicates_exact_constructions_kernel                  K;
+    typedef CGAL::Exact_intersections_tag                                   Itag;
+    typedef CGAL::Constrained_Delaunay_triangulation_2<K,CGAL::Default,Itag> CDT;
+    typedef CGAL::Constrained_triangulation_plus_2<CDT>                     CDTP;
+
+    std::vector<K::Point_2> cgalPoints;
+    cgalPoints.reserve(points.size());
+    for (const auto &p : points) {
+        cgalPoints.emplace_back(p(0), p(1));
+    }
+
+    // build triangulation
+    CDTP cdtp;
+    for (const auto &ce : constrained_edges)
+    {
+        cdtp.insert_constraint(cgalPoints[ce[0]], cgalPoints[ce[1]]);
+    }
+    cdtp.insert(cgalPoints.begin(), cgalPoints.end());
+
+    // return new points
+    out_points.clear();
+    out_points.reserve(cdtp.tds().vertices().size());
+
+    for (const auto &v : cdtp.tds().vertices())
+    {
+        out_points.emplace_back(CGAL::to_double(v.point().x()),
+                                CGAL::to_double(v.point().y()));
+    }
+
+    // return triangles
+    triangles.clear();
+    triangles.reserve(cdtp.number_of_faces());
+
+    for (auto fit = cdtp.finite_faces_begin();
+              fit != cdtp.finite_faces_end(); ++fit)
+    {
+        DTriangle indices;
+        for (int i = 0; i < 3; i++) {
+            indices[i] = cdtp.tds().vertices().index(fit->vertex(i));
+        }
+        triangles.push_back(indices);
+    }
+}
 
 } // namespace geometry
