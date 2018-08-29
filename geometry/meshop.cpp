@@ -277,31 +277,23 @@ Mesh loadObj( const boost::filesystem::path &filename )
     return parser_.mesh;
 }
 
+namespace {
 
-Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents)
+void clipImpl(const Mesh &omesh, Mesh &mesh
+              , const std::vector<ClipPlane> &planes)
 {
-    ClipPlane planes[6];
-    planes[0] = {+1.,  0., 0., extents.ll[0]};
-    planes[1] = {-1.,  0., 0., -extents.ur[0]};
-    planes[2] = {0.,  +1., 0., extents.ll[1]};
-    planes[3] = {0.,  -1., 0., -extents.ur[1]};
-    planes[4] = {0.,  0., +1., extents.ll[2]};
-    planes[5] = {0.,  0., -1., -extents.ur[2]};
-
     ClipTriangle::list clipped;
-    for (const auto& face : omesh.faces) {
+    for (const auto &face : omesh.faces) {
         clipped.emplace_back(
               omesh.vertices[face.a]
             , omesh.vertices[face.b]
             , omesh.vertices[face.c]);
     }
-    
+
     std::vector<double> tinfos;
-    for (int i = 0; i < 6; i++) {
-        clipped = clipTriangles(clipped, planes[i], tinfos);
+    for (const auto &plane : planes) {
+        clipped = clipTriangles(clipped, plane, tinfos);
     }
-    
-    auto pmesh(std::make_shared<geometry::Mesh>());
 
     typedef math::Points3::size_type Index;
     std::map<math::Point3, Index> pMap;
@@ -317,9 +309,9 @@ Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents)
                 next++;
             }
             indices[i] = pair.first->second;
-            
-            if (indices[i] >= pmesh->vertices.size()) {
-                pmesh->vertices.push_back(triangle.pos[i]);
+
+            if (indices[i] >= mesh.vertices.size()) {
+                mesh.vertices.push_back(triangle.pos[i]);
             }
         }
         // do not add degenerated faces
@@ -327,13 +319,48 @@ Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents)
             (indices[1] != indices[2]) &&
             (indices[0] != indices[2]))
         {
-            pmesh->addFace(indices[0], indices[1], indices[2]);
+            mesh.addFace(indices[0], indices[1], indices[2]);
         }
     }
-
-    return pmesh;
 }
 
+std::vector<ClipPlane> planes(const math::Extents2 &extents)
+{
+    std::vector<ClipPlane> planes;
+    planes.emplace_back(+1.,  0., 0., extents.ll[0]);
+    planes.emplace_back(-1.,  0., 0., -extents.ur[0]);
+    planes.emplace_back(0.,  +1., 0., extents.ll[1]);
+    planes.emplace_back(0.,  -1., 0., -extents.ur[1]);
+    return planes;
+}
+
+std::vector<ClipPlane> planes(const math::Extents3 &extents)
+{
+    std::vector<ClipPlane> planes;
+    planes.emplace_back(+1.,  0., 0., extents.ll[0]);
+    planes.emplace_back(-1.,  0., 0., -extents.ur[0]);
+    planes.emplace_back(0.,  +1., 0., extents.ll[1]);
+    planes.emplace_back(0.,  -1., 0., -extents.ur[1]);
+    planes.emplace_back(0.,  0., +1., extents.ll[2]);
+    planes.emplace_back(0.,  0., -1., -extents.ur[2]);
+    return planes;
+}
+
+} // namespace
+
+Mesh::pointer clip(const Mesh &omesh, const math::Extents2 &extents)
+{
+    auto out(std::make_shared<Mesh>());
+    clipImpl(omesh, *out, planes(extents));
+    return out;
+}
+
+Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents)
+{
+    auto out(std::make_shared<Mesh>());
+    clipImpl(omesh, *out, planes(extents));
+    return out;
+}
 
 Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));

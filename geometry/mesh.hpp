@@ -50,6 +50,7 @@ namespace geometry {
  */
 struct Face {
     typedef std::vector<Face> list;
+    typedef math::Points3::size_type index_type;
 
     unsigned int imageId;
 
@@ -60,14 +61,12 @@ struct Face {
 
     Face() : imageId(), a(), b(), c(), ta(), tb(), tc() {}
 
-    Face(math::Points3::size_type a, math::Points3::size_type b
-         , math::Points3::size_type c)
+    Face(index_type a, index_type b, index_type c)
         : imageId(), a(a), b(b), c(c), ta(), tb(), tc()
     {}
 
-    Face(math::Points3::size_type a, math::Points3::size_type b
-         , math::Points3::size_type c, math::Points2::size_type ta
-         , math::Points2::size_type tb, math::Points2::size_type tc
+    Face(index_type a, index_type b, index_type c
+         , index_type ta, index_type tb, index_type tc
          , unsigned int imageId = 0)
         : imageId(imageId), a(a), b(b), c(c), ta(ta), tb(tb), tc(tc)
     {}
@@ -90,6 +89,10 @@ struct Face {
     bool degenerate() const {
         return ((a == b) || (b == c) || (c == a));
     }
+
+    // needed by python bindings
+    bool operator==(const Face &f) const;
+    bool operator<(const Face &f) const;
 };
 
 /** Textured 3D mesh representation.
@@ -291,5 +294,35 @@ inline Mesh::FaceVertexConstIterator Mesh::end(const Face&) const {
     return FaceVertexConstIterator();
 }
 
+// inlines
+
+inline bool Face::operator==(const Face &f) const {
+    return
+        (a == f.a) && (b == f.b) && (c == f.c)
+        && (ta == f.ta) && (tb == f.tb) && (tc == f.tc)
+        && (imageId == f.imageId)
+        ;
+}
+
+inline bool Face::operator<(const Face &f) const
+{
+    if (a < f.a) { return true; }
+    if (f.a < a) { return false; }
+    if (b < f.b) { return true; }
+    if (f.b < b) { return false; }
+    if (c < f.c) { return true; }
+    if (f.c < c) { return false; }
+
+    if (ta < f.ta) { return true; }
+    if (f.ta < ta) { return false; }
+    if (tb < f.tb) { return true; }
+    if (f.tb < tb) { return false; }
+    if (tc < f.tc) { return true; }
+    if (f.tc < tc) { return false; }
+
+    return imageId < f.imageId;
+}
+
 } // namespace geometry
+
 #endif // geometry_mesh_hpp_included_

@@ -160,7 +160,15 @@ Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
  * \param extents extents defining where to keep geometry
  * \return processed mesh, texture coordinates are at the moment discarted
  */
-Mesh::pointer clip( const Mesh& omesh, const math::Extents3& extents);
+Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents);
+
+/** Clips mesh to the given 2d extents 
+ *
+ * \param mesh mesh to clip
+ * \param extents extents defining where to keep geometry
+ * \return processed mesh, texture coordinates are at the moment discarted
+ */
+Mesh::pointer clip(const Mesh &omesh, const math::Extents2 &extents);
 
 /** Support structure for faces-per-tile calculation.
  */
