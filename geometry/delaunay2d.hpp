@@ -43,6 +43,14 @@
 
 #include "utility/gccversion.hpp"
 
+#if GEOMETRY_HAS_CGAL
+#  include <CGAL/config.h>
+#  include <CGAL/version.h>
+#  if CGAL_VERSION_NR >= CGAL_VERSION_NUMBER(4,11,0)
+#    define GEOMETRY_HAS_CGAL_4_11
+#  endif
+#endif
+
 namespace geometry {
 
 typedef std::array<unsigned, 3> DTriangle;
@@ -73,9 +81,9 @@ void constrainedDelaunayTriangulation2d
     math::Points2 &out_points,
     std::vector<DTriangle> &triangles
 )
-#ifndef GEOMETRY_HAS_CGAL
+#ifndef GEOMETRY_HAS_CGAL_4_11
     UTILITY_FUNCTION_ERROR("Constrained Delaunay triangulation is only "
-                           "available when compiling with CGAL.")
+                           "available when compiling with CGAL>=4.11.")
 #endif
     ;
 

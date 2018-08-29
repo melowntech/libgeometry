@@ -79,7 +79,7 @@ std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
     return triangles;
 }
 
-
+#ifdef GEOMETRY_HAS_CGAL_4_11
 void constrainedDelaunayTriangulation2d(
         const math::Points2 &points,
         const std::vector<DEdge> &constrained_edges,
@@ -132,5 +132,6 @@ void constrainedDelaunayTriangulation2d(
         triangles.push_back(indices);
     }
 }
+#endif
 
 } // namespace geometry
