@@ -170,6 +170,10 @@ Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents);
  */
 Mesh::pointer clip(const Mesh &omesh, const math::Extents2 &extents);
 
+/** Appends one mesh to the another. Fixed face indices.
+ */
+void append(Mesh &mesh, const Mesh &added);
+
 /** Support structure for faces-per-tile calculation.
  */
 class FacesPerCell {

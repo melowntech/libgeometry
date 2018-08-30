@@ -68,6 +68,12 @@ void addFace6(Mesh &m, index_type a, index_type b, index_type c, index_type ta
     return m.addFace(a, b, c, ta, tb, tc);
 }
 
+void addFace7(Mesh &m, index_type a, index_type b, index_type c, index_type ta
+              , index_type tb, index_type tc, unsigned int imageId)
+{
+    return m.addFace(a, b, c, ta, tb, tc, imageId);
+}
+
 Mesh clip2(const Mesh &m, const math::Extents2 &e)
 {
     return *geometry::clip(m, e);
@@ -76,6 +82,11 @@ Mesh clip2(const Mesh &m, const math::Extents2 &e)
 Mesh clip3(const Mesh &m, const math::Extents3 &e)
 {
     return *geometry::clip(m, e);
+}
+
+void appendMesh(Mesh &mesh, const Mesh &added)
+{
+    return geometry::append(mesh, added);
 }
 
 } } // namespace geometry::py
@@ -89,7 +100,7 @@ BOOST_PYTHON_MODULE(melown_geometry)
 
     const return_internal_reference<> InternalRef;
 
-    auto Face = class_<geometry::Face>("Face", init<geometry::Face>())
+    auto Face = class_<geometry::Face>("Face", init<const geometry::Face&>())
         .def(init<>())
         .def(init<index_type, index_type, index_type>())
         .def(init<index_type, index_type, index_type
@@ -121,9 +132,11 @@ BOOST_PYTHON_MODULE(melown_geometry)
 
     auto Mesh = class_<geometry::Mesh>
         ("Mesh", init<const geometry::Mesh&>())
+        .def(init<>())
         .def("normal", &geometry::Mesh::normal)
         .def("addFace", &py::addFace3)
         .def("addFace", &py::addFace6)
+        .def("addFace", &py::addFace7)
         .def("a", &geometry::Mesh::a, InternalRef)
         .def("b", &geometry::Mesh::b, InternalRef)
         .def("c", &geometry::Mesh::c, InternalRef)
@@ -138,15 +151,20 @@ BOOST_PYTHON_MODULE(melown_geometry)
         .def("barycenter", &geometry::Mesh::barycenter)
         ;
 
-    pysupport::def_readonly(Mesh, "vertices", &geometry::Mesh::vertices);
-    pysupport::def_readonly(Mesh, "tCoords", &geometry::Mesh::tCoords);
-    pysupport::def_readonly(Mesh, "faces", &geometry::Mesh::faces);
+    pysupport::def_readwrite(Mesh, "vertices", &geometry::Mesh::vertices);
+    pysupport::def_readwrite(Mesh, "tCoords", &geometry::Mesh::tCoords);
+    pysupport::def_readwrite(Mesh, "faces", &geometry::Mesh::faces);
 
     def<geometry::Mesh (*)(const fs::path&)>("loadPly", &geometry::loadPly);
     def<geometry::Mesh (*)(const fs::path&)>("loadObj", &geometry::loadObj);
+    def<void (*)(const geometry::Mesh&, const fs::path&)>
+        ("savePly", &geometry::saveAsPly);
+    def<void (*)(const geometry::Mesh&, const fs::path&, const std::string&)>
+        ("saveObj", &geometry::saveAsObj);
 
     def("clip", &py::clip2);
     def("clip", &py::clip3);
+    def("append", &py::appendMesh);
 }
 
 namespace geometry { namespace py {

@@ -758,4 +758,24 @@ void loadPly(ObjParserBase &parser, const boost::filesystem::path &path)
     f.close();
 }
 
+void append(Mesh &mesh, const Mesh &added)
+{
+    // remember vertex indexing shift and append vertices
+    const auto vShift(mesh.vertices.size());
+    mesh.vertices.insert(mesh.vertices.end(), added.vertices.begin()
+                         , added.vertices.end());
+
+    // remember texturing coord indexing shift and append texturing coordinates
+    const auto tcShift(mesh.tCoords.size());
+    mesh.tCoords.insert(mesh.tCoords.end(), added.tCoords.begin()
+                        , added.tCoords.end());
+
+    // append faces with shifts applied
+    for (const auto &f : added.faces) {
+        mesh.addFace(f.a + vShift, f.b + vShift, f.c + vShift
+                     , f.ta + tcShift, f.tb + tcShift, f.tc + tcShift
+                     , f.imageId);
+    }
+}
+
 } // namespace geometry

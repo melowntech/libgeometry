@@ -129,6 +129,11 @@ struct Mesh {
                  , math::Points3::size_type c, math::Points2::size_type ta
                  , math::Points2::size_type tb, math::Points2::size_type tc );
 
+    void addFace(math::Points3::size_type a, math::Points3::size_type b
+                 , math::Points3::size_type c, math::Points2::size_type ta
+                 , math::Points2::size_type tb, math::Points2::size_type tc
+                 , unsigned int imageId);
+
     /** First face point.
     */
     const math::Point3& a(const Face &face) const {
@@ -219,11 +224,21 @@ inline void Mesh::addFace(math::Points3::size_type a
     faces.emplace_back(a, b, c);
 }
 
-inline void Mesh::addFace(math::Points3::size_type a, math::Points3::size_type b
-                 , math::Points3::size_type c, math::Points2::size_type ta
-                 , math::Points2::size_type tb, math::Points2::size_type tc)
+inline void
+Mesh::addFace(math::Points3::size_type a, math::Points3::size_type b
+              , math::Points3::size_type c, math::Points2::size_type ta
+              , math::Points2::size_type tb, math::Points2::size_type tc)
 {
     faces.emplace_back(a, b, c, ta, tb, tc);
+}
+
+inline void
+Mesh::addFace(math::Points3::size_type a, math::Points3::size_type b
+              , math::Points3::size_type c, math::Points2::size_type ta
+              , math::Points2::size_type tb, math::Points2::size_type tc
+              , unsigned int imageId)
+{
+    faces.emplace_back(a, b, c, ta, tb, tc, imageId);
 }
 
 
