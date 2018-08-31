@@ -151,9 +151,12 @@ BOOST_PYTHON_MODULE(melown_geometry)
         .def("barycenter", &geometry::Mesh::barycenter)
         ;
 
-    pysupport::def_readwrite(Mesh, "vertices", &geometry::Mesh::vertices);
-    pysupport::def_readwrite(Mesh, "tCoords", &geometry::Mesh::tCoords);
-    pysupport::def_readwrite(Mesh, "faces", &geometry::Mesh::faces);
+    pysupport::def_readwrite<return_internal_reference<>>
+        (Mesh, "vertices", &geometry::Mesh::vertices);
+    pysupport::def_readwrite<return_internal_reference<>>
+        (Mesh, "tCoords", &geometry::Mesh::tCoords);
+    pysupport::def_readwrite<return_internal_reference<>>
+        (Mesh, "faces", &geometry::Mesh::faces);
 
     def<geometry::Mesh (*)(const fs::path&)>("loadPly", &geometry::loadPly);
     def<geometry::Mesh (*)(const fs::path&)>("loadObj", &geometry::loadObj);
