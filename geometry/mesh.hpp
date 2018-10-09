@@ -55,9 +55,9 @@ struct Face {
     unsigned int imageId;
 
     // Indices of vertices.
-    math::Points3::size_type a, b, c;
+    index_type a, b, c;
     // Indices of texture coordinates.
-    math::Points2::size_type ta, tb, tc;
+    index_type ta, tb, tc;
 
     Face() : imageId(), a(), b(), c(), ta(), tb(), tc() {}
 
