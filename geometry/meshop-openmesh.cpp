@@ -360,13 +360,12 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount
     return newMesh;
 }
 
-Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr)
+Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
+                            , const SimplifyOptions &options)
 {
     OMMesh omMesh;
-    toOpenMesh(mesh, omMesh);
 
-    // lock the corner vertices of the window to prevent simplifying the corners
-    lockCorners(omMesh);
+    prepareMesh(omMesh, mesh, options);
 
     Decimator decimator(omMesh);
     HModQuadric hModQuadric; // collapse priority based on vertex error quadric

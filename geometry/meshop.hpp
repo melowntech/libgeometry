@@ -128,7 +128,7 @@ Mesh::pointer simplify( const Mesh::pointer &mesh, int faceCount
  * \param maxErr maximal geometric error
  * \return simplified mesh
  */
-Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr);
+Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr, const SimplifyOptions &simplifyOptions);
 
 /** Refines mesh. Longest edges are splitted until certain amount of faces is reached
  *
@@ -302,9 +302,9 @@ inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount
     return simplify(*mesh, faceCount, simplifyOptions);
 }
 
-inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
+inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr, const SimplifyOptions &options)
 {
-    return simplifyToError(*mesh, maxErr);
+    return simplifyToError(*mesh, maxErr, options);
 }
 
 inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh
