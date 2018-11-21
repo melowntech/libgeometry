@@ -53,14 +53,15 @@ namespace ublas = boost::numeric::ublas;
 
 namespace {
 
-struct NormalTraits : public OpenMesh::DefaultTraits 
+struct NormalTraits : public OpenMesh::DefaultTraits
 {
   FaceAttributes( OpenMesh::Attributes::Normal );
 };
 
 typedef OpenMesh::TriMesh_ArrayKernelT<NormalTraits> OMMesh;
 typedef OpenMesh::Decimater::DecimaterT<OMMesh> Decimator;
-typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
+//typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
+typedef detail::ModQuadricConvexT<OMMesh>::Handle HModQuadric;
 typedef detail::ModQuadricHybrid<OMMesh>::Handle HModQuadricHybrid;
 typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippingT;
 typedef OpenMesh::Decimater::ModAspectRatioT<OMMesh>::Handle HModAspectRatioT;
@@ -93,6 +94,7 @@ math::Extents2 toOpenMesh(const geometry::Mesh &mesh, OMMesh& omMesh)
 
     return e;
 }
+
 
 void fromOpenMesh(const OMMesh& omMesh, geometry::Mesh& mesh)
 {
