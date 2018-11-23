@@ -96,12 +96,32 @@ public:
         return alternativeVertices_;
     }
 
+    SimplifyOptions&
+    concaveVertexModifier(const boost::optional<float> &value)
+    {
+        concaveVertexModifier_ = value; return *this;
+    }
+    const boost::optional<float>& concaveVertexModifier() const {
+        return concaveVertexModifier_;
+    }
+
 private:
     long flags_;
     boost::optional<double> maxError_;
     boost::optional<float> maxEdgeLength_;
     boost::optional<float> minAspectRatio_;
     const math::Points3 *alternativeVertices_;
+
+    // This is a priority modifier for concave vertexes.
+    // Lets denote it K: new_error = old_error * K.
+    // For convex and undefined verteces the new_error = old_error.
+    // The decimation framework would select verteces
+    // with the lowest value of error.
+    // Therefore, if K is in (0, 1) then we would prefer
+    // these concave verteces (for simplification) over
+    // verteces which are not concave.
+    // If K in (1, +infinity) then we would have the opposite effect.
+    boost::optional<float> concaveVertexModifier_;
 };
 
 Mesh::pointer simplify(const Mesh &mesh, int faceCount

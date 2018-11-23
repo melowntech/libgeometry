@@ -60,8 +60,8 @@ struct NormalTraits : public OpenMesh::DefaultTraits
 
 typedef OpenMesh::TriMesh_ArrayKernelT<NormalTraits> OMMesh;
 typedef OpenMesh::Decimater::DecimaterT<OMMesh> Decimator;
-//typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
-typedef detail::ModQuadricConvexT<OMMesh>::Handle HModQuadric;
+typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
+typedef detail::ModQuadricConvexT<OMMesh>::Handle HModQuadricConvex;
 typedef detail::ModQuadricHybrid<OMMesh>::Handle HModQuadricHybrid;
 typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippingT;
 typedef OpenMesh::Decimater::ModAspectRatioT<OMMesh>::Handle HModAspectRatioT;
@@ -301,6 +301,11 @@ void prepareDecimator(Decimator &decimator
                       , const SimplifyOptions &options)
 {
     if (options.alternativeVertices()) {
+        if (options.concaveVertexModifier()) {
+            LOGTHROW (err3, std::runtime_error) <<
+                "Concave/Convex modification is not "
+                "implemented for alternative verteces";
+        }
         HModQuadricHybrid hModQuadricHybrid;
         decimator.add(hModQuadricHybrid);
         decimator.module(hModQuadricHybrid)
@@ -308,6 +313,17 @@ void prepareDecimator(Decimator &decimator
 
         if (options.maxError()) {
             decimator.module(hModQuadricHybrid)
+                .set_max_err(*options.maxError(), false);
+        }
+    } else if (options.concaveVertexModifier()){
+        // collapse priority based on vertex error quadric
+        // adjusted by convexity of the vertex
+        HModQuadricConvex hModQuadricConvex;
+        decimator.add(hModQuadricConvex);
+        decimator.module(hModQuadricConvex).
+            set_concave_vertex_modifier(*options.concaveVertexModifier());
+        if (options.maxError()) {
+            decimator.module(hModQuadricConvex)
                 .set_max_err(*options.maxError(), false);
         }
     } else {

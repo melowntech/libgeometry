@@ -317,6 +317,9 @@ template <class MeshT>
 class ModQuadricConvexT : public OpenMesh::Decimater::ModQuadricT<MeshT>
 {
 private:
+
+    float concaveVertexModifier_;
+
     //  0 - cannot decide
     //  1 - convex
     // -1 - concave
@@ -362,10 +365,10 @@ private:
         }
 
         if (volume_parallelepiped > 0 ) {
-            //LOG (info3) << "plus -> convex " << volume_parallelepiped/6.0;
+            //LOG (debug) << "plus -> convex " << volume_parallelepiped/6.0;
             return 1;
         } else {
-            //LOG (info3) << "minus -> concave " << volume_parallelepiped/6.0;
+            //LOG (debug) << "minus -> concave " << volume_parallelepiped/6.0;
             return -1;
         }
     }
@@ -379,11 +382,15 @@ public:
 
 public:
 
-  ModQuadricConvexT( MeshT &_mesh )
+  ModQuadricConvexT( MeshT &_mesh)
     : OpenMesh::Decimater::ModQuadricT<MeshT>(_mesh)
   {
+      concaveVertexModifier_ = 1; // By default do not do anything
   }
 
+  void set_concave_vertex_modifier(float value) {
+      concaveVertexModifier_ = value;
+  }
 
   /// Destructor
   virtual ~ModQuadricConvexT()
@@ -393,24 +400,28 @@ public:
 
 public: // inherited
 
-  /** Compute collapse priority based on error quadrics.
-   *
-   *  \see ModBaseT::collapse_priority() for return values
-   *  \see set_max_err()
+  /**
+   *  Compute collapse priority based on error quadrics
+   *  and modifies it based on convexity of the vertex
    */
   virtual float collapse_priority(const CollapseInfo& _ci)
   {
     float priority = OpenMesh::Decimater::ModQuadricT<MeshT>::collapse_priority(_ci);
-    if (priority == Base::ILLEGAL_COLLAPSE) {
+    if (concaveVertexModifier_ == 1) {
+        // If we are not going to modify it => do nothing
         return priority;
     }
 
+    // We want to modify priority somehow
+    if (priority == Base::ILLEGAL_COLLAPSE) {
+        return priority;
+    }
     // v0 -> vertex to be removed
     // v1 -> remaining vertex
     auto result = check_vertex_convexity (_ci.v0);
     if (result == -1) {
-//        LOG (info3) << "Point " << Base::mesh().point (_ci.v0) << " is concave";
-        return priority * 0.5;
+//        LOG (debug) << "Point " << Base::mesh().point (_ci.v0) << " is concave";
+        return priority * concaveVertexModifier_;
     }
     return priority;
   }
