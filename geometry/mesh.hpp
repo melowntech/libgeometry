@@ -50,7 +50,7 @@ namespace geometry {
  */
 struct Face {
     typedef std::vector<Face> list;
-    typedef math::Points3::size_type index_type;
+    typedef unsigned int index_type;
 
     unsigned int imageId;
 
