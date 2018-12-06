@@ -45,6 +45,7 @@
 #include <memory>
 #include "utility/progress.hpp"
 #include "utility/openmp.hpp"
+#include "utility/stl-helpers.hpp"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -2129,12 +2130,7 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
 
             }
 
-    std::vector<FPosition_s> retval;
-    for(const auto &vec : tVertices){
-        retval.insert(retval.end(),vec.begin(), vec.end());
-    }
-
-    return retval;
+    return utility::flatten<FPosition_s>(tVertices);
 }
 
 template <typename Value_t, class Container_t>
