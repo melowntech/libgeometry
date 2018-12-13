@@ -823,13 +823,7 @@ private:
 };
 
 
-/** Converts coordinate to grid defined by reference point and cell size.
- *  Coordinates not on grid are rounded up.
- */
-double gridExtentsUp(double value, double origin, double size)
-{
-    return std::ceil((value - origin) / size) * size + origin;
-}
+} // namespace
 
 /** Converts coordinate to grid defined by reference point and cell size.
  *  Coordinates not on grid are rounded down.
@@ -837,6 +831,14 @@ double gridExtentsUp(double value, double origin, double size)
 double gridExtentsDown(double value, double origin, double size)
 {
     return std::floor((value - origin) / size) * size + origin;
+}
+
+/** Converts coordinate to grid defined by reference point and cell size.
+ *  Coordinates not on grid are rounded up.
+ */
+double gridExtentsUp(double value, double origin, double size)
+{
+    return std::ceil((value - origin) / size) * size + origin;
 }
 
 math::Extents2 gridExtents(const math::Extents2 &extents
@@ -851,7 +853,6 @@ math::Extents2 gridExtents(const math::Extents2 &extents
     };
 }
 
-} // namespace
 
 std::size_t FacesPerCell::cellIndex(double x, double y) const
 {

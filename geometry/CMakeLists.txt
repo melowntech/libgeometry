@@ -73,7 +73,7 @@ endif()
 
 
 define_module(LIBRARY geometry=${geometry_VERSION}
-  DEPENDS math>=1.4 utility>=1.11 dbglog>=1.4
+  DEPENDS math>=1.4 utility>=1.11 dbglog>=1.4 gts glib
   ${geometry_EXTRA_DEPENDS}
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
@@ -102,6 +102,7 @@ set(geometry_SOURCES
 
   nonconvexclip.hpp nonconvexclip.cpp
   triangulate.hpp triangulate.cpp
+  meshop-gts.cpp
 
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}

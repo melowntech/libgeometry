@@ -44,6 +44,15 @@
 
 namespace geometry {
 
+struct GridCell {
+    math::Extents2 extent;
+    long maxFaceCount;
+
+    GridCell (const math::Extents2 &cellExtent) : extent(cellExtent) {
+        maxFaceCount = 0;
+    };
+};
+
 enum SimplifyOption
 {
     NONE = 0,
@@ -228,9 +237,16 @@ private:
     PerCellCount goal_;
 };
 
-/** Function that tells how many faces should given cell have.
- */
+void make_gts_class_system_threadsafe (void);
 
+Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax);
+
+Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
+    , std::vector<std::vector <geometry::GridCell>> &gridCells, bool inParallel);
+
+math::Extents2 gridExtents(const math::Extents2 &extents
+                           , const math::Point2 &alignment
+                           , const math::Size2f &cellSize);
 /** Simplify mesh with custom number of faces in cell.
  *
  * \param mesh mesh to simplify
