@@ -274,7 +274,6 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
                 coarsen_func, coarsen_data,
                 stop_func, &edgeMaxCount, fold);
 
-        gts_object_destroy (GTS_OBJECT (subSurface));
     });
 
 
@@ -293,6 +292,7 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
             // Fill the sub surface with faces from this cell and calculate mesh_area in cells
             gts_surface_foreach_face (s, (GtsFunc) getSubSurface, &subParams);
             oneCellProcess (row, column, subSurface);
+            gts_object_destroy (GTS_OBJECT (subSurface));
         }
     } else {
         auto computeBunchInParallel ([&](long cellRowStart, long cellColumnStart, long cellRowShift, long cellColumnShift) -> void
@@ -327,6 +327,11 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
                 GtsSurface *subSurface = subSurfaces.find (std::make_pair <long, long> (row, column))->second;
                 oneCellProcess (row, column, subSurface);
             }
+            for (uint row = cellRowStart ; row < rows; row+=cellRowShift)
+            for (uint column = cellColumnStart ; column < columns; column+=cellColumnShift) {
+                GtsSurface *subSurface = subSurfaces.find (std::make_pair <long, long> (row, column))->second;
+                gts_object_destroy (GTS_OBJECT (subSurface));
+            }
         });
         computeBunchInParallel (0, 0, 2, 2);
         subSurfaces.clear();
@@ -335,6 +340,26 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
         computeBunchInParallel (1, 0, 2, 2);
         subSurfaces.clear();
         computeBunchInParallel (1, 1, 2, 2);
+        /*
+        // Another proposal for the order of parallel processing
+        // These are guaranded to do not have intersection in 2-neghbourhoods
+        // Because between every cells that are computed in parallel
+        // there is at least one unsimplifyed cell, which has a loooot of triangles
+        // But still it does not work, there is a problem inside gts library
+        // and I was not able to find it yet
+        computeBunchInParallel (0, 0, 2, 2);
+        subSurfaces.clear();
+        computeBunchInParallel (0, 1, 2, 4);
+        subSurfaces.clear();
+        computeBunchInParallel (1, 0, 4, 4);
+        subSurfaces.clear();
+        computeBunchInParallel (1, 1, 4, 4);
+        subSurfaces.clear();
+        computeBunchInParallel (1, 2, 4, 4);
+        subSurfaces.clear();
+        //
+        // TODO run on the rest cells
+        */
     }
 
     auto newMesh(std::make_shared<geometry::Mesh>());
