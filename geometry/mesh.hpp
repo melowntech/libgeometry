@@ -107,6 +107,7 @@ struct Mesh {
     typedef std::vector<Mesh> list;
 
     /** vertices */
+    std::vector <int> vertecesClass;
     math::Points3 vertices;
 
     /** per-vertex texture coordinates */

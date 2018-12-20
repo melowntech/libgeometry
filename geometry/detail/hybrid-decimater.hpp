@@ -312,6 +312,73 @@ void ModQuadricHybrid<MeshT>::set_error_tolerance_factor(double _factor) {
   }
 }
 
+template <class MeshT>
+class ClassifyRestrictModT : public OpenMesh::Decimater::ModBaseT<MeshT>
+{
+private:
+    std::set <int> allowedClasses_;
+public:
+
+  // Defines the types Self, Handle, Base, Mesh, and CollapseInfo
+  // and the memberfunction name()
+  DECIMATING_MODULE( ClassifyRestrictModT, MeshT, ClassifyRestricted );
+
+public:
+
+  /** Constructor
+   *  \internal
+   */
+  ClassifyRestrictModT( MeshT &_mesh )
+    : Base(_mesh, true)
+  {
+  }
+
+  void allow (int classLabel) {
+    allowedClasses_.insert(classLabel);
+  }
+
+  bool isAllowed (int classLabel) {
+    return allowedClasses_.count (classLabel);
+  }
+
+  /// Destructor
+  virtual ~ClassifyRestrictModT()
+  {
+  }
+
+
+public: // inherited
+
+  /// Initalize the module and prepare the mesh for decimation.
+  virtual void initialize(void) {
+  }
+
+  /** Compute collapse priority based on error quadrics.
+   *
+   *  \see ModBaseT::collapse_priority() for return values
+   *  \see set_max_err()
+   */
+  virtual float collapse_priority(const CollapseInfo& _ci)
+  {
+    auto &mesh = Base::mesh();
+    if (!isAllowed (mesh.data(_ci.v1).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    if (!isAllowed (mesh.data(_ci.v0).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    if (!isAllowed (mesh.data(_ci.vl).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    if (!isAllowed (mesh.data(_ci.vr).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    return Base::LEGAL_COLLAPSE;
+  }
+
+};
+
+
 
 template <class MeshT>
 class ModQuadricConvexT : public OpenMesh::Decimater::ModQuadricT<MeshT>

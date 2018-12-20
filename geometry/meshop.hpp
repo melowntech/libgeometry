@@ -106,6 +106,15 @@ public:
     }
 
     SimplifyOptions&
+    classBasedPlanarisation(const boost::optional<bool> &value)
+    {
+        classBasedPlanarisation_ = value; return *this;
+    }
+    const boost::optional<bool>& classBasedPlanarisation() const {
+        return classBasedPlanarisation_;
+    }
+
+    SimplifyOptions&
     concaveVertexModifier(const boost::optional<float> &value)
     {
         concaveVertexModifier_ = value; return *this;
@@ -131,6 +140,9 @@ private:
     // verteces which are not concave.
     // If K in (1, +infinity) then we would have the opposite effect.
     boost::optional<float> concaveVertexModifier_;
+
+    // Use class based planarisation in simplifyToError
+    boost::optional<bool> classBasedPlanarisation_;
 };
 
 Mesh::pointer simplify(const Mesh &mesh, int faceCount

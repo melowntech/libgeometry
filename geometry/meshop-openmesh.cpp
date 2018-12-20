@@ -56,6 +56,11 @@ namespace {
 struct NormalTraits : public OpenMesh::DefaultTraits
 {
   FaceAttributes( OpenMesh::Attributes::Normal );
+  VertexTraits
+  {
+    int classLabel;
+  };
+
 };
 
 typedef OpenMesh::TriMesh_ArrayKernelT<NormalTraits> OMMesh;
@@ -67,6 +72,9 @@ typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippi
 typedef OpenMesh::Decimater::ModAspectRatioT<OMMesh>::Handle HModAspectRatioT;
 typedef OpenMesh::Decimater::ModEdgeLengthT<OMMesh>::Handle HModEdgeLengthT;
 
+
+typedef detail::ClassifyRestrictModT<OMMesh>::Handle HModClassRestrictT;
+
 /** Convert mesh to OpenMesh data structure and return mesh extents (2D bounding
  *  box)
  */
@@ -77,10 +85,13 @@ math::Extents2 toOpenMesh(const geometry::Mesh &mesh, OMMesh& omMesh)
     // create OpenMesh vertices
     std::vector<OMMesh::VertexHandle> handles;
     handles.reserve(mesh.vertices.size());
+    int i = 0;
     for (const auto& v : mesh.vertices) {
         handles.emplace_back(
             omMesh.add_vertex(OMMesh::Point(v(0), v(1), v(2))) );
+        omMesh.data(handles.back()).classLabel = mesh.vertecesClass[i];
         update(e, v);
+        ++i;
     }
 
     // create OpenMesh faces
@@ -389,8 +400,19 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
     HModQuadric hModQuadric; // collapse priority based on vertex error quadric
     decimator.add(hModQuadric);
     decimator.module( hModQuadric ).set_max_err(maxErr, false);
-    decimator.initialize();
 
+    if (options.classBasedPlanarisation()) {
+        HModClassRestrictT hModClassRestrictT;
+        decimator.add (hModClassRestrictT);
+        // Some hardcoded classes allowed for decimation
+        decimator.module(hModClassRestrictT).allow(13);
+        decimator.module(hModClassRestrictT).allow(14);
+        decimator.module(hModClassRestrictT).allow(15);
+        decimator.module(hModClassRestrictT).allow(16);
+        decimator.module(hModClassRestrictT).allow(18);
+        decimator.module(hModClassRestrictT).allow(9);
+    }
+    decimator.initialize();
     decimator.decimate_to_faces(0, 0);
     omMesh.garbage_collection();
 
