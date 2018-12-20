@@ -188,6 +188,25 @@ void getSubSurface (void *ee, gpointer *data)
     }
 }
 
+void getSubSurfaces (GtsFace *f, gpointer *data)
+{
+    std::vector <std::vector <GtsSurface *>> *subSurfaces = (std::vector <std::vector <GtsSurface *>> *) data[0];
+    std::function<math::Point2_<long>(double x, double y)> *getGridCell = (std::function<math::Point2_<long>(double, double)>* ) data[1];
+
+
+    GtsVertex *v1, *v2, *v3;
+    gts_triangle_vertices (GTS_TRIANGLE (f), &v1, &v2, &v3);
+
+    gdouble midx = GTS_POINT (v1) -> x + GTS_POINT (v2)->x + GTS_POINT (v3) ->x;
+    midx /= 3;
+    gdouble midy = GTS_POINT (v1) -> y + GTS_POINT (v2)->y + GTS_POINT (v3) ->y;
+    midy /= 3;
+
+    auto targetCell = (*getGridCell)(midx, midy);
+    GtsSurface *subSurface =(*subSurfaces)[targetCell(1)][targetCell(0)];
+    gts_surface_add_face (subSurface, f);
+}
+
 void make_gts_class_system_threadsafe (void) {
     // Claass system in GTS is not thread safe at compile time
     // initialise it in the main thread -> then it would thread-safe at run time
@@ -234,7 +253,9 @@ void make_gts_class_system_threadsafe (void) {
 }
 
 geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
-    , std::vector<std::vector <geometry::GridCell>> &gridCells, bool inParallel)
+    , std::vector<std::vector <geometry::GridCell>> &gridCells
+    , bool inParallel
+    , std::function<math::Point2_<long>(double x, double y)> getGridCell)
 {
     // the make_gts_class_system_threadsafe (void);
     // MUST be called in main thread! be fore this moment
@@ -260,13 +281,15 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
     gpointer coarsen_data = &params;
     gpointer cost_data = &params;
 
-    std::map <std::pair <long, long>, GtsSurface*> subSurfaces;
     auto rows = gridCells.size();
     auto columns = gridCells[0].size(); // All rows have the same number of columns
+
+
     auto oneCellProcess ([&](long row, long column, GtsSurface *subSurface) -> void
     {
         auto edgeMaxCount = gridCells[row][column].maxFaceCount * 3 / 2;
-        LOG (info3) << "Simplifying cell [" << row << "," << column << "]" << "/[" << rows << "," << columns << "] "
+        // -1, because we are counting from 0!
+        LOG (info3) << "Simplifying cell [" << row << "," << column << "]" << "/[" << rows - 1 << "," << columns - 1 << "] "
             << gridCells[row][column].extent
             << " to " << gridCells[row][column].maxFaceCount << " faces";
         gts_surface_coarsen (subSurface,
@@ -295,9 +318,27 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
             gts_object_destroy (GTS_OBJECT (subSurface));
         }
     } else {
+        LOG (info3) << "Creating empty subSurfaces";
+        // Create a list of surfaces
+        std::vector<std::vector <GtsSurface *>> subSurfaces(rows);
+        for (uint row = 0; row < rows ; ++row)
+        for (uint column = 0; column < columns ; ++column) {
+            GtsSurface *subSurface = gts_surface_new (gts_surface_class (),
+                    gts_face_class (),
+                    gts_edge_class (),
+                    gts_vertex_class ());
+            subSurfaces[row].push_back (subSurface);
+        }
+        // Generate surfaces
+        gpointer subParams[2];
+        subParams[0] = &subSurfaces;
+        subParams[1] = &getGridCell;
+        LOG (info3) << "Filling subSurfaces";
+        gts_surface_foreach_face (s, (GtsFunc) getSubSurfaces, &subParams);
+
         auto computeBunchInParallel ([&](long cellRowStart, long cellColumnStart, long cellRowShift, long cellColumnShift) -> void
         {
-            LOG (info3)  << "Next bunch" ;
+            LOG (info3)  << "Next bunch";
             // We cannot change a gts_surface (simplifying one cell of the mesh)
             // and at the same time iterate over gts_surface_verteces/faces/edges
             // (creating a subsurface for another cell)
@@ -305,32 +346,17 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
             //     Gts:ERROR:surface.c:184:gts_surface_remove_face: assertion failed: (s->keep_faces == FALSE)
             // Solution: prepare all sub surfaces for this bunch in advance
 
-            for (uint row = cellRowStart ; row < rows; row+=cellRowShift)
-            for (uint column = cellColumnStart ; column < columns; column+=cellColumnShift)
-            {
-                GtsSurface *subSurface = gts_surface_new (gts_surface_class (),
-                        gts_face_class (),
-                        gts_edge_class (),
-                        gts_vertex_class ());
-                gpointer subParams[2];
-                subParams[0] = &gridCells[row][column].extent;
-                subParams[1] = subSurface;
-
-                // Fill the sub surface with faces from this cell
-                gts_surface_foreach_face (s, (GtsFunc) getSubSurface, &subParams);
-                subSurfaces.emplace (std::make_pair <long, long> (row, column), subSurface);
-            }
-
             UTILITY_OMP(parallel for schedule(dynamic, 1) collapse(2))
             for (uint row = cellRowStart ; row < rows; row+=cellRowShift)
             for (uint column = cellColumnStart ; column < columns; column+=cellColumnShift)
             {
-                GtsSurface *subSurface = subSurfaces.find (std::make_pair <long, long> (row, column))->second;
+                GtsSurface *subSurface = subSurfaces[row][column];
                 oneCellProcess (row, column, subSurface);
             }
+            // Clean up to free some space
             for (uint row = cellRowStart ; row < rows; row+=cellRowShift)
             for (uint column = cellColumnStart ; column < columns; column+=cellColumnShift) {
-                GtsSurface *subSurface = subSurfaces.find (std::make_pair <long, long> (row, column))->second;
+                GtsSurface *subSurface = subSurfaces[row][column];
                 gts_object_destroy (GTS_OBJECT (subSurface));
             }
         });
@@ -338,15 +364,10 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
         // Because between every cells that are computed in parallel
         // there is at least one unsimplifyed cell, which has a loooot of triangles
         computeBunchInParallel (0, 0, 2, 2); // 1
-        subSurfaces.clear();
         computeBunchInParallel (0, 1, 2, 4); // 2
-        subSurfaces.clear();
         computeBunchInParallel (1, 0, 4, 4); // 3
-        subSurfaces.clear();
         computeBunchInParallel (1, 1, 4, 4); // 4
-        subSurfaces.clear();
         computeBunchInParallel (1, 2, 4, 4); // 5
-        subSurfaces.clear();
 
         computeBunchInParallel (3, 0, 8, 4); // 6
         computeBunchInParallel (3, 1, 8, 4); // 7
@@ -354,32 +375,19 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
 
         for (uint row = 7; row < rows; row += 8) {
             computeBunchInParallel (row, 0, rows + 1, 4); // only this row  //6', 6'', 6''', ...
-            subSurfaces.clear();
             computeBunchInParallel (row, 1, rows + 1, 4); // only this row  //7', 7'', 7''', ...
-            subSurfaces.clear();
             computeBunchInParallel (row, 2, rows + 1, 4); // only this row  //8', 8'', 8''', ...
-            subSurfaces.clear();
         }
 
         for (uint row = 0; row < rows; ++row) {
             computeBunchInParallel (row, 3, rows + 1, 8); // only this row //9, 9', 9'', 9''', ...
-            subSurfaces.clear();
         }
 
         // run the rest cells in sequence
         for (uint row = 0 ; row < rows; row+=1)
         for (uint column = 7 ; column < columns; column+=8)
         {
-            GtsSurface *subSurface = gts_surface_new (gts_surface_class (),
-                    gts_face_class (),
-                    gts_edge_class (),
-                    gts_vertex_class ());
-            gpointer subParams[2];
-            subParams[0] = &gridCells[row][column].extent;
-            subParams[1] = subSurface;
-
-            // Fill the sub surface with faces from this cell and calculate mesh_area in cells
-            gts_surface_foreach_face (s, (GtsFunc) getSubSurface, &subParams);
+            GtsSurface *subSurface = subSurfaces[row][column];
             oneCellProcess (row, column, subSurface);
             gts_object_destroy (GTS_OBJECT (subSurface));
         }
