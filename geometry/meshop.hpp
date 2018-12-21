@@ -44,6 +44,15 @@
 
 namespace geometry {
 
+struct GridCell {
+    math::Extents2 extent;
+    long maxFaceCount;
+
+    GridCell (const math::Extents2 &cellExtent) : extent(cellExtent) {
+        maxFaceCount = 0;
+    };
+};
+
 enum SimplifyOption
 {
     NONE = 0,
@@ -96,12 +105,44 @@ public:
         return alternativeVertices_;
     }
 
+    SimplifyOptions&
+    classBasedPlanarisation(const boost::optional<bool> &value)
+    {
+        classBasedPlanarisation_ = value; return *this;
+    }
+    const boost::optional<bool>& classBasedPlanarisation() const {
+        return classBasedPlanarisation_;
+    }
+
+    SimplifyOptions&
+    concaveVertexModifier(const boost::optional<float> &value)
+    {
+        concaveVertexModifier_ = value; return *this;
+    }
+    const boost::optional<float>& concaveVertexModifier() const {
+        return concaveVertexModifier_;
+    }
+
 private:
     long flags_;
     boost::optional<double> maxError_;
     boost::optional<float> maxEdgeLength_;
     boost::optional<float> minAspectRatio_;
     const math::Points3 *alternativeVertices_;
+
+    // This is a priority modifier for concave vertexes.
+    // Lets denote it K: new_error = old_error * K.
+    // For convex and undefined verteces the new_error = old_error.
+    // The decimation framework would select verteces
+    // with the lowest value of error.
+    // Therefore, if K is in (0, 1) then we would prefer
+    // these concave verteces (for simplification) over
+    // verteces which are not concave.
+    // If K in (1, +infinity) then we would have the opposite effect.
+    boost::optional<float> concaveVertexModifier_;
+
+    // Use class based planarisation in simplifyToError
+    boost::optional<bool> classBasedPlanarisation_;
 };
 
 Mesh::pointer simplify(const Mesh &mesh, int faceCount
@@ -128,7 +169,7 @@ Mesh::pointer simplify( const Mesh::pointer &mesh, int faceCount
  * \param maxErr maximal geometric error
  * \return simplified mesh
  */
-Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr);
+Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr, const SimplifyOptions &simplifyOptions);
 
 /** Refines mesh. Longest edges are splitted until certain amount of faces is reached
  *
@@ -208,9 +249,30 @@ private:
     PerCellCount goal_;
 };
 
-/** Function that tells how many faces should given cell have.
- */
+void make_gts_class_system_threadsafe()
+#ifndef GEOMETRY_HAS_GTS
+    UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
+#endif
+    ;
 
+Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax)
+#ifndef GEOMETRY_HAS_GTS
+    UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
+#endif
+    ;
+
+Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
+    , std::vector<std::vector <geometry::GridCell>> &gridCells
+    , bool inParallel
+    , std::function<math::Point2_<long>(double x, double y)> getGridCell)
+#ifndef GEOMETRY_HAS_GTS
+    UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
+#endif
+    ;
+
+math::Extents2 gridExtents(const math::Extents2 &extents
+                           , const math::Point2 &alignment
+                           , const math::Size2f &cellSize);
 /** Simplify mesh with custom number of faces in cell.
  *
  * \param mesh mesh to simplify
@@ -302,9 +364,9 @@ inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount
     return simplify(*mesh, faceCount, simplifyOptions);
 }
 
-inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr)
+inline Mesh::pointer simplifyToError(const Mesh::pointer &mesh, double maxErr, const SimplifyOptions &options)
 {
-    return simplifyToError(*mesh, maxErr);
+    return simplifyToError(*mesh, maxErr, options);
 }
 
 inline Mesh::pointer simplifyInGrid(const Mesh::pointer &mesh

@@ -312,6 +312,189 @@ void ModQuadricHybrid<MeshT>::set_error_tolerance_factor(double _factor) {
   }
 }
 
+template <class MeshT>
+class ClassifyRestrictModT : public OpenMesh::Decimater::ModBaseT<MeshT>
+{
+private:
+    std::set <int> allowedClasses_;
+public:
+
+  // Defines the types Self, Handle, Base, Mesh, and CollapseInfo
+  // and the memberfunction name()
+  DECIMATING_MODULE( ClassifyRestrictModT, MeshT, ClassifyRestricted );
+
+public:
+
+  /** Constructor
+   *  \internal
+   */
+  ClassifyRestrictModT( MeshT &_mesh )
+    : Base(_mesh, true)
+  {
+  }
+
+  void allow (int classLabel) {
+    allowedClasses_.insert(classLabel);
+  }
+
+  bool isAllowed (int classLabel) {
+    return allowedClasses_.count (classLabel);
+  }
+
+  /// Destructor
+  virtual ~ClassifyRestrictModT()
+  {
+  }
+
+
+public: // inherited
+
+  /// Initalize the module and prepare the mesh for decimation.
+  virtual void initialize(void) {
+  }
+
+  /** Compute collapse priority based on error quadrics.
+   *
+   *  \see ModBaseT::collapse_priority() for return values
+   *  \see set_max_err()
+   */
+  virtual float collapse_priority(const CollapseInfo& _ci)
+  {
+    auto &mesh = Base::mesh();
+    if (!isAllowed (mesh.data(_ci.v1).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    if (!isAllowed (mesh.data(_ci.v0).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    if (!isAllowed (mesh.data(_ci.vl).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    if (!isAllowed (mesh.data(_ci.vr).classLabel)) {
+        return Base::ILLEGAL_COLLAPSE;
+    }
+    return Base::LEGAL_COLLAPSE;
+  }
+
+};
+
+
+
+template <class MeshT>
+class ModQuadricConvexT : public OpenMesh::Decimater::ModQuadricT<MeshT>
+{
+private:
+
+    float concaveVertexModifier_;
+
+    //  0 - cannot decide
+    //  1 - convex
+    // -1 - concave
+    int check_vertex_convexity (const OpenMesh::VertexHandle &vertex_handle)
+    {
+        MeshT &omMesh = Base::mesh();
+        OpenMesh::PolyConnectivity::ConstVertexVertexCWIter neighbour_it = omMesh.vv_cwiter(vertex_handle);
+        if (!neighbour_it.is_valid()) {
+            LOG (info3) << "Isolated vertex " << vertex_handle << " skipped.";
+            return 0;
+        }
+        auto start_vertex = omMesh.point(*neighbour_it); // The main point to be used for volume computations
+        auto lateral_edge = start_vertex - omMesh.point(vertex_handle);
+
+        auto prev_neighbour_it = ++neighbour_it;
+        if (!prev_neighbour_it.is_valid()) {
+            LOG (info3) << "Vertex with only one edge " << vertex_handle << " skipped.";
+            return 0;
+        }
+        ++neighbour_it; // Move one vertex forward
+        if (!neighbour_it.is_valid()) {
+            LOG (info3) << "Vertex with only one face " << vertex_handle << " skipped.";
+            return 0;
+        }
+
+        // We have the following relation:
+        //      start_vertex -> prev_neighbour -> neighbour
+        double volume_parallelepiped = 0;
+        for ( /*empty*/ ; neighbour_it.is_valid(); ++neighbour_it) {
+            auto v0 = omMesh.point (*prev_neighbour_it);
+            auto v1 = omMesh.point (*neighbour_it);
+            // v0, v1, start_vertex in most of cases do not form a face!
+            auto edge1 = start_vertex - v0;
+            auto edge2 = start_vertex - v1;
+
+//            LOG (debug) << "(" << lateral_edge << ", [ "<< edge1 << " , " << edge2 <<"])";
+            auto a = cross(edge1, edge2);
+//            LOG (debug) << "(" << lateral_edge << ", " << a << ")";
+            auto b = dot (lateral_edge, a);
+//            LOG (debug) << b;
+
+            volume_parallelepiped += b;
+        }
+
+        if (volume_parallelepiped > 0 ) {
+            //LOG (debug) << "plus -> convex " << volume_parallelepiped/6.0;
+            return 1;
+        } else {
+            //LOG (debug) << "minus -> concave " << volume_parallelepiped/6.0;
+            return -1;
+        }
+    }
+
+
+public:
+
+  // Defines the types Self, Handle, Base, Mesh, and CollapseInfo
+  // and the memberfunction name()
+  DECIMATING_MODULE( ModQuadricConvexT, MeshT, QuadricConvex );
+
+public:
+
+  ModQuadricConvexT( MeshT &_mesh)
+    : OpenMesh::Decimater::ModQuadricT<MeshT>(_mesh)
+  {
+      concaveVertexModifier_ = 1; // By default do not do anything
+  }
+
+  void set_concave_vertex_modifier(float value) {
+      concaveVertexModifier_ = value;
+  }
+
+  /// Destructor
+  virtual ~ModQuadricConvexT()
+  {
+  }
+
+
+public: // inherited
+
+  /**
+   *  Compute collapse priority based on error quadrics
+   *  and modifies it based on convexity of the vertex
+   */
+  virtual float collapse_priority(const CollapseInfo& _ci)
+  {
+    float priority = OpenMesh::Decimater::ModQuadricT<MeshT>::collapse_priority(_ci);
+    if (concaveVertexModifier_ == 1) {
+        // If we are not going to modify it => do nothing
+        return priority;
+    }
+
+    // We want to modify priority somehow
+    if (priority == Base::ILLEGAL_COLLAPSE) {
+        return priority;
+    }
+    // v0 -> vertex to be removed
+    // v1 -> remaining vertex
+    auto result = check_vertex_convexity (_ci.v0);
+    if (result == -1) {
+//        LOG (debug) << "Point " << Base::mesh().point (_ci.v0) << " is concave";
+        return priority * concaveVertexModifier_;
+    }
+    return priority;
+  }
+
+};
+
 //=============================================================================
 } } // namespace geometry::detail
 //=============================================================================
