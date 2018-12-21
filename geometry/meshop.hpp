@@ -249,14 +249,26 @@ private:
     PerCellCount goal_;
 };
 
-void make_gts_class_system_threadsafe (void);
+void make_gts_class_system_threadsafe()
+#ifndef GEOMETRY_HAS_GTS
+    UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
+#endif
+    ;
 
-Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax);
+Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax)
+#ifndef GEOMETRY_HAS_GTS
+    UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
+#endif
+    ;
 
 Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
     , std::vector<std::vector <geometry::GridCell>> &gridCells
     , bool inParallel
-    , std::function<math::Point2_<long>(double x, double y)> getGridCell);
+    , std::function<math::Point2_<long>(double x, double y)> getGridCell)
+#ifndef GEOMETRY_HAS_GTS
+    UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
+#endif
+    ;
 
 math::Extents2 gridExtents(const math::Extents2 &extents
                            , const math::Point2 &alignment
