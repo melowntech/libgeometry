@@ -86,12 +86,17 @@ math::Extents2 toOpenMesh(const geometry::Mesh &mesh, OMMesh& omMesh)
     std::vector<OMMesh::VertexHandle> handles;
     handles.reserve(mesh.vertices.size());
     int i = 0;
+
     for (const auto& v : mesh.vertices) {
         handles.emplace_back(
             omMesh.add_vertex(OMMesh::Point(v(0), v(1), v(2))) );
-        omMesh.data(handles.back()).classLabel = mesh.vertecesClass[i];
         update(e, v);
-        ++i;
+
+        // copy classification data only if present
+        if (mesh.vertecesClass.size()) {
+            omMesh.data(handles.back()).classLabel = mesh.vertecesClass[i];
+            ++i;
+        }
     }
 
     // create OpenMesh faces
