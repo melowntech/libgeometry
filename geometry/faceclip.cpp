@@ -25,7 +25,7 @@
  */
 #include <cmath>
 
-#include "./faceclip.hpp"
+#include "faceclip.hpp"
 
 namespace geometry { namespace opencv {
 

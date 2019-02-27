@@ -30,9 +30,9 @@
  * 3D mesh operations
  */
 
-#include "./meshop.hpp"
-#include "./parse-obj.hpp"
-#include "./triclip.hpp"
+#include "meshop.hpp"
+#include "parse-obj.hpp"
+#include "triclip.hpp"
 
 #include "utility/expect.hpp"
 #include <boost/numeric/ublas/vector.hpp>

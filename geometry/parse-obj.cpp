@@ -34,7 +34,7 @@
 
 #include "utility/expect.hpp"
 
-#include "./detail/parse-obj.hpp"
+#include "detail/parse-obj.hpp"
 
 namespace geometry {
 

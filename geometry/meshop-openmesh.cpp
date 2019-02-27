@@ -43,8 +43,8 @@
 
 #include "math/math.hpp"
 
-#include "./meshop.hpp"
-#include "./detail/hybrid-decimater.hpp"
+#include "meshop.hpp"
+#include "detail/hybrid-decimater.hpp"
 
 namespace geometry {
 

@@ -39,8 +39,8 @@
 
 #include "utility/gccversion.hpp"
 
-#include "./mesh.hpp"
-#include "./parse-obj.hpp"
+#include "mesh.hpp"
+#include "parse-obj.hpp"
 
 namespace geometry {
 

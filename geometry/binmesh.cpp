@@ -25,8 +25,8 @@
  */
 #include "utility/binaryio.hpp"
 
-#include "./error.hpp"
-#include "./binmesh.hpp"
+#include "error.hpp"
+#include "binmesh.hpp"
 
 namespace bin = utility::binaryio;
 

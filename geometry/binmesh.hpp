@@ -30,7 +30,7 @@
 
 #include <boost/filesystem/path.hpp>
 
-#include "./parse-obj.hpp"
+#include "parse-obj.hpp"
 
 namespace geometry {
 

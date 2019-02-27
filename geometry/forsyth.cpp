@@ -63,7 +63,7 @@
 #include <string.h>
 #include <math.h>
 
-#include "./forsyth.hpp"
+#include "forsyth.hpp"
 
 namespace geometry {
 

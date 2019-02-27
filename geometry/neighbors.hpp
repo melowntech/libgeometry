@@ -39,7 +39,7 @@
 #include "dbglog/dbglog.hpp"
 #include "math/geometry_core.hpp"
 
-#include "./kdtree.hpp"
+#include "kdtree.hpp"
 
 namespace geometry {
 

@@ -31,7 +31,7 @@
  */
 
 #include <gts.h>
-#include "./meshop.hpp"
+#include "meshop.hpp"
 #include "utility/openmp.hpp"
 
 namespace geometry {

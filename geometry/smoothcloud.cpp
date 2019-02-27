@@ -37,8 +37,8 @@
 
 #include "math/geometry_core.hpp"
 
-#include "./neighbors.hpp"
-#include "./smoothcloud.hpp"
+#include "neighbors.hpp"
+#include "smoothcloud.hpp"
 
 namespace geometry {
 
