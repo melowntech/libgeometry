@@ -198,10 +198,13 @@ struct Mesh {
     /** Iterator that iteratex over face points (a->b->c->end)
      */
     struct FaceVertexConstIterator;
+    struct FaceVertexConstIteratorRange;
 
     FaceVertexConstIterator begin(const Face &face) const;
 
     FaceVertexConstIterator end(const Face&) const;
+
+    FaceVertexConstIteratorRange face(const Face &face) const;
 
     /** Calculate face area (in 3D space).
      */
@@ -308,6 +311,25 @@ inline Mesh::FaceVertexConstIterator Mesh::begin(const Face &face) const {
 
 inline Mesh::FaceVertexConstIterator Mesh::end(const Face&) const {
     return FaceVertexConstIterator();
+}
+
+class Mesh::FaceVertexConstIteratorRange {
+public:
+    FaceVertexConstIteratorRange(const Mesh &mesh, const Face &face)
+        : begin_(mesh, face), end_()
+    {}
+
+    const FaceVertexConstIterator& begin() const { return begin_; }
+    const FaceVertexConstIterator& end() const { return end_; }
+
+private:
+    FaceVertexConstIterator begin_;
+    FaceVertexConstIterator end_;
+};
+
+inline Mesh::FaceVertexConstIteratorRange Mesh::face(const Face &face) const
+{
+    return { *this, face };
 }
 
 // inlines
