@@ -312,6 +312,9 @@ void ModQuadricHybrid<MeshT>::set_error_tolerance_factor(double _factor) {
   }
 }
 
+// The following code doesn't work with older OpenMesh
+#if OM_GET_VER >= 6
+
 template <class MeshT>
 class ClassifyRestrictModT : public OpenMesh::Decimater::ModBaseT<MeshT>
 {
@@ -494,6 +497,7 @@ public: // inherited
   }
 
 };
+#endif
 
 //=============================================================================
 } } // namespace geometry::detail

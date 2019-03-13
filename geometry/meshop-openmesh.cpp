@@ -66,14 +66,15 @@ struct NormalTraits : public OpenMesh::DefaultTraits
 typedef OpenMesh::TriMesh_ArrayKernelT<NormalTraits> OMMesh;
 typedef OpenMesh::Decimater::DecimaterT<OMMesh> Decimator;
 typedef OpenMesh::Decimater::ModQuadricT<OMMesh>::Handle HModQuadric;
-typedef detail::ModQuadricConvexT<OMMesh>::Handle HModQuadricConvex;
 typedef detail::ModQuadricHybrid<OMMesh>::Handle HModQuadricHybrid;
 typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippingT;
 typedef OpenMesh::Decimater::ModAspectRatioT<OMMesh>::Handle HModAspectRatioT;
 typedef OpenMesh::Decimater::ModEdgeLengthT<OMMesh>::Handle HModEdgeLengthT;
 
-
+#if OM_GET_VER >= 6
+typedef detail::ModQuadricConvexT<OMMesh>::Handle HModQuadricConvex;
 typedef detail::ClassifyRestrictModT<OMMesh>::Handle HModClassRestrictT;
+#endif
 
 /** Convert mesh to OpenMesh data structure and return mesh extents (2D bounding
  *  box)
@@ -332,6 +333,7 @@ void prepareDecimator(Decimator &decimator
                 .set_max_err(*options.maxError(), false);
         }
     } else if (options.concaveVertexModifier()){
+#if OM_GET_VER >= 6
         // collapse priority based on vertex error quadric
         // adjusted by convexity of the vertex
         HModQuadricConvex hModQuadricConvex;
@@ -342,6 +344,10 @@ void prepareDecimator(Decimator &decimator
             decimator.module(hModQuadricConvex)
                 .set_max_err(*options.maxError(), false);
         }
+#else
+        LOGTHROW (err3, std::runtime_error) <<
+            "Concave/Convex decimater is not available on this system.";
+#endif
     } else {
         // collapse priority based on vertex error quadric
         HModQuadric hModQuadric;
@@ -394,6 +400,8 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount
     return newMesh;
 }
 
+#if OM_GET_VER >= 6
+
 Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
                             , const SimplifyOptions &options)
 {
@@ -425,6 +433,7 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
     fromOpenMesh(omMesh, *newMesh);
     return newMesh;
 }
+#endif
 
 namespace {
 

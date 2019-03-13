@@ -162,14 +162,23 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount
 Mesh::pointer simplify( const Mesh::pointer &mesh, int faceCount
                       , const SimplifyOptions &simplifyOptions
                         = SimplifyOption::CORNERS
-                        | SimplifyOption::RMNONMANIFOLDEDGES);
+                        | SimplifyOption::RMNONMANIFOLDEDGES)
+#ifndef GEOMETRY_HAS_OPENMESH
+    UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
+#endif
+    ;
 
 /** Simplify mesh with maximal geometric error
  * \param mesh mesh to simplify
  * \param maxErr maximal geometric error
  * \return simplified mesh
  */
-Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr, const SimplifyOptions &simplifyOptions);
+Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
+                              , const SimplifyOptions &simplifyOptions)
+#if !defined(GEOMETRY_HAS_OPENMESH) || (OM_GET_VER < 6)
+    UTILITY_FUNCTION_ERROR("Error-based mesh simplification is available only when compiled with OpenMesh>=6.")
+#endif
+    ;
 
 /** Refines mesh. Longest edges are splitted until certain amount of faces is reached
  *
