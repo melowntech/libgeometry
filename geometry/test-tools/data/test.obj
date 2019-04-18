@@ -1,0 +1,33 @@
+# example mesh obj file for geometry-load-obj test tool
+
+mtllib material-library.mlt
+usemtl some-material
+
+# add some vertices
+v 1 2 3
+v 4 5 6
+v 7 8 9
+
+# add some texture coordinates
+vt 10 20 30
+vt 40 50 60
+vt 70 80 90
+
+# add some normals
+vn 100 200 300
+vn 400 500 600
+vn 700 800 900
+
+# vertex-only face
+f 1 2 3
+# vertex and texture coordinate
+f 1/4 2/5 3/6
+# vertex, texture coordinate and normal
+f 1/4/7 2/5/8 3/6/9
+
+# only vertex with dangling slash
+f 1/ 2/ 3/
+# only vertex with dangling two slashesh
+f 1// 2// 3//
+# vertex and normal
+f 1//7 2//8 3//9

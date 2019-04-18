@@ -133,3 +133,5 @@ if (${Boost_VERSION} LESS 105200)
   # Boost.Polygon before version 1.52 lacked Voronoi diagram support
   target_include_directories(geometry PRIVATE compat)
 endif()
+
+add_subdirectory(test-tools EXCLUDE_FROM_ALL)
