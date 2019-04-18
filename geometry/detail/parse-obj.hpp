@@ -201,11 +201,11 @@ struct facet_parser : qi::grammar<Iterator, Facet(), Skipper>
         using qi::lexeme;
 
         start %= 'f'
-            >> lexeme[auto_ >> '/' >> -auto_ >> -('/' >> -auto_)
+            >> lexeme[auto_ >> -('/' >> -auto_) >> -('/' >> -auto_)
                       >> omit[+ascii::space]
-                      >> auto_ >> '/' >> -auto_ >> -('/' >> -auto_)
+                      >> auto_ >> -('/' >> -auto_) >> -('/' >> -auto_)
                       >> omit[+ascii::space]
-                      >> auto_ >> '/' >> -auto_ >> -('/' >> -auto_)
+                      >> auto_ >> -('/' >> -auto_) >> -('/' >> -auto_)
                       ];
     }
 
