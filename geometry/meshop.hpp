@@ -323,22 +323,29 @@ Obj asObj(const Mesh::pointer &mesh);
 */
 Mesh::pointer asMesh(const Obj &obj);
 
+/**
+ */
+struct ObjMaterial {
+    std::string lib;
+    std::vector<std::string> names;
 
+    ObjMaterial(const std::string &lib = "") : lib(lib) {}
+};
 
 void saveAsObj(const Mesh &mesh
                , const boost::filesystem::path &filepath
-               , const std::string &mtlName);
+               , const ObjMaterial &mtl);
 
 void saveAsObj(const Mesh::pointer &mesh
                , const boost::filesystem::path &filepath
-               , const std::string &mtlName);
+               , const ObjMaterial &mtl);
 
 void saveAsObj(const Mesh &mesh, std::ostream &os
-               , const std::string &mtlName
+               , const ObjMaterial &mtl
                , const boost::filesystem::path &filepath = "UNKNOWN");
 
 void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
-               , const std::string &mtlName
+               , const ObjMaterial &mtl
                , const boost::filesystem::path &filepath = "UNKNOWN");
 
 void saveAsPly( const Mesh::pointer &mesh
@@ -395,16 +402,16 @@ inline Obj asObj(const Mesh::pointer &mesh)
 
 inline void saveAsObj(const Mesh::pointer &mesh
                       , const boost::filesystem::path &filepath
-                      , const std::string &mtlName)
+                      , const ObjMaterial &mtl)
 {
-    return saveAsObj(*mesh, filepath, mtlName);
+    return saveAsObj(*mesh, filepath, mtl);
 }
 
 inline void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
-                      , const std::string &mtlName
+                      , const ObjMaterial &mtl
                       , const boost::filesystem::path &filepath)
 {
-    return saveAsObj(*mesh, os, mtlName, filepath);
+    return saveAsObj(*mesh, os, mtl, filepath);
 }
 
 inline void saveAsPly( const Mesh::pointer &mesh

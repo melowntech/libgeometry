@@ -98,13 +98,31 @@ Mesh::pointer asMesh(const Obj &obj){
     return newMesh;
 }
 
+namespace {
+
+void addMtl(std::ostream &out, const ObjMaterial &mtl, unsigned int imageId)
+{
+    if (mtl.lib.empty()) { return; }
+
+    if (imageId >= mtl.names.size()) {
+        out << "usemtl " << imageId << '\n';
+        return;
+    }
+
+    out << "usemtl " << mtl.names[imageId] << '\n';
+}
+
+} // namespace
+
 void saveAsObj(const Mesh &mesh, std::ostream &out
-               , const std::string &mtlName
+               , const ObjMaterial &mtl
                , const boost::filesystem::path &filepath)
 {
     out.setf(std::ios::scientific, std::ios::floatfield);
 
-    out << "mtllib " << mtlName << '\n';
+    if (!mtl.lib.empty()) {
+        out << "mtllib " << mtl.lib << '\n';
+    }
 
     for (const auto &vertex : mesh.vertices) {
         out << "v " << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2)
@@ -122,7 +140,7 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
             continue;
         }
         if (face.imageId != currentImageId) {
-            out << "usemtl " << face.imageId << '\n';
+            addMtl(out, mtl, face.imageId);
             currentImageId = face.imageId;
         }
 
@@ -138,7 +156,7 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
 }
 
 void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
-               , const std::string &mtlName)
+               , const ObjMaterial &mtl)
 {
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
@@ -150,7 +168,7 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
         LOGTHROW(err3, std::runtime_error)
             << "Unable to save mesh to <" << filepath << ">.";
     }
-    saveAsObj(mesh, f, mtlName, filepath);
+    saveAsObj(mesh, f, mtl, filepath);
 }
 
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
