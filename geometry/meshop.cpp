@@ -35,7 +35,10 @@
 #include "triclip.hpp"
 
 #include "utility/expect.hpp"
+
+#include <set>
 #include <boost/numeric/ublas/vector.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace geometry {
 
@@ -98,18 +101,18 @@ Mesh::pointer asMesh(const Obj &obj){
     return newMesh;
 }
 
+std::string ObjMaterial::name(std::size_t index) const
+{
+    if (index < names.size()) { return names[index]; }
+    return boost::lexical_cast<std::string>(index);
+}
+
 namespace {
 
 void addMtl(std::ostream &out, const ObjMaterial &mtl, unsigned int imageId)
 {
-    if (mtl.lib.empty()) { return; }
-
-    if (imageId >= mtl.names.size()) {
-        out << "usemtl " << imageId << '\n';
-        return;
-    }
-
-    out << "usemtl " << mtl.names[imageId] << '\n';
+    if (mtl.libs.empty()) { return; }
+    out << "usemtl " << mtl.name(imageId) << '\n';
 }
 
 } // namespace
@@ -120,8 +123,8 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
 {
     out.setf(std::ios::scientific, std::ios::floatfield);
 
-    if (!mtl.lib.empty()) {
-        out << "mtllib " << mtl.lib << '\n';
+    for (const auto &lib : mtl.libs) {
+        out << "mtllib " << lib << '\n';
     }
 
     for (const auto &vertex : mesh.vertices) {
@@ -263,9 +266,13 @@ Mesh loadPly( const boost::filesystem::path &filename )
     return mesh;
 }
 
-Mesh loadObj( const boost::filesystem::path &filename )
+const unsigned int imageIdLimit(1<<16);
+
+Mesh loadObj(const boost::filesystem::path &filename, ObjMaterial *mtl)
 {
     struct Obj2MeshParser : public ObjParserBase {
+        Obj2MeshParser() : imageId(), namedCount() {}
+
         void addVertex( const Vector3d &v ) {
             mesh.vertices.push_back(v);
         }
@@ -277,13 +284,37 @@ Mesh loadObj( const boost::filesystem::path &filename )
         void addFacet( const Facet &f ) {
             mesh.addFace( f.v[0], f.v[1], f.v[2]
                         , f.t[0], f.t[1], f.t[2] );
+            mesh.faces.back().imageId = imageId;
         }
 
         void addNormal( const Vector3d& ) { }
-        void materialLibrary(const std::string&) { }
-        void useMaterial(const std::string&) { }
+
+        void materialLibrary(const std::string &lib) { seenLibs.insert(lib); }
+        void useMaterial(const std::string &name) {
+            auto fmtlMap(mtlMap.find(name));
+            if (fmtlMap == mtlMap.end()) {
+                unsigned int id(0);
+                try {
+                    // is id a (non negative) number?
+                    auto number(boost::lexical_cast<unsigned int>(name));
+                    id = number;
+                } catch (const boost::bad_lexical_cast&) {
+                    // not a number
+                    id = imageIdLimit + namedCount++;
+                }
+
+                fmtlMap = mtlMap.insert(MtlMap::value_type(name, id)).first;
+            }
+
+            imageId = fmtlMap->second;
+        }
 
         Mesh mesh;
+        unsigned int imageId;
+        std::set<std::string> seenLibs;
+        typedef std::map<std::string, int> MtlMap;
+        MtlMap mtlMap;
+        int namedCount;
     } parser_;
 
     std::ifstream file;
@@ -291,6 +322,27 @@ Mesh loadObj( const boost::filesystem::path &filename )
     file.open(filename.string());
 
     parser_.parse(file);
+
+    std::vector<std::string> materials;
+
+    // regenerate IDs if there was any non-numeric material
+    if (parser_.namedCount) {
+        typedef std::map<unsigned int, unsigned int> Mapping;
+        Mapping mapping;
+        for (const auto &item : parser_.mtlMap) {
+            mapping[item.second] = materials.size();
+            materials.push_back(item.first);
+        }
+
+        for (auto &face : parser_.mesh.faces) {
+            face.imageId = mapping[face.imageId];
+        }
+    }
+
+    if (mtl) {
+        mtl->libs.assign(parser_.seenLibs.begin(), parser_.seenLibs.end());
+        mtl->names = std::move(materials);
+    }
 
     return parser_.mesh;
 }

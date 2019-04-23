@@ -326,10 +326,13 @@ Mesh::pointer asMesh(const Obj &obj);
 /**
  */
 struct ObjMaterial {
-    std::string lib;
+    std::vector<std::string> libs;
     std::vector<std::string> names;
 
-    ObjMaterial(const std::string &lib = "") : lib(lib) {}
+    ObjMaterial() = default;
+    ObjMaterial(const std::string &lib) : libs{lib} {}
+
+    std::string name(std::size_t index) const;
 };
 
 void saveAsObj(const Mesh &mesh
@@ -356,7 +359,8 @@ void saveAsPly( const Mesh &mesh
 
 Mesh loadPly( const boost::filesystem::path &filepath );
 
-Mesh loadObj( const boost::filesystem::path &filepath );
+Mesh loadObj(const boost::filesystem::path &filepath
+             , ObjMaterial *mtl = nullptr);
 
 // parses PLY from a file, throws on any error
 void loadPly(ObjParserBase &parser, const boost::filesystem::path &path);
