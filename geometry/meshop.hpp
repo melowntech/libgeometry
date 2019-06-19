@@ -376,6 +376,11 @@ struct MeshInfo {
 
 MeshInfo measurePly(const boost::filesystem::path &path);
 
+/** Splits mesh by image identifier. Duplicates vertices shared by different
+ *  images.
+ */
+Mesh::list splitById(const Mesh &mesh);
+
 // inline stuff
 
 inline Mesh::pointer simplify(const Mesh::pointer &mesh, int faceCount

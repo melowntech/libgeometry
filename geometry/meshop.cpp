@@ -30,6 +30,9 @@
  * 3D mesh operations
  */
 
+#include <unordered_set>
+#include <unordered_map>
+
 #include "meshop.hpp"
 #include "parse-obj.hpp"
 #include "triclip.hpp"
@@ -846,6 +849,58 @@ void append(Mesh &mesh, const Mesh &added)
                      , f.ta + tcShift, f.tb + tcShift, f.tc + tcShift
                      , f.imageId);
     }
+}
+
+Mesh::list splitById(const Mesh &mesh)
+{
+    typedef unsigned int ImageId;
+
+    struct MeshBuilder {
+        typedef std::unordered_map<ImageId, MeshBuilder> map;
+
+        typedef Face::index_type Index;
+
+        typedef std::unordered_map<Index, Index> VMap;
+
+        VMap vertices;
+        Mesh mesh;
+
+        Index vertex(const Mesh &m, Index v) {
+            auto fvertices(vertices.find(v));
+            if (fvertices == vertices.end()) {
+                auto nv(mesh.vertices.size());
+                mesh.vertices.push_back(m.vertices[v]);
+                fvertices = vertices.insert(VMap::value_type(v, nv)).first;
+            }
+            return fvertices->second;
+        }
+
+        void add(const Mesh &m, const Face &face) {
+            mesh.faces.emplace_back(vertex(m, face.a)
+                                    , vertex(m, face.b)
+                                    , vertex(m, face.c)
+                                    , 0, 0, 0, face.imageId);
+        }
+    };
+
+    MeshBuilder::map builders;
+    std::unordered_set<ImageId> unique;
+    for (const auto &face : mesh.faces) {
+        auto fbuilders(builders.find(face.imageId));
+        if (fbuilders == builders.end()) {
+            fbuilders
+                = builders.insert(MeshBuilder::map::value_type
+                                  (face.imageId, MeshBuilder())).first;
+        }
+        fbuilders->second.add(mesh, face);
+    }
+
+    Mesh::list out;
+    out.reserve(builders.size());
+    for (auto &builder : builders) {
+        out.push_back(std::move(builder.second.mesh));
+    }
+    return out;
 }
 
 } // namespace geometry
