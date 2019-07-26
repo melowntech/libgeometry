@@ -144,25 +144,25 @@ public:
 
         FPosition_s( const math::Point3 & op ) :
             x( op[0] ), y( op[1] ), z( op[2] ) {};
-            
+
         double & operator()(int idx) {
             switch(idx) {
             case 0 : return x;
             case 1 : return y;
             case 2 : return z;
-            default : 
+            default :
                 throw math::GeometryError("Bad index to FPosition_s.");
-            } 
+            }
         }
-        
+
         const double & operator()(int idx) const {
             switch(idx) {
             case 0 : return x;
             case 1 : return y;
             case 2 : return z;
-            default : 
+            default :
                 throw math::GeometryError("Bad index to FPosition_s.");
-            } 
+            }
         }
     };
 };
@@ -275,7 +275,7 @@ struct Giterator_t {
 
 /** Generic container of size size{XYZ} for volumetric data.
  * Container must be able to inflate up to capacity without reallocation
- * 
+ *
  * get and grow behavior depends on currently set borderType
  */
 template <typename Value_t>
@@ -284,37 +284,37 @@ public:
     typedef Value_t ValueType;
     typedef typename VolumeBase_t::Position_s Position_s;
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
-    
+
     enum class BorderType { BORDER_CONSTANT, BORDER_REPLICATE };
-    
+
     VolumeContainer( const int sizeX, const int sizeY, const int sizeZ
-                   , const Value_t & initValue 
+                   , const Value_t & initValue
                    , const math::Size3i & capacity = math::Size3i()
                    , const math::Point3i & offset = math::Point3i()
                    , const BorderType & border = BorderType::BORDER_CONSTANT);
-    
+
     Value_t get( int i, int j, int k ) const;
     void set( int i, int j, int k, const Value_t & value );
-    
+
     int sizeX() const { return size_(0); }
     int sizeY() const { return size_(1); }
     int sizeZ() const { return size_(2); }
-    
+
     const math::Size3i & capacity() const { return capacity_; }
     const math::Point3i & offset() const { return offset_; }
-    
-    /** Increments size along given axis and fills new cells according to 
-     *  the border type set. If front is set, cells are added in front of the 
+
+    /** Increments size along given axis and fills new cells according to
+     *  the border type set. If front is set, cells are added in front of the
      *  beginning of the volume instead at the end.
      */
     void grow(const int axis, bool front = false);
-    
+
     BorderType setBorderType(const BorderType & border) {
         auto old(border_);
         border_ = border;
         return old;
     }
-    
+
 protected:
     math::Size3i size_, capacity_;
     math::Point3i offset_;
@@ -331,19 +331,19 @@ public:
     typedef typename VolumeContainer<Value_t>::BorderType BorderType;
 
     VolumeArray( const int sizeX, const int sizeY, const int sizeZ
-                   , const Value_t & initValue 
+                   , const Value_t & initValue
                    , const math::Size3i & capacity = math::Size3i()
                    , const math::Point3i & offset = math::Point3i()
                    , const BorderType & border = BorderType::BORDER_CONSTANT);
-    
+
     //~VolumeArray(){}
 
     Value_t get( int i, int j, int k ) const;
     void set( int i, int j, int k, const Value_t & value );
-    
+
     void grow(const int axis, bool front = false);
 
-private:  
+private:
     std::vector<Value_t> data;
 };
 
@@ -355,10 +355,10 @@ public:
     typedef typename VolumeContainer<Value_t>::Position_s Position_s;
     typedef typename VolumeContainer<Value_t>::Displacement_s Displacement_s;
     typedef typename VolumeContainer<Value_t>::BorderType BorderType;
-    
+
     /** Construct a volume and initialize it to a given value. */
     VolumeOctree( const int sizeX, const int sizeY, const int sizeZ
-                , const Value_t & initValue 
+                , const Value_t & initValue
                 , const math::Size3i & capacity = math::Size3i()
                 , const math::Point3i & offset = math::Point3i()
                 , const BorderType & border = BorderType::BORDER_CONSTANT );
@@ -379,7 +379,7 @@ public:
 
     /** Value setter. */
     void set( int i, int j, int k, const Value_t & value );
-    
+
     void grow(const int axis, bool front = false) {
         LOGTHROW(err2, std::runtime_error)
             << "Grow not implemented for octree.";
@@ -480,11 +480,11 @@ public :
     GeoVolume_t( const FPosition_s & lower,
                  const FPosition_s & upper,
                  const double voxelSize, const Value_t & initValue );
-    
+
     GeoVolume_t( const FPosition_s & lower
                , const double voxelSize
                , const math::Size3i size
-               , const Value_t & initValue 
+               , const Value_t & initValue
                , const math::Size3i & capacity = math::Size3i()
                , const math::Point3i & offset = math::Point3i()
                , const BorderType & border = BorderType::BORDER_CONSTANT);
@@ -502,7 +502,7 @@ public :
     Value_t get( int i, int j, int k ) const;
     /** Value setter. */
     void set( int i, int j, int k, const Value_t & value );
-    
+
     void grow(const int axis, bool front = false);
 
     Value_t fget( const double x, const double y, const double z );
@@ -562,16 +562,16 @@ public :
         const double voxelSize, const Value_t & initValue )
         : GeoVolume_t<Value_t,Container_t>( lower, upper
                                           , voxelSize, initValue ) {};
-                                          
+
     ScalarField_t( const FPosition_s & lower
                  , const double voxelSize
                  , const math::Size3i size
-                 , const Value_t & initValue 
+                 , const Value_t & initValue
                  , const math::Size3i & capacity = math::Size3i()
                  , const math::Point3i & offset = math::Point3i()
                  , const BorderType & border = BorderType::BORDER_CONSTANT)
         : GeoVolume_t<Value_t,Container_t>( lower, voxelSize, size, initValue
-                                          , capacity, offset, border) 
+                                          , capacity, offset, border)
     {};
 
     ScalarField_t( const ScalarField_t&) = delete;
@@ -608,7 +608,8 @@ public :
      */
     std::vector<FPosition_s>
         isosurfaceTetrahedrons( const Value_t & threshold,
-            const SurfaceOrientation_t orientation = TO_MIN ) const;
+            const SurfaceOrientation_t orientation = TO_MIN,
+            const boost::optional<math::Extents3> &ext = boost::none ) const;
 
     /**
      * Extract isosurface with a marching cubes algorithm.
@@ -617,22 +618,26 @@ public :
      */
     std::vector<FPosition_s>
         isosurfaceCubes( const Value_t & threshold,
-            const SurfaceOrientation_t orientation = TO_MIN ) const;
+            const SurfaceOrientation_t orientation = TO_MIN,
+            const boost::optional<math::Extents3> &ext = boost::none ) const;
 
     /**
-     * Extract isosurface with a marching tetrahedrons algorithm.
+     * Extract isosurface with given algorithm.
      * The output is geometry::mesh class.
      */
-    geometry::Mesh isosurfaceAsMesh( const Value_t & threshold
-                       ,const SurfaceOrientation_t orientation = TO_MIN
-                       ,const IsosurfaceAlgorithm_t algorithm = M_CUBES );
+    geometry::Mesh isosurfaceAsMesh(
+            const Value_t & threshold
+          , const SurfaceOrientation_t orientation = TO_MIN
+          , const IsosurfaceAlgorithm_t algorithm = M_CUBES
+          , const boost::optional<math::Extents3> &ext = boost::none);
 
 private:
     void isoFromCube(
             std::vector<FPosition_s> & retval
             , const FPosition_s * vertices
             , const Value_t * values
-            , const Value_t & threshold, const SurfaceOrientation_t orientation) const;
+            , const Value_t & threshold
+            , const SurfaceOrientation_t orientation) const;
 
 
     /** Used for isosurface extraction */
@@ -646,7 +651,8 @@ private:
         const Value_t & value2,
         const FPosition_s & vx3,
         const Value_t & value3,
-        const Value_t & threshold, const SurfaceOrientation_t orientation ) const;
+        const Value_t & threshold,
+        const SurfaceOrientation_t orientation ) const;
 
     /** used for isosurface extraction */
     FPosition_s interpolate(
@@ -961,7 +967,7 @@ Giterator_t<Value_t, Container_t>::iteratorPositions
 template <typename Value_t>
 VolumeContainer<Value_t>::VolumeContainer( const int sizeX, const int sizeY
                                 , const int sizeZ
-                                , const Value_t & initValue 
+                                , const Value_t & initValue
                                 , const math::Size3i & capacity
                                 , const math::Point3i & offset
                                 , const BorderType & border)
@@ -971,10 +977,10 @@ VolumeContainer<Value_t>::VolumeContainer( const int sizeX, const int sizeY
     if (capacity_ == math::Size3i()) {
         capacity_ = size_;
     }
-    
+
     for (int i = 0; i < 3; ++i) {
         if (size_(i) + offset_(i) > capacity_(i)) {
-            LOGTHROW(err2, std::runtime_error) 
+            LOGTHROW(err2, std::runtime_error)
                     << "Insufficient capacity to accommodate size and offset";
         }
     }
@@ -985,7 +991,7 @@ VolumeContainer<Value_t>::VolumeContainer( const int sizeX, const int sizeY
 template <typename Value_t>
 VolumeArray<Value_t>::VolumeArray( const int sizeX
                     , const int sizeY, const int sizeZ
-                    , const Value_t & initValue 
+                    , const Value_t & initValue
                     , const math::Size3i & capacity
                     , const math::Point3i & offset
                     , const BorderType & border)
@@ -993,10 +999,10 @@ VolumeArray<Value_t>::VolumeArray( const int sizeX
                                   , capacity, offset, border)
 {
     const auto & capacity_(this->capacity_);
-    std::size_t vol( std::size_t(capacity_(0)) 
-                   * std::size_t(capacity_(1)) 
+    std::size_t vol( std::size_t(capacity_(0))
+                   * std::size_t(capacity_(1))
                    * std::size_t(capacity_(2)));
-    
+
     data = std::vector<Value_t>(vol,initValue);
 }
 
@@ -1005,19 +1011,19 @@ Value_t VolumeArray<Value_t>::get( int i, int j, int k ) const{
     const auto & size_(this->size_);
     const auto & offset_(this->offset_);
     const auto & capacity_(this->capacity_);
-    
-    if ( this->border_ == BorderType::BORDER_CONSTANT 
-       && ( i < 0 || i >= size_(0) 
-         || j < 0 || j >= size_(1) 
+
+    if ( this->border_ == BorderType::BORDER_CONSTANT
+       && ( i < 0 || i >= size_(0)
+         || j < 0 || j >= size_(1)
          || k < 0 || k >= size_(2) ))
     {
         return this->initValue_;
     }
-    
+
     int ci(std::min(std::max(i,0), size_(0) - 1)),
         cj(std::min(std::max(j,0), size_(1) - 1)),
         ck(std::min(std::max(k,0), size_(2) - 1));
-    
+
     return this->data[ std::size_t(ck + offset_(2))
                      + std::size_t(cj + offset_(1)) * capacity_(2)
                      + std::size_t(ci + offset_(0)) * capacity_(2) * capacity_(1)];
@@ -1028,13 +1034,13 @@ void VolumeArray<Value_t>::set( int i, int j, int k, const Value_t & value  ){
     const auto & size_(this->size_);
     const auto & offset_(this->offset_);
     const auto & capacity_(this->capacity_);
-    if ( i < 0 || i >= size_(0) || j < 0 
+    if ( i < 0 || i >= size_(0) || j < 0
        || j >= size_(1) || k < 0 || k >= size_(2) )
     {
-        LOGTHROW(err2, std::runtime_error) 
+        LOGTHROW(err2, std::runtime_error)
                 << "Setting value outside the volume.";
     }
-    
+
     this->data[ std::size_t(k + offset_(2))
               + std::size_t(j + offset_(1)) * capacity_(2)
               + std::size_t(i + offset_(0)) * capacity_(2) * capacity_(1)] = value;
@@ -1045,24 +1051,24 @@ void VolumeArray<Value_t>::grow(const int axis, bool front) {
     auto & size_(this->size_);
     const auto & capacity_(this->capacity_);
     auto & offset_(this->offset_);
-    
+
     // sanity check
     if (front && offset_(axis) <= 0) {
-        LOGTHROW(err2, std::runtime_error) 
+        LOGTHROW(err2, std::runtime_error)
                 << "Cannot grow, insufficient offset.";
     }
     if (!front && size_(axis) >= capacity_(axis)) {
-        LOGTHROW(err2, std::runtime_error) 
+        LOGTHROW(err2, std::runtime_error)
                 << "Cannot grow, insufficient capacity.";
     }
-    
+
     // grow
     ++size_(axis);
     if (front) { --offset_(axis); }
-    
+
     // apply border type
     if (this->border_ == BorderType::BORDER_CONSTANT) { return; }
-    
+
     if (front) {
         auto tmpSize(size_);
         math::Point3i idx, srcIdx;
@@ -1099,18 +1105,18 @@ void VolumeArray<Value_t>::grow(const int axis, bool front) {
 template <typename Value_t>
 VolumeOctree<Value_t>::VolumeOctree( const int sizeX
                     , const int sizeY, const int sizeZ
-                    , const Value_t & initValue 
+                    , const Value_t & initValue
                     , const math::Size3i & capacity
                     , const math::Point3i & offset
                     , const BorderType & border )
     : VolumeContainer<Value_t>( sizeX, sizeY, sizeZ, initValue
-                              , capacity, offset, border) 
+                              , capacity, offset, border)
     , _root(std::unique_ptr<Node_s>(new Node_s( initValue )) )
     , _rootSize( int( round( exp( log( 2.0 ) * ceil( log(
         std::max(sizeX, std::max( sizeY, sizeZ ) ) ) / log( 2.0 ) ) ) ) ))
 {
     if (this->capacity_ != this->size_) {
-        LOGTHROW(err2, std::runtime_error) 
+        LOGTHROW(err2, std::runtime_error)
                 << "Capacity handling not implemented in octree.";
     }
 }
@@ -1145,15 +1151,15 @@ VolumeOctree<Value_t>::Node_s::~Node_s() {
 template <typename Value_t>
 Value_t VolumeOctree<Value_t>::get( int i, int j, int k ) const {
     const auto & size_(this->size_);
-    
-    if ( this->border_ == BorderType::BORDER_CONSTANT 
-       && ( i < 0 || i >= size_(0) 
-         || j < 0 || j >= size_(1) 
+
+    if ( this->border_ == BorderType::BORDER_CONSTANT
+       && ( i < 0 || i >= size_(0)
+         || j < 0 || j >= size_(1)
          || k < 0 || k >= size_(2) ))
     {
         return this->initValue_;
     }
-    
+
     int ci(std::min(std::max(i,0), size_(0) - 1)),
         cj(std::min(std::max(j,0), size_(1) - 1)),
         ck(std::min(std::max(k,0), size_(2) - 1));
@@ -1164,7 +1170,7 @@ Value_t VolumeOctree<Value_t>::get( int i, int j, int k ) const {
 template <typename Value_t>
 void VolumeOctree<Value_t>::set( int i, int j, int k, const Value_t & value ) {
     const auto & size_(this->size_);
-    if ( i < 0 || i >= size_(0) || j < 0 
+    if ( i < 0 || i >= size_(0) || j < 0
        || j >= size_(1) || k < 0 || k >= size_(2) )
     {
         return;
@@ -1299,13 +1305,13 @@ GeoVolume_t<Value_t,Container_t>::GeoVolume_t(
                  const FPosition_s & lower
                , const double voxelSize
                , const math::Size3i size
-               , const Value_t & initValue 
+               , const Value_t & initValue
                , const math::Size3i & capacity
                , const math::Point3i & offset
                , const BorderType & border)
     : container_( size.width, size.height, size.depth, initValue
                 , capacity, offset, border)
-    , _lower( lower ), _voxelSize( voxelSize ) 
+    , _lower( lower ), _voxelSize( voxelSize )
 {
     _upper.x = _lower.x + this->container_.sizeX() * _voxelSize;
     _upper.y = _lower.y + this->container_.sizeY() * _voxelSize;
@@ -1329,7 +1335,7 @@ void GeoVolume_t<Value_t,Container_t>::grow(const int axis, bool front) {
     } else {
         _upper(axis) += _voxelSize;
     }
-    
+
     container_.grow(axis,front);
 }
 
@@ -1443,8 +1449,8 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     directions[0] = typename VolumeBase_t::Displacement_s(1,0,0);
     directions[1] = typename VolumeBase_t::Displacement_s(0,1,0);
     directions[2] = typename VolumeBase_t::Displacement_s(0,0,1);
-    
-    // to get right values in whole output, border condition has to be applied 
+
+    // to get right values in whole output, border condition has to be applied
     // the capacity is already prepared to right value
     {
         auto offset(this->container_.offset());
@@ -1457,7 +1463,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
                 LOG(info2) << "Applying border condition in direction " << i;
                 this->grow(i);
             }
-            
+
             while (offset(i) > 0) {
                 LOG(info2) << "Applying border condition in direction " << -i;
                 this->grow(i, true);
@@ -1472,7 +1478,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
         math::FIRFilter_t filter(math::FilterTraits<Filter1>(),filterCutoff);
         filterInplace(filter,directions[fAxis],this->container_);
     }
-    
+
     LOG( info2 )<<"Collecting filtered data.";
 
     typedef typename VolumeBase_t::Displacement_s Displacement_s;
@@ -1485,27 +1491,27 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     FPosition_s ll( this->lower().x-shift
                    , this->lower().y-shift
                    , this->lower().z-shift);
-    
+
     // make the new volume ready for next filtering (reserve space so the volume
     // can be inflated to odd dimensions)
-    // plus reserve space for 2 layers of floor cells and 2 for ceil cells 
+    // plus reserve space for 2 layers of floor cells and 2 for ceil cells
     // to prevent floor and ceiling vanishing due to thinning when simplifying
     // large flat surfaces
     double newVoxel(this->voxelSize()*factor);
-    math::Size3i volSize( std::ceil((this->upper().x - ll.x) / newVoxel ) 
+    math::Size3i volSize( std::ceil((this->upper().x - ll.x) / newVoxel )
                        , std::ceil((this->upper().y - ll.y) / newVoxel )
                        , std::ceil((this->upper().z - ll.z) / newVoxel ));
-    math::Size3i capacity( volSize(0) + !(volSize(0) % 2) 
+    math::Size3i capacity( volSize(0) + !(volSize(0) % 2)
                          , volSize(1) + !(volSize(1) % 2)
                          , volSize(2) + !(volSize(2) % 2));
     // floor layers go under ll corner -> add offset to the volume
     // add 2 floor and 2 ceil layers
     capacity(2) += 4;
     math::Point3i offset(0,0,2);
-    
-    LOG(info2) << "Creating volume of size " << volSize 
+
+    LOG(info2) << "Creating volume of size " << volSize
                << " and capacity " << capacity;
-    
+
     ScalarField_t<Value_t,Container_t> tmp( ll, newVoxel, volSize
                                           , 0, capacity, offset);
 
@@ -1522,14 +1528,14 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     typename VolumeBase_t::Position_s pos(0,0,0);
 
     /**
-     * NB: gend implementation is flawed. That is why xitN<=xendN must be used 
+     * NB: gend implementation is flawed. That is why xitN<=xendN must be used
      * here. Imagine sizeX = 9 and displ = (2,0,0), pos = (0,0,0).             >
-     * 
+     *
      * End iterator is then 8 which is valid last item in the array!
      * Fix the iterators, when there is enough time. All their usage needs to be
      * checked.
      */
-    
+
     Giterator_t xitN( tmp.container(), pos, dispNew[0] );
     Giterator_t xendN = Giterator_t::gend( xitN );
     Giterator_t xitO( this->container_, pos, dispOrig[0] );
@@ -1546,7 +1552,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
             Giterator_t zendN = Giterator_t::gend( zitN );
             Giterator_t zitO( this->container_, yitO.pos, dispOrig[2] );
             Giterator_t zendO = Giterator_t::gend( zitO );
-            
+
             while(zitN!=zendN && zitO<=zendO){ // bug -- see NB
                 zitN.setValue(zitO.value());
                 ++zitN; ++zitO;
@@ -1556,7 +1562,7 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
         ++xitN; ++xitO;
     }
     *this = std::move(tmp);
-    
+
 }
 
 template <class Value_t, class Container_t>
@@ -2084,8 +2090,10 @@ const
 
 template <typename Value_t, class Container_t>
 std::vector<typename VolumeBase_t::FPosition_s>
-ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
-    const SurfaceOrientation_t orientation ) const
+ScalarField_t<Value_t, Container_t>::isosurfaceCubes(
+      const Value_t & threshold
+    , const SurfaceOrientation_t orientation
+    , const boost::optional<math::Extents3> &ext ) const
 {
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
     // typedef typename VolumeBase_t::Position_s Position_s;
@@ -2125,6 +2133,17 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
                     typename VolumeOctree<Value_t>::Position_s( i, j + 1, k + 1 ) );
                 values[7] = this->get( i, j + 1 , k + 1 );
 
+                // if all vertices are outside extents, skip the cube
+                if (ext) {
+                    bool skip(true);
+                    for (uint c(0); (c < 8) && skip; ++c) {
+                        const auto &v(vertices[c]);
+                        skip = !(inside(*ext, v.x, v.y, v.z));
+                    }
+
+                    if (skip) continue;
+                }
+
                 isoFromCube(tVertices[i + 1], vertices, values
                             , threshold, orientation);
 
@@ -2135,8 +2154,10 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes( const Value_t & threshold,
 
 template <typename Value_t, class Container_t>
 std::vector<typename VolumeBase_t::FPosition_s>
-ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons( const Value_t & threshold,
-            const SurfaceOrientation_t orientation )
+ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons(
+              const Value_t & threshold
+            , const SurfaceOrientation_t orientation
+            , const boost::optional<math::Extents3> &ext )
     const
 {
 
@@ -2174,6 +2195,16 @@ ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons( const Value_t & thr
                 vertexes[7].vertex = this->grid2geo(
                     typename VolumeOctree<Value_t>::Position_s( i + 1, j + 1, k + 1 ) );
                 vertexes[7].value = this->get( i + 1, j + 1, k + 1 );
+
+                if (ext) {
+                    bool skip(true);
+                    for (uint c(0); (c < 8) && skip; ++c) {
+                        const auto &v(vertexes[c].vertex);
+                        skip = !(inside(*ext, v.x, v.y, v.z));
+                    }
+
+                    if (skip) continue;
+                }
 
                 isoFromTetrahedron(
                     retval,
@@ -2231,9 +2262,11 @@ ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons( const Value_t & thr
  *  condition. *sigh*
  */
 template <typename Value_t, class Container_t>
-geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh( const Value_t & threshold
+geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
+              const Value_t & threshold
             , const SurfaceOrientation_t orientation
-            , const IsosurfaceAlgorithm_t algorithm)
+            , const IsosurfaceAlgorithm_t algorithm
+            , const boost::optional<math::Extents3> &ext)
 {
 
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
@@ -2243,10 +2276,10 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh( const Valu
     std::vector<FPosition_s> vertices;
     switch(algorithm){
     case M_CUBES:
-        vertices = this->isosurfaceCubes(threshold,orientation);
+        vertices = this->isosurfaceCubes(threshold,orientation,ext);
         break;
     case M_TETRAHEDRONS:
-        vertices = this->isosurfaceTetrahedrons(threshold,orientation);
+        vertices = this->isosurfaceTetrahedrons(threshold,orientation,ext);
         break;
     }
     this->container_.setBorderType(oldBorderType);
