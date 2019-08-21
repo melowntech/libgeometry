@@ -71,7 +71,7 @@ typedef OpenMesh::Decimater::ModNormalFlippingT<OMMesh>::Handle HModNormalFlippi
 typedef OpenMesh::Decimater::ModAspectRatioT<OMMesh>::Handle HModAspectRatioT;
 typedef OpenMesh::Decimater::ModEdgeLengthT<OMMesh>::Handle HModEdgeLengthT;
 
-#if OM_GET_VER >= 6
+#if OM_VERSION >= 0x60000
 typedef detail::ModQuadricConvexT<OMMesh>::Handle HModQuadricConvex;
 typedef detail::ClassifyRestrictModT<OMMesh>::Handle HModClassRestrictT;
 #endif
@@ -333,7 +333,7 @@ void prepareDecimator(Decimator &decimator
                 .set_max_err(*options.maxError(), false);
         }
     } else if (options.concaveVertexModifier()){
-#if OM_GET_VER >= 6
+#if OM_VERSION >= 0x60000
         // collapse priority based on vertex error quadric
         // adjusted by convexity of the vertex
         HModQuadricConvex hModQuadricConvex;
@@ -400,7 +400,7 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount
     return newMesh;
 }
 
-#if OM_GET_VER >= 6
+#if OM_VERSION >= 0x60000
 
 Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
                             , const SimplifyOptions &options)

@@ -42,6 +42,11 @@
 #include "mesh.hpp"
 #include "parse-obj.hpp"
 
+// Needed to get OpenMesh version
+#ifdef GEOMETRY_HAS_OPENMESH
+#  include <OpenMesh/Core/System/config.h>
+#endif
+
 namespace geometry {
 
 struct GridCell {
@@ -175,7 +180,7 @@ Mesh::pointer simplify( const Mesh::pointer &mesh, int faceCount
  */
 Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
                               , const SimplifyOptions &simplifyOptions)
-#if !defined(GEOMETRY_HAS_OPENMESH) || (OM_GET_VER < 6)
+#if !defined(GEOMETRY_HAS_OPENMESH) || (OM_VERSION < 0x60000)
     UTILITY_FUNCTION_ERROR("Error-based mesh simplification is available only when compiled with OpenMesh>=6.")
 #endif
     ;

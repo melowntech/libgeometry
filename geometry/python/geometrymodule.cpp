@@ -89,6 +89,17 @@ void appendMesh(Mesh &mesh, const Mesh &added)
     return geometry::append(mesh, added);
 }
 
+Mesh loadObj(const boost::filesystem::path &filepath)
+{
+    return geometry::loadObj(filepath);
+}
+
+void saveAsObj(const geometry::Mesh &mesh, const fs::path &path
+               , const std::string &material)
+{
+    return geometry::saveAsObj(mesh, path, material);
+}
+
 } } // namespace geometry::py
 
 BOOST_PYTHON_MODULE(melown_geometry)
@@ -159,11 +170,10 @@ BOOST_PYTHON_MODULE(melown_geometry)
         (Mesh, "faces", &geometry::Mesh::faces);
 
     def<geometry::Mesh (*)(const fs::path&)>("loadPly", &geometry::loadPly);
-    def<geometry::Mesh (*)(const fs::path&)>("loadObj", &geometry::loadObj);
+    def("loadObj", &py::loadObj);
     def<void (*)(const geometry::Mesh&, const fs::path&)>
         ("savePly", &geometry::saveAsPly);
-    def<void (*)(const geometry::Mesh&, const fs::path&, const std::string&)>
-        ("saveObj", &geometry::saveAsObj);
+    def("saveObj", &py::saveAsObj);
 
     def("clip", &py::clip2);
     def("clip", &py::clip3);
