@@ -62,6 +62,12 @@ void addFace3(Mesh &m, index_type a, index_type b, index_type c)
     return m.addFace(a, b, c);
 }
 
+void addFace4(Mesh &m, index_type a, index_type b, index_type c
+              , unsigned int imageId)
+{
+    return m.addFace(a, b, c, imageId);
+}
+
 void addFace6(Mesh &m, index_type a, index_type b, index_type c, index_type ta
               , index_type tb, index_type tc)
 {
@@ -72,6 +78,11 @@ void addFace7(Mesh &m, index_type a, index_type b, index_type c, index_type ta
               , index_type tb, index_type tc, unsigned int imageId)
 {
     return m.addFace(a, b, c, ta, tb, tc, imageId);
+}
+
+void addVertex(Mesh &m, double x, double y, double z)
+{
+    return m.vertices.emplace_back(x, y, z);
 }
 
 Mesh clip2(const Mesh &m, const math::Extents2 &e)
@@ -94,10 +105,15 @@ Mesh loadObj(const boost::filesystem::path &filepath)
     return geometry::loadObj(filepath);
 }
 
-void saveAsObj(const geometry::Mesh &mesh, const fs::path &path
-               , const std::string &material)
+void saveObj1(const geometry::Mesh &mesh, const fs::path &path)
 {
-    return geometry::saveAsObj(mesh, path, material);
+    return geometry::saveAsObj(mesh, path, {});
+}
+
+void saveObj2(const geometry::Mesh &mesh, const fs::path &path
+              , const std::string &mtlLibrary)
+{
+    return geometry::saveAsObj(mesh, path, mtlLibrary);
 }
 
 } } // namespace geometry::py
@@ -146,8 +162,10 @@ BOOST_PYTHON_MODULE(melown_geometry)
         .def(init<>())
         .def("normal", &geometry::Mesh::normal)
         .def("addFace", &py::addFace3)
+        .def("addFace", &py::addFace4)
         .def("addFace", &py::addFace6)
         .def("addFace", &py::addFace7)
+        .def("addVertex", &py::addVertex)
         .def("a", &geometry::Mesh::a, InternalRef)
         .def("b", &geometry::Mesh::b, InternalRef)
         .def("c", &geometry::Mesh::c, InternalRef)
@@ -173,7 +191,8 @@ BOOST_PYTHON_MODULE(melown_geometry)
     def("loadObj", &py::loadObj);
     def<void (*)(const geometry::Mesh&, const fs::path&)>
         ("savePly", &geometry::saveAsPly);
-    def("saveObj", &py::saveAsObj);
+    def("saveObj", &py::saveObj1);
+    def("saveObj", &py::saveObj2);
 
     def("clip", &py::clip2);
     def("clip", &py::clip3);

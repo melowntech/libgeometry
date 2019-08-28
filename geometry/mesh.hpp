@@ -61,8 +61,8 @@ struct Face {
 
     Face() : imageId(), a(), b(), c(), ta(), tb(), tc() {}
 
-    Face(index_type a, index_type b, index_type c)
-        : imageId(), a(a), b(b), c(c), ta(), tb(), tc()
+    Face(index_type a, index_type b, index_type c, unsigned int imageId = 0)
+        : imageId(imageId), a(a), b(b), c(c), ta(), tb(), tc()
     {}
 
     Face(index_type a, index_type b, index_type c
@@ -125,6 +125,9 @@ struct Mesh {
      */
     void addFace(math::Points3::size_type a, math::Points3::size_type b
                  , math::Points3::size_type c);
+
+    void addFace(math::Points3::size_type a, math::Points3::size_type b
+                 , math::Points3::size_type c, unsigned int imageId);
 
     void addFace(math::Points3::size_type a, math::Points3::size_type b
                  , math::Points3::size_type c, math::Points2::size_type ta
@@ -220,6 +223,14 @@ struct Mesh {
 };
 
 // inlines
+
+inline void Mesh::addFace(math::Points3::size_type a
+                          , math::Points3::size_type b
+                          , math::Points3::size_type c
+                          , unsigned int imageId)
+{
+    faces.emplace_back(a, b, c, imageId);
+}
 
 inline void Mesh::addFace(math::Points3::size_type a
                           , math::Points3::size_type b
