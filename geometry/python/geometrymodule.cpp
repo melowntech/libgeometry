@@ -116,6 +116,12 @@ void saveObj2(const geometry::Mesh &mesh, const fs::path &path
     return geometry::saveAsObj(mesh, path, mtlLibrary);
 }
 
+void saveObj3(const geometry::Mesh &mesh, const fs::path &path
+              , const ObjMaterial &mtl)
+{
+    return geometry::saveAsObj(mesh, path, mtl);
+}
+
 } } // namespace geometry::py
 
 BOOST_PYTHON_MODULE(melown_geometry)
@@ -187,12 +193,22 @@ BOOST_PYTHON_MODULE(melown_geometry)
     pysupport::def_readwrite<return_internal_reference<>>
         (Mesh, "faces", &geometry::Mesh::faces);
 
+    auto ObjMaterial = class_<geometry::ObjMaterial>
+        ("ObjMaterial", init<const geometry::ObjMaterial&>())
+        .def(init<>())
+        .def(init<std::string>())
+
+        .def_readwrite("libs", &geometry::ObjMaterial::libs)
+        .def_readwrite("names", &geometry::ObjMaterial::names)
+        ;
+
     def<geometry::Mesh (*)(const fs::path&)>("loadPly", &geometry::loadPly);
     def("loadObj", &py::loadObj);
     def<void (*)(const geometry::Mesh&, const fs::path&)>
         ("savePly", &geometry::saveAsPly);
     def("saveObj", &py::saveObj1);
     def("saveObj", &py::saveObj2);
+    def("saveObj", &py::saveObj3);
 
     def("clip", &py::clip2);
     def("clip", &py::clip3);
