@@ -336,6 +336,7 @@ struct ObjMaterial {
 
     ObjMaterial() = default;
     ObjMaterial(const std::string &lib) : libs{lib} {}
+    ObjMaterial(const char *lib) : libs{lib} {}
 
     std::string name(std::size_t index) const;
 };
