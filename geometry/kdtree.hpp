@@ -31,6 +31,7 @@
  *  The k-d tree data structure for fast nearest neighbor search.
  *
  *  2012-09-28 (vasek)    refactored
+ *  2019-09-25 (pavel)    generalized difference type of points
  */
 
 #ifndef KDTREE_HPP_INCLUDED
@@ -93,6 +94,7 @@ class KdTreeNode : boost::noncopyable, G
 {
 public:
     typedef C container_type;
+    typedef typename G::difference_type difference_type;
     typedef typename container_type::iterator mutable_iterator;
     typedef typename container_type::const_iterator iterator;
 
@@ -169,7 +171,7 @@ public:
         const
     {
         // calculate the squared distance between query and us
-        T diff(G::diff(query, *point));
+        difference_type diff(G::diff(query, *point));
         dist2 = inner_prod(diff, diff);
 
         // if a point already in the tree is queried we may want to ignore it
@@ -229,7 +231,7 @@ public:
                std::vector<T>& result, unsigned int axis = 0) const
     {
         // return point if it is within radius
-        T diff(G::diff(query, *point));
+        difference_type diff(G::diff(query, *point));
         double dist2 = inner_prod(diff, diff);
         if (dist2 <= radius*radius) {
             if (!IgnoreEqual || dist2 > 0.0)
@@ -262,7 +264,7 @@ public:
               std::vector<iterator>& result, unsigned int axis = 0) const
     {
        // return point if it is within radius
-       T diff(G::diff(query, *point));
+       difference_type diff(G::diff(query, *point));
        double dist2 = inner_prod(diff, diff);
        if (dist2 <= radius*radius) {
            if (!IgnoreEqual || dist2 > 0.0)
@@ -296,7 +298,7 @@ public:
                , unsigned int axis = 0) const
     {
         // return point if it is within radius
-        T diff(G::diff(query, *point));
+        difference_type diff(G::diff(query, *point));
         double dist2 = inner_prod(diff, diff);
         if (dist2 <= radius*radius) {
             if (!IgnoreEqual || dist2 > 0.0)
@@ -326,13 +328,13 @@ public:
     }
 
 protected:
-    double inner_prod(const T &op1, const T &op2) const {
+    double inner_prod(const difference_type &op1, const difference_type &op2) const {
         double retval( 0.0 );
         for (unsigned int i = 0; i < K; i++) {
             retval += G::get(op1, i) * G::get(op2, i);
         }
         return retval;
-    };
+    }
 
 
     iterator point;
@@ -347,12 +349,15 @@ protected:
 
 template <typename T>
 struct GetCoordinate {
-    typename T::value_type get(const T &value, unsigned int axis) const
+    typedef typename T::value_type value_type;
+    typedef T difference_type;
+
+    value_type get(const T &value, unsigned int axis) const
     {
         return value(axis);
     }
 
-    T diff(const T &op1, const T &op2) const {
+    difference_type diff(const T &op1, const T &op2) const {
         return op1 - op2;
     }
 };

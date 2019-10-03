@@ -105,8 +105,9 @@ set(geometry_SOURCES
 
   neighbors.hpp
 
-  smoothcloud.hpp smoothcloud.cpp
+  bvh.hpp
 
+  smoothcloud.hpp smoothcloud.cpp
 
   detail/volume.mcubes.hpp detail/volume.mcubes.cpp
 
