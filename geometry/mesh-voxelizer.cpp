@@ -78,19 +78,35 @@ void MeshVoxelizer::voxelize(){
 
     LOG( info2 )<<"Meshes extents: "<<extents;
 
-    //volume size
-    math::Point3 extentsSize = extents.ur-extents.ll;
-    math::Point3i volumeGridRes(
-                std::ceil(extentsSize(0)/params_.voxelSize)
-                ,std::ceil(extentsSize(1)/params_.voxelSize)
-                ,std::ceil(extentsSize(2)/params_.voxelSize));
-    math::Point3 newExtentsSize = volumeGridRes*params_.voxelSize;
-    math::Point3 extentsCenter = math::center(extents);
+    // volume size
 
-    extents = math::Extents3( extentsCenter-newExtentsSize/2
-                             , extentsCenter+newExtentsSize/2);
-    LOG( info2 )<<"Volumetric grid resolution: "<<volumeGridRes;
-    LOG( info2 )<<"Volume extents: "<<extents;
+    {
+        math::Point3 extentsSize = extents.ur-extents.ll;
+        math::Point3i volumeGridRes(
+                    std::ceil(extentsSize(0)/params_.voxelSize)
+                    ,std::ceil(extentsSize(1)/params_.voxelSize)
+                    ,std::ceil(extentsSize(2)/params_.voxelSize));
+        math::Point3 newExtentsSize = volumeGridRes*params_.voxelSize;
+        math::Point3 extentsCenter = math::center(extents);
+
+        extents = math::Extents3( extentsCenter-newExtentsSize/2
+                                 , extentsCenter+newExtentsSize/2);
+
+        if ( valid(params_.overrideExtents) ) {
+            LOG(info2) << "Using supplied extents for voxelization.";
+
+            extents = params_.overrideExtents;
+
+            for (uint i(0); i < 3; ++i) {
+                volumeGridRes(i)
+                    = std::ceil(size(extents)(i)/params_.voxelSize);
+            }
+        }
+
+        LOG(info2) << "Volumetric grid resolution: " << volumeGridRes;
+        LOG(info2) << "Volume extents: " << extents;
+    }
+
 
     //generate directions for 3 main axes + axes of icosahedron faces
     std::vector<math::Point3> directions;
@@ -135,7 +151,7 @@ void MeshVoxelizer::voxelize(){
 
 #ifdef RASTERIZE_MESH_DEBUG
     uint i=0;
-    for( auto &proj : projections){
+    for( auto &proj : results){
         fs::path path = fs::path(std::string("depth")
                                  +boost::lexical_cast<std::string>(i++)
                                  +std::string(".png"));
@@ -147,39 +163,50 @@ void MeshVoxelizer::voxelize(){
 
     //create new volume
     /**************
-     * Ugly hack
-     * 
-     * Voxelization has problems with edges - create volume 2*cells 
+     * Ugly hack (shaveVolume)
+     *
+     * Voxelization has problems with edges - create volume 2*cells
      * smaller from both x and y directions
-     * 
+     *
      * Voxelization itself should be fixed instead
-     **************************/ 
+     **************************/
     {
-        math::Size3i volSize( std::ceil( size(extents)(0)/params_.voxelSize ) - 4
-                            , std::ceil( size(extents)(1)/params_.voxelSize ) - 4
+        math::Size3i volSize( std::ceil( size(extents)(0)/params_.voxelSize )
+                            , std::ceil( size(extents)(1)/params_.voxelSize )
                             , std::ceil( size(extents)(2)/params_.voxelSize ));
+
+        math::Point3 ll( extents.ll(0)
+                       , extents.ll(1)
+                       , extents.ll(2));
+
+        if (params_.shaveVolume) {
+            for (uint i(0); i < 2; ++i) {
+                // strip 2 from each side
+                volSize(i) -= 4;
+                // shift extents's ll by 2 voxel size because that is what we stripped
+                ll(i) += 2*params_.voxelSize;
+            }
+        }
+
         // prepare volume for filtering and downsampling: reserve space so all
         // dimensions can be inflated to closest larger odd value
         // add few layers of cells on the ceiling of the volume as a margin
         // for subsampling.
-        math::Size3i capacity( volSize(0) + !(volSize(0) % 2) 
+        math::Size3i capacity( volSize(0) + !(volSize(0) % 2)
                              , volSize(1) + !(volSize(1) % 2)
                              , volSize(2) + !(volSize(2) % 2) + 4);
-        
-        LOG(info2) << "Creating volume of size " << volSize 
+
+        LOG(info2) << "Creating volume of size " << volSize
                    << " and capacity " << capacity;
-        
-        // shift extents's ll by 2 voxel size because that is what we stripped
-        math::Point3 ll( extents.ll(0) + 2*params_.voxelSize
-                       , extents.ll(1) + 2*params_.voxelSize
-                       , extents.ll(2));
+
+
         volume_ = std::unique_ptr<Volume>( new Volume( ll
                                                      , params_.voxelSize
                                                      , volSize
                                                      , VoxelizerUnit::empty()
                                                      , capacity));
     }
-    
+
     math::Size3i vSize = volume_->cSize();
     long volMem = (long)vSize.width * vSize.height
                     * vSize.depth * sizeof(unsigned short);
@@ -511,7 +538,7 @@ bool MeshVoxelizer::isInside( const math::Point3 & position
     }
     return false;
 }
-/*
+
 void MeshVoxelizer::visualizeDepthMap( const ProjectionResult &proj
                                       , const math::Extents3 & extents
                                       , const fs::path & path){
@@ -523,11 +550,11 @@ void MeshVoxelizer::visualizeDepthMap( const ProjectionResult &proj
 
     for(int x = 0; x < proj.buffer.size.width; ++x){
         for(int y = 0; y < proj.buffer.size.height; ++y){
-            if(proj.buffer.data[x][y].size()==0){
+            if(proj.buffer.begin(x,y) == proj.buffer.end(x,y)){
                 continue;
             }
-            min = std::min(proj.buffer.data[x][y].front(),min);
-            max = std::max(proj.buffer.data[x][y].back(),max);
+            min = std::min(*proj.buffer.begin(x,y),min);
+            max = std::max(*std::prev(proj.buffer.end(x,y)),max);
         }
     }
 
@@ -538,12 +565,12 @@ void MeshVoxelizer::visualizeDepthMap( const ProjectionResult &proj
 
     for(int x = 0; x < proj.buffer.size.width; ++x){
         for(int y = 0; y < proj.buffer.size.height; ++y){
-            if(proj.buffer.data[x][y].size()==0){
+            if(proj.buffer.begin(x,y) == proj.buffer.end(x,y)){
                 depthMapImg.at<cv::Vec3b>(y,x)=
                         cv::Vec3b(0,0,255);
                 continue;
             }
-            float val  = (proj.buffer.data[x][y].front() - min) / range;
+            float val  = (*proj.buffer.begin(x,y) - min) / range;
             depthMapImg.at<cv::Vec3b>(y,x)=
                     cv::Vec3b(255-val*255,255-val*255,255-val*255);
         }
@@ -595,5 +622,5 @@ void MeshVoxelizer::visualizeDepthMap( const ProjectionResult &proj
 
     cv::imwrite( path.native().c_str(), depthMapImg );
 }
-*/
+
 } //namespace geometry

@@ -71,6 +71,9 @@ public:
         float isoThreshold;
         float sealFactor;
         Method method;
+        bool shaveVolume; // turn hack on or off
+        // if provided, expected to be compatible with voxel size
+        math::Extents3 overrideExtents;
 
         Parameters():
             voxelSize(0.25)
@@ -78,6 +81,8 @@ public:
           , isoThreshold(0.5)
           , sealFactor(5)
           , method(Method::PARITY_COUNT)
+          , shaveVolume(true)
+          , overrideExtents(math::InvalidExtents{})
          {};
     };
 
@@ -157,6 +162,7 @@ private:
 
     struct CompressedLayeredZBuffer{
         typedef std::vector<float>::iterator Iterator;
+        typedef std::vector<float>::const_iterator CIterator;
         math::Size2i size;
         std::vector<float> data;
         std::vector<uint> rowpos;
@@ -201,7 +207,16 @@ private:
                     +rowpos[(std::size_t)x*size.height+y];
         }
 
-        Iterator end(uint x, uint y){
+        CIterator begin(uint x, uint y) const {
+            return data.begin()+colStart[x]
+                    +rowpos[(std::size_t)x*size.height+y];
+        }
+
+        Iterator end(uint x, uint y) {
+            return begin(x,y)+count[(std::size_t)x*size.height+y];
+        }
+
+        CIterator end(uint x, uint y) const {
             return begin(x,y)+count[(std::size_t)x*size.height+y];
         }
 
@@ -257,10 +272,10 @@ private:
      */
     bool isInside(  const math::Point3 & position
                   , ProjectionResults & projectionResults);
-/*
+
     void visualizeDepthMap(const ProjectionResult &proj
                            , const math::Extents3 &extents, const fs::path &path);
-*/
+
 };
 
 } //namespace geometry

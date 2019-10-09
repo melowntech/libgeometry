@@ -35,11 +35,11 @@
 #ifndef geometry_volumeop_hpp_included_
 #define geometry_volumeop_hpp_included_
 
-#include "volume.hpp"
+#include "geometry/volume.hpp"
 #include "math/geometry_core.hpp"
 #include "utility/enum-io.hpp"
 
-namespace geometry{
+namespace geometry {
 
 //morphological operations
 
@@ -56,7 +56,7 @@ private:
 };
 
 
-template <class Value_t, class Container_t>
+template <typename Value_t, class Container_t>
 void erosion( Container_t & container
     , const StructuralElement & se
     , const VolumeUnit<Value_t> volumeUnit = VolumeUnit<Value_t>()){

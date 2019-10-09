@@ -61,7 +61,7 @@
 namespace geometry {
 
 template<typename T>
-class VolumeUnit{
+class VolumeUnit {
 
 public:
     static T empty(){
@@ -2513,3 +2513,5 @@ void DistanceMap_t<Value_t>::scanXLine( DistVectorField_t & dvField,
 
 } // namespace geometry
 #endif
+
+#include "geometry/volumeop.hpp"
