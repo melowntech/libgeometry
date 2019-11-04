@@ -341,9 +341,16 @@ struct ObjMaterial {
     std::string name(std::size_t index) const;
 };
 
+/** Callback for setting up stream before saving mesh as OBJ.
+ *  Returns if stream precision has been set.
+ *  Stream precision is configured when false is returned.
+ */
+typedef std::function<bool(std::ostream&)> ObjStreamSetup;
+
 void saveAsObj(const Mesh &mesh
                , const boost::filesystem::path &filepath
-               , const ObjMaterial &mtl);
+               , const ObjMaterial &mtl
+               , const ObjStreamSetup &streamSetup = ObjStreamSetup());
 
 void saveAsObj(const Mesh::pointer &mesh
                , const boost::filesystem::path &filepath
@@ -351,11 +358,13 @@ void saveAsObj(const Mesh::pointer &mesh
 
 void saveAsObj(const Mesh &mesh, std::ostream &os
                , const ObjMaterial &mtl
-               , const boost::filesystem::path &filepath = "UNKNOWN");
+               , const boost::filesystem::path &filepath = "UNKNOWN"
+               , bool setFormat = true);
 
 void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
                , const ObjMaterial &mtl
-               , const boost::filesystem::path &filepath = "UNKNOWN");
+               , const boost::filesystem::path &filepath = "UNKNOWN"
+               , bool setFormat = true);
 
 void saveAsPly( const Mesh::pointer &mesh
               , const boost::filesystem::path &filepath);
@@ -424,9 +433,10 @@ inline void saveAsObj(const Mesh::pointer &mesh
 
 inline void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
                       , const ObjMaterial &mtl
-                      , const boost::filesystem::path &filepath)
+                      , const boost::filesystem::path &filepath
+                      , bool setFormat)
 {
-    return saveAsObj(*mesh, os, mtl, filepath);
+    return saveAsObj(*mesh, os, mtl, filepath, setFormat);
 }
 
 inline void saveAsPly( const Mesh::pointer &mesh

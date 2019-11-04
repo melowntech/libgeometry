@@ -122,9 +122,12 @@ void addMtl(std::ostream &out, const ObjMaterial &mtl, unsigned int imageId)
 
 void saveAsObj(const Mesh &mesh, std::ostream &out
                , const ObjMaterial &mtl
-               , const boost::filesystem::path &filepath)
+               , const boost::filesystem::path &filepath
+               , bool setFormat)
 {
-    out.setf(std::ios::scientific, std::ios::floatfield);
+    if (setFormat) {
+        out.setf(std::ios::scientific, std::ios::floatfield);
+    }
 
     for (const auto &lib : mtl.libs) {
         out << "mtllib " << lib << '\n';
@@ -162,7 +165,7 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
 }
 
 void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
-               , const ObjMaterial &mtl)
+               , const ObjMaterial &mtl, const ObjStreamSetup &streamSetup)
 {
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
@@ -174,7 +177,10 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
         LOGTHROW(err3, std::runtime_error)
             << "Unable to save mesh to <" << filepath << ">.";
     }
-    saveAsObj(mesh, f, mtl, filepath);
+
+    bool setFormat(true);
+    if (streamSetup) { setFormat = !streamSetup(f); }
+    saveAsObj(mesh, f, mtl, filepath, setFormat);
 }
 
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
