@@ -1,5 +1,5 @@
 # bump version here
-set(geometry_VERSION 1.11)
+set(geometry_VERSION 1.12)
 
 set(geometry_EXTRA_DEPENDS)
 set(geometry_EXTRA_DEFINITIONS)
