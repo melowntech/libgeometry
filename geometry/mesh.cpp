@@ -33,11 +33,174 @@
 #include <dbglog/dbglog.hpp>
 
 #include "mesh.hpp"
+#include "utility/openmp.hpp"
+#include "utility/expect.hpp"
 
 namespace fs = boost::filesystem;
 
 
 namespace geometry {
+
+
+void Mesh::computeBoundary() {
+    // Face-face table is required for computing mesh boundary.
+    utility::expect(connectivity.faceFaceTable.size() == faces.size());
+
+    boundary.clear();
+    boundary.resize(vertices.size(), false);
+
+    for (uint faceIdx = 0; faceIdx < faces.size(); ++faceIdx) {
+        const Face& face = faces[faceIdx];
+        for (int i = 0, j = 2; i < 3; j = i++) {
+            if (connectivity.faceFaceTable[faceIdx][j] < 0) {
+                // no neighbor -> both vertices boundary
+                boundary[face.vertex(i)] = true;
+                boundary[face.vertex(j)] = true;
+            }
+        }
+    }
+}
+
+void Mesh::computeNormals() {
+    normals.resize(faces.size());
+    for (uint i = 0; i < faces.size(); ++i) {
+        const Face& f = faces[i];
+        const math::Point3 dp1 = vertices[f.b] - vertices[f.a];
+        const math::Point3 dp2 = vertices[f.c] - vertices[f.a];
+        const math::Point3 n = math::crossProduct(dp1, dp2);
+        const double length = math::ublas::norm_2(n);
+        if (length > 0.) {
+            normals[i] = n * (1.0 / length);
+        } else {
+            // degenerated face, assign arbitrary normal
+            normals[i] = { 0, 0, 1 };
+        }
+    }
+}
+
+void Mesh::computeVertexFaceTable() {
+    std::vector<std::vector<int>>& vf = connectivity.vertexFaceTable;
+    vf.resize(vertices.size());
+
+    // prepare lists: average vertex degree is 6
+    for (std::vector<int>& vec : vf) {
+        vec.clear();
+        vec.reserve(8);
+    }
+
+    for (uint i = 0; i < faces.size(); i++) {
+        const Face& face = faces[i];
+        for (uint j = 0; j < 3; ++j) {
+            vf[face.vertex(j)].push_back(i);
+        }
+    }
+}
+
+
+void Mesh::computeVertexVertexTable() {
+    std::vector<std::vector<int>>& vv = connectivity.vertexVertexTable;
+    vv.resize(vertices.size());
+    for (std::vector<int>& vec : vv) {
+        vec.clear();
+        vec.reserve(16);
+    }
+
+    for (const Face& face : faces) {
+        int a = face.a, b = face.b, c = face.c;
+
+        vv[a].push_back(b);
+        vv[a].push_back(c);
+        vv[b].push_back(c);
+        vv[b].push_back(a);
+        vv[c].push_back(a);
+        vv[c].push_back(b);
+    }
+
+    // remove duplicities in lists
+    for (std::vector<int>& vec : vv) {
+        std::sort(vec.begin(), vec.end());
+        auto last = std::unique(vec.begin(), vec.end());
+        vec.erase(last, vec.end());
+        vec.shrink_to_fit();
+    }
+}
+
+namespace {
+struct EdgeKey {
+    int v1, v2; // vertex indices
+
+    EdgeKey(const int a, const int b)
+        : v1(a)
+        , v2(b) {
+        if (v1 > v2) {
+            std::swap(v1, v2);
+        }
+    }
+
+    bool operator<(const EdgeKey& other) const {
+        return std::make_tuple(v1, v2) < std::make_tuple(other.v1, other.v2);
+    }
+};
+
+struct EdgeData {
+    int f1, f2; // face indices
+
+    EdgeData()
+        : f1(-1)
+        , f2(-1) {}
+
+    void addFace(int f) {
+        if (f1 < 0) {
+            f1 = f;
+        } else if (f2 < 0) {
+            f2 = f;
+        } else {
+            LOG(warn1) << "Mesh warning: edge shared by more than two triangles.";
+        }
+    }
+
+    int getNeighbor(int f) const {
+        return (f == f1) ? f2 : f1;
+    }
+};
+}
+
+void Mesh::computeFaceFaceTable() {
+    std::map<EdgeKey, EdgeData> edges;
+
+    for (uint i = 0; i < faces.size(); i++) {
+        const Face& face = faces[i];
+        edges[EdgeKey(face.a, face.b)].addFace(i);
+        edges[EdgeKey(face.b, face.c)].addFace(i);
+        edges[EdgeKey(face.c, face.a)].addFace(i);
+    }
+
+    connectivity.faceFaceTable.resize(faces.size());
+    UTILITY_OMP(parallel for)
+    for (uint i = 0; i < faces.size(); i++) {
+        const Face& face = faces[i];
+        std::array<int, 3>& ni = connectivity.faceFaceTable[i];
+        ni[0] = edges[EdgeKey(face.a, face.b)].getNeighbor(i);
+        ni[1] = edges[EdgeKey(face.b, face.c)].getNeighbor(i);
+        ni[2] = edges[EdgeKey(face.c, face.a)].getNeighbor(i);
+    }
+}
+
+void Mesh::recomputeTopologyData() {
+    // order matters here
+    if (!connectivity.faceFaceTable.empty()) {
+        computeFaceFaceTable();
+    }
+    if (!boundary.empty()) {
+        computeBoundary();
+    }
+    if (!connectivity.vertexFaceTable.empty()) {
+        computeVertexFaceTable();
+    }
+    if (!connectivity.vertexVertexTable.empty()) {
+        computeVertexVertexTable();
+    }
+}
 
 void Mesh::skirt( const math::Point3 & down ) {
     typedef std::size_t Index;

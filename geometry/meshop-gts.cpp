@@ -121,7 +121,7 @@ void fromGts(geometry::Mesh &mesh, GtsSurface &s)
 }
 
 // TODO faceCount
-geometry::Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax)
+geometry::Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax, double costMax)
 {
     // the make_gts_class_system_threadsafe (void);
     // MUST be called in main thread! before this moment
@@ -134,7 +134,15 @@ geometry::Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountM
     //  set maximum fold angle to F degrees, default is one degree"
     gdouble fold = M_PI/180.;
     //  fold = atof (optarg)*PI/180.;
-    GtsStopFunc stop_func =  (GtsStopFunc) gts_coarsen_stop_number;
+    GtsStopFunc stop_func;
+    gpointer stop_data = nullptr;
+    if (edgeCountMax > 0) {
+        stop_func = (GtsStopFunc) gts_coarsen_stop_number;
+        stop_data = &edgeCountMax;
+    } else {
+        stop_func = (GtsStopFunc) gts_coarsen_stop_cost;
+        stop_data = &costMax;
+    }
     GtsCoarsenFunc coarsen_func = (GtsCoarsenFunc) gts_volume_optimized_vertex;
     // Default parameters
     GtsVolumeOptimizedParams params = { 0.5, 0.5, 0. };
@@ -148,9 +156,9 @@ geometry::Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountM
     gpointer cost_data = &params;
 
     gts_surface_coarsen (s,
-			 cost_func, cost_data,
-			 coarsen_func, coarsen_data,
-			 stop_func, &edgeCountMax, fold);
+             cost_func, cost_data,
+             coarsen_func, coarsen_data,
+             stop_func, stop_data, fold);
 
     auto newMesh(std::make_shared<geometry::Mesh>());
     fromGts (*newMesh, *s);

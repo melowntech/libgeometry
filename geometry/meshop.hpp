@@ -173,6 +173,21 @@ Mesh::pointer simplify( const Mesh::pointer &mesh, int faceCount
 #endif
     ;
 
+/**
+ * @brief Simplifies the mesh in place to certain amount of faces
+ * @param mesh mesh to simplify
+ * @param faceCount target face count
+ * @param simplifyOptions additional parameters of the simplification
+ */
+void simplifyInPlace(Mesh &mesh, int faceCount
+                    , const SimplifyOptions &simplifyOptions
+                     =  SimplifyOption::CORNERS
+                     | SimplifyOption::RMNONMANIFOLDEDGES)
+#ifndef GEOMETRY_HAS_OPENMESH
+    UTILITY_FUNCTION_ERROR("Mesh simplification is available only when compiled with OpenMesh.")
+#endif
+    ;
+
 /** Simplify mesh with maximal geometric error
  * \param mesh mesh to simplify
  * \param maxErr maximal geometric error
@@ -269,7 +284,7 @@ void make_gts_class_system_threadsafe()
 #endif
     ;
 
-Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax)
+Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax, double costMax)
 #ifndef GEOMETRY_HAS_GTS
     UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
 #endif

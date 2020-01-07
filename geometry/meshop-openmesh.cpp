@@ -400,6 +400,22 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount
     return newMesh;
 }
 
+void simplifyInPlace(Mesh& mesh, int faceCount, const SimplifyOptions& options) {
+    OMMesh omMesh;
+    prepareMesh(omMesh, mesh, options);
+
+    Decimator decimator(omMesh);
+    prepareDecimator(decimator, options);
+    decimator.initialize();
+
+    decimator.decimate_to_faces(0, faceCount);
+    omMesh.garbage_collection();
+
+    mesh.vertices.clear();
+    mesh.faces.clear();
+    fromOpenMesh(omMesh, mesh);
+}
+
 #if OM_VERSION >= 0x60000
 
 Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
