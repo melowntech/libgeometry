@@ -33,8 +33,6 @@
 #include <dbglog/dbglog.hpp>
 
 #include "mesh.hpp"
-#include "utility/openmp.hpp"
-#include "utility/expect.hpp"
 
 namespace fs = boost::filesystem;
 
