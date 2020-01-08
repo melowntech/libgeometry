@@ -121,51 +121,6 @@ struct Mesh {
     /** Faces (triplets of indices to vertices and texture coordinates) */
     Face::list faces;
 
-    /**
-     * @brief Boundary flag for each vertex
-     * @details May be empty, computed on demand using \ref computeBoundary.
-     */
-    std::vector<bool> boundary;
-
-    /**
-     * @brief Per-face geometric normals
-     * @details May be empty, computed on demand using \ref computeNormals.
-     */
-    math::Points3 normals;
-
-    /** List of indices for each vertex of the mesh.
-     */
-    typedef std::vector<std::vector<int>> vertex_table;
-
-    /** List of indices for each face of the mesh.
-     */
-    typedef std::vector<std::array<int, 3>> face_table;
-
-    /** Optional mesh connectivity information, must be initialized by respective function calls.
-     */
-    struct {
-
-        /**
-         * @brief Lists faces containing given vertex.
-         * @details Computed using \ref computeVertexFaceTable.
-         */
-        vertex_table vertexFaceTable;
-
-        /**
-         * @brief Lists nearest vertices for each vertex.
-         * @details Computed using \ref computeVertexVertexTable.
-         */
-        vertex_table vertexVertexTable;
-
-        /**
-         * @brief Lists neighboring faces.
-         * @details Computed using \ref computeFaceFaceTable.
-         */
-        face_table faceFaceTable;
-
-    } connectivity;
-
-
     /** Face normal. */
     math::Point3 normal(const Face &face) const {
         return face.normal(vertices);
@@ -238,43 +193,6 @@ struct Mesh {
                face.b < vertices.size() &&
                face.c < vertices.size();
     }
-
-    /**
-     * @brief Computes or recomputes face normals.
-     */
-    void computeNormals();
-
-    /**
-     * @brief Computes or recomputes per-face boundary flags.
-     * @details Requires face-face table, computed by function \ref computeFaceFaceTable.
-     */
-    void computeBoundary();
-
-    /**
-     * @brief Computes or recomputes per-verter list of faces containing given vertex.
-     */
-    void computeVertexFaceTable();
-
-    /**
-     * @brief Computes or recomputes per-verter list of neighboring vertices (one-ring neighborhood).
-     */
-    void computeVertexVertexTable();
-
-    /**
-     * @brief Computes or recomputes per-face list of neighboring faces.
-     * @details Each face has three neighbors, except for boundary faces, for which the missing neighbor is
-     * substituted by index -1.
-     */
-    void computeFaceFaceTable();
-
-    /**
-     * @brief Recomputes all mesh topology data that have been previously computed by the user.
-     * @details The function recomputes boundary, vertex-face table, vertex-vertex table and face-face table,
-     * provided the user called the respective computation function at least once. Data not used previously
-     * are not computed. It has to be called when new vertices or faces are added, when vertices or faces are
-     * removed, when edges are flipped, etc.
-     */
-    void recomputeTopologyData();
 
     /**
      * @brief provide mesh with skirt
