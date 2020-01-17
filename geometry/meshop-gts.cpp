@@ -83,7 +83,7 @@ void toGTSMesh(const geometry::Mesh &mesh, GtsSurface &s)
 // A 'callback' for foreach_vertex call that converts
 // all verticies from gts to vadstena and add it to the list of vertices
 // Just a helper
-void vertexGts2Va (GtsPoint *gts_p, gpointer *data)
+gint vertexGts2Va (GtsPoint *gts_p, gpointer *data)
 {
     math::Points3d *va_points = (math::Points3d *) data[0];
     uint *current_index = (uint *) data[1];
@@ -92,12 +92,14 @@ void vertexGts2Va (GtsPoint *gts_p, gpointer *data)
     // This is inspired by gts codebase
     GTS_OBJECT (gts_p)->reserved = GUINT_TO_POINTER (*current_index);
     ++(*current_index);
+
+    return {};
 }
 
 // A 'callback' for foreach_face call that converts
 // all faces from gts to vadstena and add it to the list of faces
 // Just a helper
-void faceGts2Va (GtsTriangle *t, Face::list *va_faces)
+gint faceGts2Va (GtsTriangle *t, Face::list *va_faces)
 {
   GtsVertex *v1, *v2, *v3;
   gts_triangle_vertices (t, &v1, &v2, &v3);
@@ -106,6 +108,8 @@ void faceGts2Va (GtsTriangle *t, Face::list *va_faces)
           GPOINTER_TO_UINT (GTS_OBJECT (v1)->reserved),
           GPOINTER_TO_UINT (GTS_OBJECT (v2)->reserved),
           GPOINTER_TO_UINT (GTS_OBJECT (v3)->reserved));
+
+    return {};
 }
 
 // Convert gts::Mesh to vadstena::Mesh
@@ -166,7 +170,7 @@ geometry::Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountM
     return newMesh;
 }
 
-void getSubSurface (void *ee, gpointer *data)
+gint getSubSurface (void *ee, gpointer *data)
 {
     GtsSurface *s_sub = (GtsSurface *) data[1];
 
@@ -194,9 +198,11 @@ void getSubSurface (void *ee, gpointer *data)
     if (result) {
         gts_surface_add_face (s_sub, f);
     }
+
+    return {};
 }
 
-void getSubSurfaces (GtsFace *f, gpointer *data)
+gint getSubSurfaces (GtsFace *f, gpointer *data)
 {
     std::vector <std::vector <GtsSurface *>> *subSurfaces = (std::vector <std::vector <GtsSurface *>> *) data[0];
     std::function<math::Point2_<long>(double x, double y)> *getGridCell = (std::function<math::Point2_<long>(double, double)>* ) data[1];
@@ -213,6 +219,8 @@ void getSubSurfaces (GtsFace *f, gpointer *data)
     auto targetCell = (*getGridCell)(midx, midy);
     GtsSurface *subSurface =(*subSurfaces)[targetCell(1)][targetCell(0)];
     gts_surface_add_face (subSurface, f);
+
+    return {};
 }
 
 void make_gts_class_system_threadsafe (void) {
