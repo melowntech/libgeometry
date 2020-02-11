@@ -42,7 +42,6 @@
 #include <boost/numeric/ublas/vector.hpp>
 
 #include "math/math.hpp"
-#include "imgproc/binterpolate.hpp"
 
 #include "meshop.hpp"
 #include "detail/hybrid-decimater.hpp"
@@ -96,7 +95,7 @@ public:
         if (baseCost != Base::ILLEGAL_COLLAPSE) {
             const float x = (ci.p1[0] - extents_.ll(0)) / (extents_.ur(0) - extents_.ll(0)) * weights_.cols;
             const float y = (ci.p1[1] - extents_.ll(1)) / (extents_.ur(1) - extents_.ll(1)) * weights_.rows;
-            const float w = imgproc::interpolate<float>(weights_, x, y);
+            const float w = getCostFactor(x, y);
             return baseCost * w;
         } else {
             return baseCost;
@@ -111,6 +110,29 @@ public:
             const auto& pt = mesh.point(it.handle());
             math::update(extents_, math::Point2(pt[0], pt[1]));
         }
+    }
+
+private:
+    float getCostFactor(const float x, const float y) const {
+        const float eps = 1e-3f;
+        const float xmax = (float)weights_.cols - (1.f + eps);
+        const float ymax = (float)weights_.rows - (1.f + eps);
+        const float x1 = std::min(std::max(x, 0.f), xmax);
+        const float y1 = std::min(std::max(y, 0.f), ymax);
+        const int x0 = (int)x1;
+        const int y0 = (int)y1;
+
+        const float fx1 = x1 - x0;
+        const float fx0 = 1.f - fx1;
+        const float fy1 = y1 - y0;
+        const float fy0 = 1.f - fy1;
+
+        const float v00 = weights_(y0, x0);
+        const float v01 = weights_(y0, x0 + 1);
+        const float v10 = weights_(y0 + 1, x0);
+        const float v11 = weights_(y0 + 1, x0 + 1);
+
+        return fx0 * fy0 * v00 + fx1 * fy0 * v01 + fx0 * fy1 * v10 + fx1 * fy1 * v11;
     }
 
 private:
