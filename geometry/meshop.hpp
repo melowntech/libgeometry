@@ -42,6 +42,10 @@
 #include "mesh.hpp"
 #include "parse-obj.hpp"
 
+#ifdef GEOMETRY_HAS_OPENCV
+#  include <opencv2/core/mat.hpp>
+#endif
+
 // Needed to get OpenMesh version
 #ifdef GEOMETRY_HAS_OPENMESH
 #  include <OpenMesh/Core/System/config.h>
@@ -128,6 +132,16 @@ public:
         return concaveVertexModifier_;
     }
 
+#ifdef GEOMETRY_HAS_OPENCV
+    SimplifyOptions& weightMap(const boost::optional<cv::Mat_<float>>& map) {
+        weightMap_ = map;
+        return *this;
+    }
+    boost::optional<cv::Mat_<float>> weightMap() const {
+        return weightMap_;
+    }
+#endif
+
 private:
     long flags_;
     boost::optional<double> maxError_;
@@ -148,6 +162,11 @@ private:
 
     // Use class based planarisation in simplifyToError
     boost::optional<bool> classBasedPlanarisation_;
+
+#ifdef GEOMETRY_HAS_OPENCV
+    // Map used as a multiplier of quadric cost
+    boost::optional<cv::Mat_<float>> weightMap_;
+#endif
 };
 
 Mesh::pointer simplify(const Mesh &mesh, int faceCount

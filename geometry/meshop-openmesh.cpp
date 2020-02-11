@@ -42,6 +42,7 @@
 #include <boost/numeric/ublas/vector.hpp>
 
 #include "math/math.hpp"
+#include "imgproc/binterpolate.hpp"
 
 #include "meshop.hpp"
 #include "detail/hybrid-decimater.hpp"
@@ -74,6 +75,51 @@ typedef OpenMesh::Decimater::ModEdgeLengthT<OMMesh>::Handle HModEdgeLengthT;
 #if OM_VERSION >= 0x60000
 typedef detail::ModQuadricConvexT<OMMesh>::Handle HModQuadricConvex;
 typedef detail::ClassifyRestrictModT<OMMesh>::Handle HModClassRestrictT;
+#endif
+
+#ifdef GEOMETRY_HAS_OPENCV
+
+/** Extension of ModQuadric multiplying the cost by generic 2D weight map
+ */
+template <class MeshT>
+class ModWeightedQuadricT : public OpenMesh::Decimater::ModQuadricT<MeshT> {
+public:
+    // Defines the types Self, Handle, Base, Mesh, and CollapseInfo
+    // and the memberfunction name()
+    DECIMATING_MODULE(ModWeightedQuadricT, MeshT, WeightedQuadric);
+
+public:
+    using OpenMesh::Decimater::ModQuadricT<MeshT>::ModQuadricT;
+
+    virtual float collapse_priority(const CollapseInfo& ci) {
+        const float baseCost = OpenMesh::Decimater::ModQuadricT<MeshT>::collapse_priority(ci);
+        if (baseCost != Base::ILLEGAL_COLLAPSE) {
+            const float x = (ci.p1[0] - extents_.ll(0)) / (extents_.ur(0) - extents_.ll(0)) * weights_.cols;
+            const float y = (ci.p1[1] - extents_.ll(1)) / (extents_.ur(1) - extents_.ll(1)) * weights_.rows;
+            const float w = imgproc::interpolate<float>(weights_, x, y);
+            return baseCost * w;
+        } else {
+            return baseCost;
+        }
+    }
+
+    void setWeightMap(const cv::Mat_<float>& weights) {
+        weights_ = weights;
+        extents_ = math::Extents2(math::InvalidExtents{});
+        const MeshT& mesh = Base::mesh();
+        for (auto it = mesh.vertices_begin(); it != mesh.vertices_end(); ++it) {
+            const auto& pt = mesh.point(it.handle());
+            math::update(extents_, math::Point2(pt[0], pt[1]));
+        }
+    }
+
+private:
+    cv::Mat_<float> weights_;
+    math::Extents2 extents_;
+};
+
+typedef ModWeightedQuadricT<OMMesh>::Handle HModWeightedQuadric;
+
 #endif
 
 /** Convert mesh to OpenMesh data structure and return mesh extents (2D bounding
@@ -348,7 +394,18 @@ void prepareDecimator(Decimator &decimator
         LOGTHROW (err3, std::runtime_error) <<
             "Concave/Convex decimater is not available on this system.";
 #endif
-    } else {
+    } else
+#ifdef GEOMETRY_HAS_OPENCV
+        if (options.weightMap()) {
+        HModWeightedQuadric hModWeightedQuadric;
+        decimator.add(hModWeightedQuadric);
+        decimator.module(hModWeightedQuadric).setWeightMap(*options.weightMap());
+        if (options.maxError()) {
+            decimator.module(hModWeightedQuadric).set_max_err(*options.maxError(), false);
+        }
+    } else
+#endif
+    {
         // collapse priority based on vertex error quadric
         HModQuadric hModQuadric;
         decimator.add(hModQuadric);
