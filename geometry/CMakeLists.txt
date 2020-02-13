@@ -105,6 +105,8 @@ set(geometry_SOURCES
 
   neighbors.hpp
 
+  estimatePointNormals.cpp
+
   smoothcloud.hpp smoothcloud.cpp
 
 
