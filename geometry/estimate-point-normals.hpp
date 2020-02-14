@@ -1,9 +1,49 @@
+/**
+ * Copyright (c) 2017 Melown Technologies SE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * *  Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * *  Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+/**
+ * @file estimate-point-normals.hpp
+ * @author Matyas Hollmann <matyas.hollmann@melowntech.com>
+ *
+ * Estimation of point normals in the point cloud.
+ * Code based on window-mesh-legacy.cpp
+ * 
+ * Note: Uses Eigen3 library.
+ *       
+ */
+
+#ifndef ESTIMATE_POINT_NORMALS_HPP_INCLUDED
+#define ESTIMATE_POINT_NORMALS_HPP_INCLUDED
+
 #include <Eigen/Dense>
 
 #include "dbglog/dbglog.hpp"
 #include "utility/openmp.hpp"
 
 #include "./kdtree.hpp"
+#include "./neighbors.hpp"
 
 namespace geometry {
 /**
@@ -27,15 +67,16 @@ Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data)
     JacobiSVD<MatrixXd> svd(covariance, ComputeFullU);
     // the normal is the last column of U, singular vector of the covariance
     // matrix corresponding to the smallest singular value 
-    // (i.e., the direction of the lowest variability in the data)
+    // (i.e., the direction of the least variability in the data)
     VectorXd sgVec(svd.matrixU().col(data.cols() - 1));
 
-    return sgVec.normalized();
+    // normalization shouldn't be needed as U should be a unitary matrix.
+    return sgVec;//.normalized();
 }
 
 /**
- *  Getter/setter of 
- * 
+ *  Interface to access dimension values of a point, and to calculate the
+ *  difference of two points.
  **/
 template <typename T>
 struct DefaultAccessor {
@@ -43,7 +84,7 @@ struct DefaultAccessor {
         return pt(dim);
     }
 
-    static inline void set(T& pt, unsigned dim, typename T::value_type val) {
+    static inline void set(T& pt, unsigned dim, const typename T::value_type& val) {
         pt(dim) = val;
     }
 
@@ -54,16 +95,22 @@ struct DefaultAccessor {
 };
 
 /**
- *  typename T:     point in K-dimensional space
- *  unsinged K:     number of dimensions of the space
+ *
+ *  Estimate normals of all points in the input point pointcloud. 
+ * 
+ *  typename T:     point in a K-dimensional space
+ *  unsigned K:     number of dimensions of the space
  *  typename A:     dimension value accessor (has to support get(),
- *                               set() and diff() (see kdtree.hpp))
+ *                               set() and also diff() [used in Kdtree]
  */
 template<typename T, unsigned K = 3, typename A = DefaultAccessor<T>>
 std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
-                               unsigned nEstimatorPts = 20,
+                               unsigned nEstimatorPts = 40,
                                double radius = 0)
 {
+    static_assert(K >= 2,
+                  "Estimation of point normals makes sense only in at least "
+                  "2-dimensional space.");
     using Neighbor = typename KdTree<T, K, A>::Neighbor;
     using Neighbors = typename KdTree<T, K, A>::Neighbors;
     
@@ -83,19 +130,25 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
         return res;
     });
 
+    auto setZeros([](T& pt) -> void {
+        for (unsigned t = 0; t < K; ++t) {
+            A::set(pt, t, 0);
+        }
+    });
+
     const size_t nPoints(pointCloud.size());
     // prepare space for normals
-    std::vector<T> normals(nPoints, T());
+    std::vector<T> normals(nPoints);
     
     LOG(info3) << "Building a kd-tree from the pointcloud of "
                << nPoints << " points.";
     KdTree<T, K, A> kdtree(pointCloud.begin(), pointCloud.end());
 
-    /** per thread variables*/
+    /** per thread accumulative variables **/
     double searchRadiusTotal(0.0);
     size_t pointsProcessed(0);
 
-   UTILITY_OMP(parallel for schedule(static) default(shared) 
+    UTILITY_OMP(parallel for schedule(static) default(shared) 
                firstprivate(searchRadiusTotal, pointsProcessed))
     for (size_t i = 0; i < nPoints; ++i)
     {
@@ -108,8 +161,7 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
             // Mode 2: search radius is variable and is based on the average
             // radius needed to reach the specified number of neighbors
             searchRadius
-                = (pointsProcessed ? (searchRadiusTotal / pointsProcessed)
-                                   : 1.0);
+                = (pointsProcessed ? (searchRadiusTotal / pointsProcessed) : 1.0);
             ++pointsProcessed;
         }
 
@@ -122,8 +174,9 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
 
         size_t nNeighs = neighbors.size();
         if (nNeighs < nEstimatorPts) {
-            // Oops, normal stays zero -> we ignore point later
+            // Oops, normal stays zero -> we may deal with this later
             LOG(warn3) << "too few neighbors! (" << nNeighs << ")";
+            setZeros(normal);
             continue;
         }
         
@@ -136,6 +189,9 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
         // calculate normal
         normal = fromEigen(estimateNormal(samples));
     }
+    return normals;
 }
 
 } // geometry
+
+#endif // ESTIMATE_POINT_NORMALS_HPP_INCLUDED
