@@ -88,56 +88,35 @@ public:
     DECIMATING_MODULE(ModWeightedQuadricT, MeshT, WeightedQuadric);
 
 public:
-    using OpenMesh::Decimater::ModQuadricT<MeshT>::ModQuadricT;
+    ModWeightedQuadricT(MeshT& mesh)
+        : OpenMesh::Decimater::ModQuadricT<MeshT>(mesh) {
+        Base::mesh().add_property(weights_);
+    }
+
+    ~ModWeightedQuadricT() {
+        Base::mesh().remove_property(weights_);
+    }
 
     virtual float collapse_priority(const CollapseInfo& ci) {
         const float baseCost = OpenMesh::Decimater::ModQuadricT<MeshT>::collapse_priority(ci);
         if (baseCost != Base::ILLEGAL_COLLAPSE) {
-            const float x = (ci.p1[0] - extents_.ll(0)) / (extents_.ur(0) - extents_.ll(0)) * weights_.cols;
-            const float y = (ci.p1[1] - extents_.ll(1)) / (extents_.ur(1) - extents_.ll(1)) * weights_.rows;
-            const float w = getCostFactor(x, y);
+            const double w = Base::mesh().property(weights_, ci.v1);
             return baseCost * w;
         } else {
             return baseCost;
         }
     }
 
-    void setWeightMap(const cv::Mat_<float>& weights) {
-        weights_ = weights;
-        extents_ = math::Extents2(math::InvalidExtents{});
-        const MeshT& mesh = Base::mesh();
-        for (auto it = mesh.vertices_begin(); it != mesh.vertices_end(); ++it) {
-            const auto& pt = mesh.point(it.handle());
-            math::update(extents_, math::Point2(pt[0], pt[1]));
+    void setWeights(const std::vector<float>& weights) {
+        MeshT& mesh = Base::mesh();
+        int i = 0;
+        for (auto iter = mesh.vertices_begin(); iter != mesh.vertices_end(); ++iter, ++i) {
+            mesh.property(weights_, *iter) = weights[i];
         }
     }
 
 private:
-    float getCostFactor(const float x, const float y) const {
-        const float eps = 1e-3f;
-        const float xmax = (float)weights_.cols - (1.f + eps);
-        const float ymax = (float)weights_.rows - (1.f + eps);
-        const float x1 = std::min(std::max(x, 0.f), xmax);
-        const float y1 = std::min(std::max(y, 0.f), ymax);
-        const int x0 = (int)x1;
-        const int y0 = (int)y1;
-
-        const float fx1 = x1 - x0;
-        const float fx0 = 1.f - fx1;
-        const float fy1 = y1 - y0;
-        const float fy0 = 1.f - fy1;
-
-        const float v00 = weights_(y0, x0);
-        const float v01 = weights_(y0, x0 + 1);
-        const float v10 = weights_(y0 + 1, x0);
-        const float v11 = weights_(y0 + 1, x0 + 1);
-
-        return fx0 * fy0 * v00 + fx1 * fy0 * v01 + fx0 * fy1 * v10 + fx1 * fy1 * v11;
-    }
-
-private:
-    cv::Mat_<float> weights_;
-    math::Extents2 extents_;
+    OpenMesh::VPropHandleT<float> weights_;
 };
 
 typedef ModWeightedQuadricT<OMMesh>::Handle HModWeightedQuadric;
@@ -416,18 +395,14 @@ void prepareDecimator(Decimator &decimator
         LOGTHROW (err3, std::runtime_error) <<
             "Concave/Convex decimater is not available on this system.";
 #endif
-    } else
-#ifdef GEOMETRY_HAS_OPENCV
-        if (options.weightMap()) {
+    } else if (options.vertexWeights()) {
         HModWeightedQuadric hModWeightedQuadric;
         decimator.add(hModWeightedQuadric);
-        decimator.module(hModWeightedQuadric).setWeightMap(*options.weightMap());
+        decimator.module(hModWeightedQuadric).setWeights(*options.vertexWeights());
         if (options.maxError()) {
             decimator.module(hModWeightedQuadric).set_max_err(*options.maxError(), false);
         }
-    } else
-#endif
-    {
+    } else {
         // collapse priority based on vertex error quadric
         HModQuadric hModQuadric;
         decimator.add(hModQuadric);
