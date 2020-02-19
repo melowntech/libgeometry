@@ -42,8 +42,8 @@
 #include "dbglog/dbglog.hpp"
 #include "utility/openmp.hpp"
 
-#include "./kdtree.hpp"
-#include "./neighbors.hpp"
+#include "kdtree.hpp"
+#include "neighbors.hpp"
 
 namespace geometry {
 /**
