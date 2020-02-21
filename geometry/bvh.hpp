@@ -99,54 +99,66 @@ inline bool intersectBox(const math::Extents3& box, const Ray& ray, double& t_mi
 
 
 struct BvhPrimitive {
-    /// Generic user data, can be used to store additional information to the primitives.
-    std::size_t userData = std::size_t(-1);
+    /** Generic user data, can be used to store additional information to the primitives. */
+    uint userData = uint(-1);
 };
 
-/// \brief Holds intormation about intersection.
+/**
+ * \brief Holds intormation about intersection.
+ */
 struct IntersectionInfo {
-    /// Distance of the hit in units of ray.direction().
+    /** Distance of the hit in units of ray.direction(). */
     double t;
 
-    /// Object hit by the ray, or nullptr if nothing has been hit.
+    /** Object hit by the ray, or nullptr if nothing has been hit. */
     const BvhPrimitive* object = nullptr;
 
     math::Point3 hit(const Ray& ray) const {
         return ray.origin() + ray.direction() * t;
     }
 
-    /// Sort by intersection distance
+    /** Sort by intersection distance. */
     bool operator<(const IntersectionInfo& other) const {
         return t < other.t;
     }
 };
 
-
+/**
+ * @brief Bounding volume hierarchy
+ * @details TBvhObject must derive from \ref BvhPrimitive and implement the following interface:
+ * @code
+ * struct BvhObject : public BvhPrimitive {
+ *   bool getIntersection(const Ray& ray, IntersectionInfo& intersection) const;
+ *   math::Extents3 getBBox() const;
+ *   math::Point3 getCenter() const;
+ * };
+ * @endcode
+ */
 template <typename TBvhObject>
 class Bvh : public boost::noncopyable {
 private:
-    const std::size_t leafSize_;
-    std::size_t nodeCnt_ = 0;
-    std::size_t leafCnt_ = 0;
+    const uint leafSize_;
+    uint nodeCnt_ = 0;
+    uint leafCnt_ = 0;
 
     std::vector<TBvhObject> objects_;
 
     struct BvhNode {
         math::Extents3 box;
-        std::size_t start;
-        std::size_t primCnt;
-        std::size_t rightOffset;
+        uint start;
+        uint primCnt;
+        uint rightOffset;
     };
 
     std::vector<BvhNode> nodes_;
 
     struct BvhTraversal {
-        std::size_t idx;
+        uint idx;
         double t_min;
     };
 
 public:
-    explicit Bvh(const std::size_t leafSize = 4)
+    explicit Bvh(const uint leafSize = 4)
         : leafSize_(leafSize) {}
 
     /// \brief Contructs the BVH from given set of objects.
@@ -159,21 +171,20 @@ public:
         leafCnt_ = 0;
 
         struct BvhBuildEntry {
-            std::size_t parent;
-            std::size_t start;
-            std::size_t end;
+            uint parent;
+            uint start;
+            uint end;
         };
 
         std::array<BvhBuildEntry, 128> stack;
-        std::size_t stackIdx = 0;
-        constexpr std::size_t UNTOUCHED = 0xffffffff;
-        constexpr std::size_t NO_PARENT = 0xfffffffc;
-        constexpr std::size_t TOUCHED_TWICE = 0xfffffffd;
+        uint stackIdx = 0;
+        constexpr uint NO_PARENT_FLAG = uint(-1);
+        constexpr uint UNTOUCHED_FLAG = uint(-1);
 
         // Push the root
         stack[stackIdx].start = 0;
         stack[stackIdx].end = objects_.size();
-        stack[stackIdx].parent = NO_PARENT;
+        stack[stackIdx].parent = NO_PARENT_FLAG;
         stackIdx++;
 
         BvhNode node;
@@ -182,19 +193,19 @@ public:
 
         while (stackIdx > 0) {
             BvhBuildEntry& nodeEntry = stack[--stackIdx];
-            const std::size_t start = nodeEntry.start;
-            const std::size_t end = nodeEntry.end;
-            const std::size_t primCnt = end - start;
+            const uint start = nodeEntry.start;
+            const uint end = nodeEntry.end;
+            const uint primCnt = end - start;
 
             nodeCnt_++;
             node.start = start;
             node.primCnt = primCnt;
-            node.rightOffset = UNTOUCHED;
+            node.rightOffset = UNTOUCHED_FLAG;
 
             math::Extents3 bbox = objects_[start].getBBox();
             const math::Point3 center = objects_[start].getCenter();
             math::Extents3 boxCenter(center, center);
-            for (std::size_t i = start + 1; i < end; ++i) {
+            for (uint i = start + 1; i < end; ++i) {
                 math::update(bbox, objects_[i].getBBox());
                 math::update(boxCenter, objects_[i].getCenter());
             }
@@ -206,10 +217,10 @@ public:
             }
             buildNodes.push_back(node);
 
-            if (nodeEntry.parent != NO_PARENT) {
+            if (nodeEntry.parent != NO_PARENT_FLAG) {
                 buildNodes[nodeEntry.parent].rightOffset--;
 
-                if (buildNodes[nodeEntry.parent].rightOffset == TOUCHED_TWICE) {
+                if (buildNodes[nodeEntry.parent].rightOffset == UNTOUCHED_FLAG - 2) {
                     buildNodes[nodeEntry.parent].rightOffset = nodeCnt_ - 1 - nodeEntry.parent;
                 }
             }
@@ -218,11 +229,11 @@ public:
                 continue;
             }
 
-            const std::size_t splitDim = argMax(boxCenter.ur - boxCenter.ll);
+            const uint splitDim = argMax(boxCenter.ur - boxCenter.ll);
             const double split = 0.5 * (boxCenter.ll(splitDim) + boxCenter.ur(splitDim));
 
-            std::size_t mid = start;
-            for (std::size_t i = start; i < end; ++i) {
+            uint mid = start;
+            for (uint i = start; i < end; ++i) {
                 if (objects_[i].getCenter()[splitDim] < split) {
                     std::swap(objects_[i], objects_[mid]);
                     ++mid;
@@ -231,6 +242,12 @@ public:
 
             if (mid == start || mid == end) {
                 mid = start + (end - start) / 2;
+            }
+
+            if (stackIdx >= stack.size() - 2) {
+                objects_.clear();
+                nodeCnt_ = leafCnt_ = 0;
+                throw std::runtime_error("BVH build stack overflow, try increasing the leaf size");
             }
 
             stack[stackIdx++] = { nodeCnt_ - 1, mid, end };
@@ -287,8 +304,8 @@ private:
     template <typename TAddIntersection>
     void getIntersections(const Ray& ray, const TAddIntersection& addIntersection) const {
         std::array<double, 4> boxHits;
-        std::size_t closer;
-        std::size_t other;
+        uint closer;
+        uint other;
 
         std::array<BvhTraversal, 64> stack;
         int stackIdx = 0;
@@ -297,13 +314,13 @@ private:
         stack[stackIdx].t_min = 0.;
 
         while (stackIdx >= 0) {
-            const std::size_t idx = stack[stackIdx].idx;            
+            const uint idx = stack[stackIdx].idx;
             stackIdx--;
             const BvhNode& node = nodes_[idx];
 
             if (node.rightOffset == 0) {
                 // leaf
-                for (std::size_t primIdx = 0; primIdx < node.primCnt; ++primIdx) {
+                for (uint primIdx = 0; primIdx < node.primCnt; ++primIdx) {
                     IntersectionInfo current;
 
                     const TBvhObject& obj = objects_[node.start + primIdx];
@@ -318,11 +335,16 @@ private:
                 }
             } else {
                 // inner node
-                const bool hitc0 = intersectBox(nodes_[idx + 1].box, ray, boxHits[0], boxHits[1]);
-                const bool hitc1 =
-                    intersectBox(nodes_[idx + node.rightOffset].box, ray, boxHits[2], boxHits[3]);
+                const bool hitLeft = intersectBox
+                        (nodes_[idx + 1].box, ray, boxHits[0], boxHits[1]);
+                const bool hitRight = intersectBox
+                        (nodes_[idx + node.rightOffset].box, ray, boxHits[2], boxHits[3]);
 
-                if (hitc0 && hitc1) {
+                if (stackIdx >= int(stack.size()) - 2) {
+                    throw std::runtime_error("BVH traversal stack overflow, try increasing the leaf size");
+                }
+
+                if (hitLeft && hitRight) {
                     closer = idx + 1;
                     other = idx + node.rightOffset;
 
@@ -334,9 +356,9 @@ private:
 
                     stack[++stackIdx] = BvhTraversal{ other, boxHits[2] };
                     stack[++stackIdx] = BvhTraversal{ closer, boxHits[0] };
-                } else if (hitc0) {
+                } else if (hitLeft) {
                     stack[++stackIdx] = BvhTraversal{ idx + 1, boxHits[0] };
-                } else if (hitc1) {
+                } else if (hitRight) {
                     stack[++stackIdx] = BvhTraversal{ idx + node.rightOffset, boxHits[2] };
                 }
             }
