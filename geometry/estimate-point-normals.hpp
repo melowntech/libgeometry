@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Melown Technologies SE
+ * Copyright (c) 2020 Melown Technologies SE
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -52,27 +52,7 @@ namespace geometry {
  * The estimation of the normal is based on the principal-component analysis
  * of the data, a SVD of the covariance matrix (K x K) is performed.
  **/
-Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data)
-{
-    using namespace Eigen;
-    // calculate centroid (1 x K) of all (N) data points
-    RowVectorXd centroid = data.colwise().mean();
-    // mean-center sample matrix
-    MatrixXd centered = data.rowwise() - centroid;
-    // calculate the covariance matrix (K x K), for PCA we may ommit
-    // scaling by the factor 1/(N - 1)
-    MatrixXd covariance = centered.transpose() * centered;
-
-    // calculate SVD (ordered by the magnitude of SV)
-    JacobiSVD<MatrixXd> svd(covariance, ComputeFullU);
-    // the normal is the last column of U, singular vector of the covariance
-    // matrix corresponding to the smallest singular value 
-    // (i.e., the direction of the least variability in the data)
-    VectorXd sgVec(svd.matrixU().col(data.cols() - 1));
-
-    // normalization shouldn't be needed as U should be a unitary matrix.
-    return sgVec;//.normalized();
-}
+Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data);
 
 /**
  *  Interface to access dimension values of a point, and to calculate the
@@ -80,6 +60,9 @@ Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data)
  **/
 template <typename T>
 struct DefaultAccessor {
+    typedef typename T::value_type value_type;
+    typedef T difference_type;
+
     static inline typename T::value_type get(const T& pt, unsigned dim) {
         return pt(dim);
     }
@@ -191,6 +174,18 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
     }
     return normals;
 }
+
+/**
+ * @brief Orients point cloud normals to outward directions.
+ *
+ * @param pointCloud  Input points cloud
+ * @param normals     Estimated normals (with undetermined orientation) for each point
+ * @param pointRadius Radius of a patch associated with each point. Must be large enough
+ *                    for the point patches to overlap and cover the surface.
+ */
+void reorientNormals(const std::vector<math::Point3>& pointCloud
+                     , std::vector<math::Point3>& normals
+                     , double pointRadius);
 
 } // geometry
 

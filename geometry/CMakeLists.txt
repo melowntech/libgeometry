@@ -104,8 +104,8 @@ set(geometry_SOURCES
   meshop.hpp meshop.cpp
 
   neighbors.hpp
-
   bvh.hpp
+  estimate-point-normals.hpp estimate-point-normals.cpp
 
   smoothcloud.hpp smoothcloud.cpp
 
