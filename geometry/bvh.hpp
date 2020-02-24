@@ -123,6 +123,62 @@ struct IntersectionInfo {
     }
 };
 
+
+/**
+ * @brief Stack with fixed maximum number of elements.
+ */
+template<typename T, uint Capacity>
+class BvhStack {
+    std::array<T, Capacity> data_;
+    uint size_ = 0;
+
+public:
+    void pushBack(const T& value) {
+        checkFull();
+        data_[size_++] = value;
+    }
+
+    T& emplaceBack() {
+        checkFull();
+        size_++;
+        return top();
+    }
+
+    void popBack() {
+        assert(!empty());
+        size_--;
+    }
+
+    const T& top() const {
+        assert(!empty());
+        return data_[size_ - 1];
+    }
+
+    T& top() {
+        assert(!empty());
+        return data_[size_ - 1];
+    }
+
+    uint size() const {
+        return size_;
+    }
+
+    bool empty() const {
+        return size_ == 0;
+    }
+
+    bool full() const {
+        return size_ == Capacity - 1;
+    }
+
+private:
+    void checkFull() const {
+        if (full()) {
+            throw std::runtime_error("BVH queue overflow, try increasing the leaf size.");
+        }
+    }
+};
+
 /**
  * @brief Bounding volume hierarchy
  * @details TBvhObject must derive from \ref BvhPrimitive and implement the following interface:
@@ -144,18 +200,20 @@ private:
     std::vector<TBvhObject> objects_;
 
     struct BvhNode {
-        math::Extents3 box;
+        math::Extents3 bbox;
         uint start;
-        uint primCnt;
+        uint objCnt;
         uint rightOffset;
+
+        bool isLeaf() const {
+            return rightOffset == 0;
+        }
+        void setLeaf() {
+            rightOffset = 0;
+        }
     };
 
     std::vector<BvhNode> nodes_;
-
-    struct BvhTraversal {
-        uint idx;
-        double t_min;
-    };
 
 public:
     explicit Bvh(const uint leafSize = 4)
@@ -176,30 +234,31 @@ public:
             uint end;
         };
 
-        std::array<BvhBuildEntry, 128> stack;
-        uint stackIdx = 0;
+        BvhStack<BvhBuildEntry, 128> stack;
         constexpr uint NO_PARENT_FLAG = uint(-1);
         constexpr uint UNTOUCHED_FLAG = uint(-1);
 
         // Push the root
-        stack[stackIdx].start = 0;
-        stack[stackIdx].end = objects_.size();
-        stack[stackIdx].parent = NO_PARENT_FLAG;
-        stackIdx++;
+        BvhBuildEntry& rootEntry = stack.emplaceBack();
+        rootEntry.start = 0;
+        rootEntry.end = objects_.size();
+        rootEntry.parent = NO_PARENT_FLAG;
 
-        BvhNode node;
         std::vector<BvhNode> buildNodes;
         buildNodes.reserve(2 * objects_.size());
 
-        while (stackIdx > 0) {
-            BvhBuildEntry& nodeEntry = stack[--stackIdx];
+        while (!stack.empty()) {
+            const BvhBuildEntry nodeEntry = stack.top();
+            stack.popBack();
+
             const uint start = nodeEntry.start;
             const uint end = nodeEntry.end;
-            const uint primCnt = end - start;
+            const uint objCnt = end - start;
 
             nodeCnt_++;
+            BvhNode node;
             node.start = start;
-            node.primCnt = primCnt;
+            node.objCnt = objCnt;
             node.rightOffset = UNTOUCHED_FLAG;
 
             math::Extents3 bbox = objects_[start].getBBox();
@@ -209,10 +268,10 @@ public:
                 math::update(bbox, objects_[i].getBBox());
                 math::update(boxCenter, objects_[i].getCenter());
             }
-            node.box = bbox;
+            node.bbox = bbox;
 
-            if (primCnt <= leafSize_) {
-                node.rightOffset = 0;
+            if (objCnt <= leafSize_) {
+                node.setLeaf();
                 leafCnt_++;
             }
             buildNodes.push_back(node);
@@ -225,7 +284,7 @@ public:
                 }
             }
 
-            if (node.rightOffset == 0) {
+            if (node.isLeaf()) {
                 continue;
             }
 
@@ -244,14 +303,8 @@ public:
                 mid = start + (end - start) / 2;
             }
 
-            if (stackIdx >= stack.size() - 2) {
-                objects_.clear();
-                nodeCnt_ = leafCnt_ = 0;
-                throw std::runtime_error("BVH build stack overflow, try increasing the leaf size");
-            }
-
-            stack[stackIdx++] = { nodeCnt_ - 1, mid, end };
-            stack[stackIdx++] = { nodeCnt_ - 1, start, mid };
+            stack.pushBack({ nodeCnt_ - 1, mid, end });
+            stack.pushBack({ nodeCnt_ - 1, start, mid });
         }
 
         assert(buildNodes.size() == nodeCnt_);
@@ -297,33 +350,26 @@ public:
 
     /// \brief Returns the bounding box of all objects in BVH.
     math::Extents3 getBoundingBox() const {
-        return nodes_[0].box;
+        return nodes_[0].bbox;
     }
 
 private:
     template <typename TAddIntersection>
     void getIntersections(const Ray& ray, const TAddIntersection& addIntersection) const {
-        std::array<double, 4> boxHits;
-        uint closer;
-        uint other;
+        BvhStack<uint, 64> stack;
+        stack.pushBack(0); // add root
 
-        std::array<BvhTraversal, 64> stack;
-        int stackIdx = 0;
-
-        stack[stackIdx].idx = 0;
-        stack[stackIdx].t_min = 0.;
-
-        while (stackIdx >= 0) {
-            const uint idx = stack[stackIdx].idx;
-            stackIdx--;
+        while (!stack.empty()) {
+            const uint idx = stack.top();
+            stack.popBack();
             const BvhNode& node = nodes_[idx];
 
-            if (node.rightOffset == 0) {
-                // leaf
-                for (uint primIdx = 0; primIdx < node.primCnt; ++primIdx) {
+            if (node.isLeaf()) {
+                // leaf -> intersect stored objects
+                for (uint objIdx = 0; objIdx < node.objCnt; ++objIdx) {
                     IntersectionInfo current;
 
-                    const TBvhObject& obj = objects_[node.start + primIdx];
+                    const TBvhObject& obj = objects_[node.start + objIdx];
                     const bool hit = obj.getIntersection(ray, current);
 
                     if (hit) {
@@ -335,31 +381,27 @@ private:
                 }
             } else {
                 // inner node
+                double left_t0, left_t1, right_t0, right_t1;
                 const bool hitLeft = intersectBox
-                        (nodes_[idx + 1].box, ray, boxHits[0], boxHits[1]);
+                        (nodes_[idx + 1].bbox, ray, left_t0, left_t1);
                 const bool hitRight = intersectBox
-                        (nodes_[idx + node.rightOffset].box, ray, boxHits[2], boxHits[3]);
+                        (nodes_[idx + node.rightOffset].bbox, ray, right_t0, right_t1);
 
-                if (stackIdx >= int(stack.size()) - 2) {
-                    throw std::runtime_error("BVH traversal stack overflow, try increasing the leaf size");
-                }
-
+                uint closer;
+                uint farther;
                 if (hitLeft && hitRight) {
                     closer = idx + 1;
-                    other = idx + node.rightOffset;
+                    farther = idx + node.rightOffset;
 
-                    if (boxHits[2] < boxHits[0]) {
-                        std::swap(boxHits[0], boxHits[2]);
-                        std::swap(boxHits[1], boxHits[3]);
-                        std::swap(closer, other);
+                    if (right_t0 < left_t0) {
+                        std::swap(closer, farther);
                     }
-
-                    stack[++stackIdx] = BvhTraversal{ other, boxHits[2] };
-                    stack[++stackIdx] = BvhTraversal{ closer, boxHits[0] };
+                    stack.pushBack(farther);
+                    stack.pushBack(closer);
                 } else if (hitLeft) {
-                    stack[++stackIdx] = BvhTraversal{ idx + 1, boxHits[0] };
+                    stack.pushBack(idx + 1);
                 } else if (hitRight) {
-                    stack[++stackIdx] = BvhTraversal{ idx + node.rightOffset, boxHits[2] };
+                    stack.pushBack(idx + node.rightOffset);
                 }
             }
         }
