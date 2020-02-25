@@ -147,6 +147,8 @@ void reorientNormals(const std::vector<math::Point3>& pc
     std::sort(orderZ.begin(), orderZ.end()
               , [&](uint i1, uint i2) { return pc[i1](2) > pc[i2](2); });
 
+    // step 1 - determine normal orientation based on normals of already determined points,
+    // assuming the topmost points (roofs) have z>0 orientation.
     LOG(info2) << "Estimating normal orientations";
     UTILITY_OMP(parallel for)
     for (uint rankZ = 0; rankZ < orderZ.size(); ++rankZ) {
@@ -172,6 +174,32 @@ void reorientNormals(const std::vector<math::Point3>& pc
 
         if (doFlip > 0) {
             // more votes for flipping the normal
+            normals[i] *= -1;
+        }
+    }
+
+    // step 2 - flip normals which have opposite orientation than their neighbors
+    LOG(info2) << "Flipping outliers";
+    KdTree<math::Point3, 3> tree(pc.begin(), pc.end());
+    std::vector<uint8_t> doFlip(pc.size(), false);
+    std::vector<math::Points3::const_iterator> neighs;
+    UTILITY_OMP(parallel for private(neighs))
+    for (uint i = 0; i < pc.size(); ++i) {
+        neighs.clear();
+        tree.range(pc[i], 2 * pointRadius, neighs);
+
+        double count = 0.;
+        for (auto& n : neighs) {
+            const uint j = uint(n - pc.begin());
+            count += inner_prod(normals[i], normals[j]);
+        }
+        if (count < 0.) {
+            doFlip[i] = true;
+        }
+    }
+    UTILITY_OMP(parallel for)
+    for (uint i = 0; i < pc.size(); ++i) {
+        if (doFlip[i]) {
             normals[i] *= -1;
         }
     }
