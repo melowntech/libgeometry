@@ -620,7 +620,7 @@ void MeshVoxelizer::visualizeDepthMap( const ProjectionResult &proj
     cv::line(depthMapImg, cv::Point2f(extPoints[2][0],extPoints[2][1])
             , cv::Point2f(extPoints[6][0],extPoints[6][1]),cv::Scalar(255,0,0),2);
 
-    cv::imwrite( path.native().c_str(), depthMapImg );
+    cv::imwrite( path.string().c_str(), depthMapImg );
 }
 
 } //namespace geometry

@@ -15,8 +15,10 @@ if (OPENMESH_FOUND)
     )
 
   # handle() is deprecated -> no warning
-  set_source_files_properties(meshop-openmesh.cpp PROPERTIES
-    COMPILE_FLAGS -Wno-deprecated-declarations)
+  if (NOT MSVC)
+    set_source_files_properties(meshop-openmesh.cpp PROPERTIES
+      COMPILE_FLAGS -Wno-deprecated-declarations)
+  endif()
 
   list(APPEND geometry_EXTRA_DEPENDS OPENMESH)
 else()

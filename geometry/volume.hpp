@@ -935,7 +935,7 @@ Giterator_t<Value_t,Container_t> Giterator_t<Value_t,Container_t>::gend(
 }
 
 template <typename Value_t, class Container_t>
-class std::vector<typename VolumeBase_t::Position_s>
+typename std::vector<typename VolumeBase_t::Position_s>
 Giterator_t<Value_t, Container_t>::iteratorPositions
     ( Container_t & container, const Displacement_s & diff ) {
      std::vector<VolumeBase_t::Position_s> retval;
