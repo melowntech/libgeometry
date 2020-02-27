@@ -73,17 +73,17 @@ else()
   message(STATUS "geometry: compiling without OpenCV support")
 endif()
 
-if(GTS_FOUND)
+if(MGTS_FOUND)
   message(STATUS "geometry: compiling in GTS support")
 
   # add definitions
   list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_GTS=1)
 
-  set(geometry_GTS_SOURCES
+  set(geometry_MGTS_SOURCES
     meshop-gts.cpp
     )
 
-  list(APPEND geometry_EXTRA_DEPENDS GTS GLIB)
+  list(APPEND geometry_EXTRA_DEPENDS MGTS GLIB)
 else()
   message(STATUS "geometry: compiling without GTS support")
 endif()
@@ -122,7 +122,7 @@ set(geometry_SOURCES
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}
   ${geometry_OPENCV_SOURCES}
-  ${geometry_GTS_SOURCES}
+  ${geometry_MGTS_SOURCES}
 )
 
 add_library(geometry STATIC ${geometry_SOURCES})

@@ -30,7 +30,7 @@
  * simplification with Lindstrom-Turk algorithm from GTS library
  */
 
-#include <gts.h>
+#include <mgts.h>
 #include "meshop.hpp"
 #include "utility/openmp.hpp"
 
