@@ -208,12 +208,12 @@ void MeshVoxelizer::voxelize(){
     }
 
     math::Size3i vSize = volume_->cSize();
-    long volMem = (long)vSize.width * vSize.height
+    long long volMem = (long long)vSize.width * vSize.height
                     * vSize.depth * sizeof(unsigned short);
     LOG( info2 )<<"Memory consumption of volume: "
         << volMem/1024.0/1024.0/1024.0 << " GB.";
 
-    long mem = 0;
+    long long mem = 0;
     for(auto res : results){
         mem += res.buffer.mem();
     }

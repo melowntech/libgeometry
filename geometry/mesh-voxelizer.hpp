@@ -138,8 +138,8 @@ private:
         }
 
 
-        long mem(){
-            long dataMem=0;
+        long long mem(){
+            long long dataMem=0;
             for( auto &col : data){
                 for( auto &cell : col){
                     dataMem+= cell.size()*sizeof(float);
@@ -196,7 +196,7 @@ private:
             }
         }
 
-        long mem(){
+        long long mem(){
             return data.size()*sizeof(float) + rowpos.size()*sizeof(uint)
                 + colStart.size()*sizeof(size_t)
                 + count.size()*sizeof(unsigned short);

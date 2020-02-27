@@ -507,31 +507,31 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
 
 namespace {
 
-inline std::size_t gridIndexImpl(const math::Size2_<long> &size
+inline std::size_t gridIndexImpl(const math::Size2ll &size
                                  , const math::Point2 origin
                                  , const math::Size2f tileSize
                                  , double x, double y)
 {
-    long xx((x - origin(0)) / tileSize.width);
-    long yy((y - origin(1)) / tileSize.height);
+    long long xx((x - origin(0)) / tileSize.width);
+    long long yy((y - origin(1)) / tileSize.height);
 
     // clamp to grid (values can be outside of grid in case non-integer
     // tileSize
-    xx = math::clamp(xx, long(0), long(size.width - 1));
-    yy = math::clamp(yy, long(0), long(size.height -1));
+    xx = math::clamp<long long>(xx, 0LL, size.width - 1);
+    yy = math::clamp<long long>(yy, 0LL, size.height -1);
 
     return xx + yy * size.width;
 }
 
 struct Tiling {
-    math::Size2_<long> size;
+    math::Size2ll size;
     math::Point2 origin;
     math::Size2f tileSize;
     FacesPerCell::Functor facesPerCell;
 
     Tiling() : tileSize() {}
 
-    Tiling(const math::Size2_<long> &size, const math::Point2 &origin
+    Tiling(const math::Size2ll &size, const math::Point2 &origin
            , const math::Size2f &tileSize
            , const FacesPerCell::Functor &facesPerCell)
         : size(size), origin(origin), tileSize(tileSize)
@@ -998,9 +998,9 @@ Mesh::pointer simplifyInGrid(const Mesh &mesh, const math::Point2 &alignment
     const auto gorigin(ge.ll);
 
     // grid size
-    const math::Size2_<long> gsize
-        (long(std::round(((ge.ur(0) - ge.ll(0)) / cellSize.width)))
-         , long(std::round((ge.ur(1) - ge.ll(1)) / cellSize.width)));
+    const math::Size2ll gsize
+        ((long long) (std::round(((ge.ur(0) - ge.ll(0)) / cellSize.width)))
+         , (long long)(std::round((ge.ur(1) - ge.ll(1)) / cellSize.width)));
 
     LOG(info2) << "[simplify] mesh extents: " << me;
     LOG(info2) << "[simplify] gridded mesh extents: "
