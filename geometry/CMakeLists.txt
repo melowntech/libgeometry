@@ -65,7 +65,7 @@ if (OpenCV_FOUND)
       mesh-voxelizer.hpp mesh-voxelizer.cpp
       )
 
-    list(APPEND geometry_EXTRA_DEPENDS imgproc=>1.23)
+    list(APPEND geometry_EXTRA_DEPENDS imgproc=>1.32)
   else()
     message(STATUS "geometry: compiling without imgproc support")
   endif()
