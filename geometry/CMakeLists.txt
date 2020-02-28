@@ -1,5 +1,5 @@
 # bump version here
-set(geometry_VERSION 1.12)
+set(geometry_VERSION 1.13)
 
 set(geometry_EXTRA_DEPENDS)
 set(geometry_EXTRA_DEFINITIONS)
@@ -15,8 +15,10 @@ if (OPENMESH_FOUND)
     )
 
   # handle() is deprecated -> no warning
-  set_source_files_properties(meshop-openmesh.cpp PROPERTIES
-    COMPILE_FLAGS -Wno-deprecated-declarations)
+  if (NOT MSVC)
+    set_source_files_properties(meshop-openmesh.cpp PROPERTIES
+      COMPILE_FLAGS -Wno-deprecated-declarations)
+  endif()
 
   list(APPEND geometry_EXTRA_DEPENDS OPENMESH)
 else()
@@ -63,7 +65,7 @@ if (OpenCV_FOUND)
       mesh-voxelizer.hpp mesh-voxelizer.cpp
       )
 
-    list(APPEND geometry_EXTRA_DEPENDS imgproc=>1.23)
+    list(APPEND geometry_EXTRA_DEPENDS imgproc=>1.32)
   else()
     message(STATUS "geometry: compiling without imgproc support")
   endif()
@@ -71,23 +73,23 @@ else()
   message(STATUS "geometry: compiling without OpenCV support")
 endif()
 
-if(GTS_FOUND)
+if(MGTS_FOUND)
   message(STATUS "geometry: compiling in GTS support")
 
   # add definitions
   list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_GTS=1)
 
-  set(geometry_GTS_SOURCES
+  set(geometry_MGTS_SOURCES
     meshop-gts.cpp
     )
 
-  list(APPEND geometry_EXTRA_DEPENDS GTS GLIB)
+  list(APPEND geometry_EXTRA_DEPENDS MGTS GLIB)
 else()
   message(STATUS "geometry: compiling without GTS support")
 endif()
 
 define_module(LIBRARY geometry=${geometry_VERSION}
-  DEPENDS math>=1.4 utility>=1.11 dbglog>=1.4
+  DEPENDS math>=1.8 utility>=1.11 dbglog>=1.4
   ${geometry_EXTRA_DEPENDS}
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
@@ -121,7 +123,7 @@ set(geometry_SOURCES
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}
   ${geometry_OPENCV_SOURCES}
-  ${geometry_GTS_SOURCES}
+  ${geometry_MGTS_SOURCES}
 )
 
 add_library(geometry STATIC ${geometry_SOURCES})

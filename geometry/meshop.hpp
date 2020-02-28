@@ -51,7 +51,7 @@ namespace geometry {
 
 struct GridCell {
     math::Extents2 extent;
-    long maxFaceCount;
+    long long maxFaceCount;
 
     GridCell (const math::Extents2 &cellExtent) : extent(cellExtent) {
         maxFaceCount = 0;
@@ -70,11 +70,11 @@ enum SimplifyOption
 
 class SimplifyOptions {
 public:
-    SimplifyOptions(long flags = 0)
+    SimplifyOptions(long long flags = 0)
         : flags_(flags), alternativeVertices_() {}
 
-    SimplifyOptions& flags(long flags) { flags_ = flags; return *this; }
-    bool check(long flag) const { return flags_ & flag; }
+    SimplifyOptions& flags(long long flags) { flags_ = flags; return *this; }
+    bool check(long long flag) const { return flags_ & flag; }
 
     SimplifyOptions& maxError(const boost::optional<double> &maxError)
     {
@@ -137,7 +137,7 @@ public:
     }
 
 private:
-    long flags_;
+    long long flags_;
     boost::optional<double> maxError_;
     boost::optional<float> maxEdgeLength_;
     boost::optional<float> minAspectRatio_;
@@ -263,7 +263,8 @@ public:
 
     typedef std::vector<std::size_t> PerCellCount;
 
-    FacesPerCell(const math::Size2_<long> &gridSize, const math::Point2 &origin
+    FacesPerCell(const math::Size2ll &gridSize
+                 , const math::Point2 &origin
                  , const math::Size2f &cellSize)
         : gridSize_(gridSize), origin_(origin), cellSize_(cellSize)
         , goal_(math::area(gridSize))
@@ -283,7 +284,7 @@ public:
     math::Extents2 cellExtents(std::size_t index) const;
 
 private:
-    const math::Size2_<long> &gridSize_;
+    const math::Size2ll &gridSize_;
     const math::Point2 &origin_;
     const math::Size2f &cellSize_;
     PerCellCount goal_;
@@ -295,7 +296,8 @@ void make_gts_class_system_threadsafe()
 #endif
     ;
 
-Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax, double costMax)
+Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long long edgeCountMax
+                           , double costMax)
 #ifndef GEOMETRY_HAS_GTS
     UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
 #endif
@@ -304,7 +306,7 @@ Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long edgeCountMax, double
 Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
     , std::vector<std::vector <geometry::GridCell>> &gridCells
     , bool inParallel
-    , std::function<math::Point2_<long>(double x, double y)> getGridCell)
+    , std::function<math::Point2ll(double x, double y)> getGridCell)
 #ifndef GEOMETRY_HAS_GTS
     UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
 #endif
