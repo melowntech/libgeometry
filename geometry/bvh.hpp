@@ -34,11 +34,15 @@
 #define bvh_hpp_included_
 
 #include "math/geometry_core.hpp"
+#include <set>
 
 namespace geometry {
 
 class Ray {
-    friend bool intersectBox(const math::Extents3& box, const Ray& ray, double& t_min, double& t_max);
+    friend bool intersectBox(const math::Extents3& box
+                             , const Ray& ray
+                             , double& t_min
+                             , double& t_max);
 
     math::Point3 orig_;
     math::Point3 dir_;
@@ -66,13 +70,17 @@ public:
     }
 };
 
-inline bool intersectBox(const math::Extents3& box, const Ray& ray, double& t_min, double& t_max) {
+inline bool intersectBox(const math::Extents3& box
+                         , const Ray& ray
+                         , double& t_min
+                         , double& t_max) {
     std::array<math::Point3, 2> b{ box.ll, box.ur };
     double tmin = (b[ray.signs_[0]](0) - ray.orig_(0)) * ray.invDir_(0);
     double tmax = (b[1 - ray.signs_[0]](0) - ray.orig_(0)) * ray.invDir_(0);
     assert(!std::isnan(tmin) && !std::isnan(tmax)); // they may be inf though
     const double tymin = (b[ray.signs_[1]](1) - ray.orig_(1)) * ray.invDir_(1);
-    const double tymax = (b[1 - ray.signs_[1]](1) - ray.orig_(1)) * ray.invDir_(1);
+    const double tymax =
+        (b[1 - ray.signs_[1]](1) - ray.orig_(1)) * ray.invDir_(1);
     assert(!std::isnan(tymin) && !std::isnan(tymax));
 
     if ((tmin > tymax) || (tymin > tmax)) {
@@ -82,7 +90,8 @@ inline bool intersectBox(const math::Extents3& box, const Ray& ray, double& t_mi
     tmax = std::min(tmax, tymax);
 
     const double tzmin = (b[ray.signs_[2]](2) - ray.orig_(2)) * ray.invDir_(2);
-    const double tzmax = (b[1 - ray.signs_[2]](2) - ray.orig_(2)) * ray.invDir_(2);
+    const double tzmax =
+        (b[1 - ray.signs_[2]](2) - ray.orig_(2)) * ray.invDir_(2);
     assert(!std::isnan(tzmin) && !std::isnan(tzmax));
 
     if ((tmin > tzmax) || (tzmin > tmax)) {
@@ -99,8 +108,9 @@ inline bool intersectBox(const math::Extents3& box, const Ray& ray, double& t_mi
 
 
 struct BvhPrimitive {
-    /** Generic user data, can be used to store additional information to the primitives. */
-    uint userData = uint(-1);
+    /** Generic user data, can be used to store additional information to the
+     * primitives. */
+    std::size_t userData = std::size_t(-1);
 };
 
 /**
@@ -121,16 +131,18 @@ struct IntersectionInfo {
     bool operator<(const IntersectionInfo& other) const {
         return t < other.t;
     }
+
+    typedef std::set<IntersectionInfo> set;
 };
 
 
 /**
  * @brief Stack with fixed maximum number of elements.
  */
-template<typename T, uint Capacity>
+template<typename T, std::size_t Capacity>
 class BvhStack {
     std::array<T, Capacity> data_;
-    uint size_ = 0;
+    std::size_t size_ = 0;
 
 public:
     void pushBack(const T& value) {
@@ -159,7 +171,7 @@ public:
         return data_[size_ - 1];
     }
 
-    uint size() const {
+    std::size_t size() const {
         return size_;
     }
 
@@ -174,14 +186,16 @@ public:
 private:
     void checkFull() const {
         if (full()) {
-            throw std::runtime_error("BVH queue overflow, try increasing the leaf size.");
+            throw std::runtime_error(
+                "BVH queue overflow, try increasing the leaf size.");
         }
     }
 };
 
 /**
  * @brief Bounding volume hierarchy
- * @details TBvhObject must derive from \ref BvhPrimitive and implement the following interface:
+ * @details TBvhObject must derive from \ref BvhPrimitive and implement the
+ * following interface:
  * @code
  * struct BvhObject : public BvhPrimitive {
  *   bool getIntersection(const Ray& ray, IntersectionInfo& intersection) const;
@@ -193,17 +207,17 @@ private:
 template <typename TBvhObject>
 class Bvh : public boost::noncopyable {
 private:
-    const uint leafSize_;
-    uint nodeCnt_ = 0;
-    uint leafCnt_ = 0;
+    const std::size_t leafSize_;
+    std::size_t nodeCnt_ = 0;
+    std::size_t leafCnt_ = 0;
 
     std::vector<TBvhObject> objects_;
 
     struct BvhNode {
         math::Extents3 bbox;
-        uint start;
-        uint objCnt;
-        uint rightOffset;
+        std::size_t start;
+        std::size_t objCnt;
+        std::size_t rightOffset;
 
         bool isLeaf() const {
             return rightOffset == 0;
@@ -216,7 +230,7 @@ private:
     std::vector<BvhNode> nodes_;
 
 public:
-    explicit Bvh(const uint leafSize = 4)
+    explicit Bvh(const std::size_t leafSize = 4)
         : leafSize_(leafSize) {}
 
     /// \brief Contructs the BVH from given set of objects.
@@ -229,14 +243,14 @@ public:
         leafCnt_ = 0;
 
         struct BvhBuildEntry {
-            uint parent;
-            uint start;
-            uint end;
+            std::size_t parent;
+            std::size_t start;
+            std::size_t end;
         };
 
         BvhStack<BvhBuildEntry, 128> stack;
-        constexpr uint NO_PARENT_FLAG = uint(-1);
-        constexpr uint UNTOUCHED_FLAG = uint(-1);
+        constexpr std::size_t NO_PARENT_FLAG = std::size_t(-1);
+        constexpr std::size_t UNTOUCHED_FLAG = std::size_t(-1);
 
         // Push the root
         BvhBuildEntry& rootEntry = stack.emplaceBack();
@@ -251,9 +265,9 @@ public:
             const BvhBuildEntry nodeEntry = stack.top();
             stack.popBack();
 
-            const uint start = nodeEntry.start;
-            const uint end = nodeEntry.end;
-            const uint objCnt = end - start;
+            const std::size_t start = nodeEntry.start;
+            const std::size_t end = nodeEntry.end;
+            const std::size_t objCnt = end - start;
 
             nodeCnt_++;
             BvhNode node;
@@ -264,7 +278,7 @@ public:
             math::Extents3 bbox = objects_[start].getBBox();
             const math::Point3 center = objects_[start].getCenter();
             math::Extents3 boxCenter(center, center);
-            for (uint i = start + 1; i < end; ++i) {
+            for (std::size_t i = start + 1; i < end; ++i) {
                 math::update(bbox, objects_[i].getBBox());
                 math::update(boxCenter, objects_[i].getCenter());
             }
@@ -279,8 +293,10 @@ public:
             if (nodeEntry.parent != NO_PARENT_FLAG) {
                 buildNodes[nodeEntry.parent].rightOffset--;
 
-                if (buildNodes[nodeEntry.parent].rightOffset == UNTOUCHED_FLAG - 2) {
-                    buildNodes[nodeEntry.parent].rightOffset = nodeCnt_ - 1 - nodeEntry.parent;
+                if (buildNodes[nodeEntry.parent].rightOffset ==
+                    UNTOUCHED_FLAG - 2) {
+                    buildNodes[nodeEntry.parent].rightOffset =
+                        nodeCnt_ - 1 - nodeEntry.parent;
                 }
             }
 
@@ -288,11 +304,12 @@ public:
                 continue;
             }
 
-            const uint splitDim = argMax(boxCenter.ur - boxCenter.ll);
-            const double split = 0.5 * (boxCenter.ll(splitDim) + boxCenter.ur(splitDim));
+            const std::size_t splitDim = argMax(boxCenter.ur - boxCenter.ll);
+            const double split =
+                0.5 * (boxCenter.ll(splitDim) + boxCenter.ur(splitDim));
 
-            uint mid = start;
-            for (uint i = start; i < end; ++i) {
+            std::size_t mid = start;
+            for (std::size_t i = start; i < end; ++i) {
                 if (objects_[i].getCenter()[splitDim] < split) {
                     std::swap(objects_[i], objects_[mid]);
                     ++mid;
@@ -314,7 +331,8 @@ public:
     /// \brief Finds the closest intersection of the ray.
     ///
     /// Returns true if an intersection has been found.
-    bool getFirstIntersection(const Ray& ray, IntersectionInfo& intersection) const {
+    bool getFirstIntersection(const Ray& ray
+                              , IntersectionInfo& intersection) const {
         intersection.t = INFINITY;
         intersection.object = nullptr;
 
@@ -328,14 +346,16 @@ public:
     }
 
     /// \brief Returns all intersections of the ray.
-    void getAllIntersections(const Ray& ray, std::set<IntersectionInfo>& intersections) const {
+    void getAllIntersections(const Ray& ray
+                             , IntersectionInfo::set& intersections) const {
         intersections.clear();
-        this->getIntersections(ray, [&intersections](IntersectionInfo& current) { //
-            if (current.t > 0.) {
-                intersections.insert(current);
-            }
-            return true;
-        });
+        this->getIntersections(
+            ray, [&intersections](IntersectionInfo& current) {
+                if (current.t > 0.) {
+                    intersections.insert(current);
+                }
+                return true;
+            });
     }
 
     /// \brief Returns true if the ray is occluded by some geometry
@@ -355,18 +375,19 @@ public:
 
 private:
     template <typename TAddIntersection>
-    void getIntersections(const Ray& ray, const TAddIntersection& addIntersection) const {
-        BvhStack<uint, 64> stack;
+    void getIntersections(const Ray& ray
+                          , const TAddIntersection& addIntersection) const {
+        BvhStack<std::size_t, 64> stack;
         stack.pushBack(0); // add root
 
         while (!stack.empty()) {
-            const uint idx = stack.top();
+            const std::size_t idx = stack.top();
             stack.popBack();
             const BvhNode& node = nodes_[idx];
 
             if (node.isLeaf()) {
                 // leaf -> intersect stored objects
-                for (uint objIdx = 0; objIdx < node.objCnt; ++objIdx) {
+                for (std::size_t objIdx = 0; objIdx < node.objCnt; ++objIdx) {
                     IntersectionInfo current;
 
                     const TBvhObject& obj = objects_[node.start + objIdx];
@@ -382,13 +403,14 @@ private:
             } else {
                 // inner node
                 double left_t0, left_t1, right_t0, right_t1;
-                const bool hitLeft = intersectBox
-                        (nodes_[idx + 1].bbox, ray, left_t0, left_t1);
-                const bool hitRight = intersectBox
-                        (nodes_[idx + node.rightOffset].bbox, ray, right_t0, right_t1);
+                const bool hitLeft =
+                    intersectBox(nodes_[idx + 1].bbox, ray, left_t0, left_t1);
+                const bool hitRight =
+                    intersectBox(nodes_[idx + node.rightOffset].bbox, ray,
+                        right_t0, right_t1);
 
-                uint closer;
-                uint farther;
+                std::size_t closer;
+                std::size_t farther;
                 if (hitLeft && hitRight) {
                     closer = idx + 1;
                     farther = idx + node.rightOffset;
