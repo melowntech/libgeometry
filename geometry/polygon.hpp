@@ -86,10 +86,10 @@ bool insidePolygon(const std::vector<PointType1> &polygon
 template <typename T>
 double area( const std::vector<math::Point2_<T> > & polygon  ) {
 
-    uint n = polygon.size();
+    auto n = polygon.size();
     double retval( 0.0 );
 
-    for ( uint i = 0; i < n; i++ ) {
+    for ( decltype(n) i = 0; i < n; i++ ) {
 
         retval += polygon[i](0) * (
             polygon[ ( i + 1 ) % n ](1)
