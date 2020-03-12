@@ -106,9 +106,10 @@ set(geometry_SOURCES
   meshop.hpp meshop.cpp
 
   neighbors.hpp
+  bvh.hpp
+  estimate-point-normals.hpp estimate-point-normals.cpp
 
   smoothcloud.hpp smoothcloud.cpp
-
 
   detail/volume.mcubes.hpp detail/volume.mcubes.cpp
 
