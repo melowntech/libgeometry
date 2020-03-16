@@ -552,7 +552,9 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
 }
 
 
-Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
+Mesh::pointer refine( const Mesh & omesh
+                      , unsigned int maxFacesCount
+                      , boost::optional<float> maxEdgeLength)
 {
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));
     auto & mesh(*pmesh);
@@ -744,6 +746,9 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
     while( mesh.faces.size() < maxFacesCount && edgeMap.size()>0 ){
         //split edge
         auto edge = edgeMap.pop_top_edge();
+        if (edge.length < maxEdgeLength.value_or(0.f)) {
+            break;
+        }
 
         //find middle
         math::Point3 middle = (mesh.vertices[edge.v1]

@@ -217,7 +217,9 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
  * \param maxFacesCount target faces count of the refined mesh
  * \return refined mesh
  */
-Mesh::pointer refine( const Mesh &mesh, unsigned int maxFacesCount);
+Mesh::pointer refine( const Mesh &mesh
+                      , unsigned int maxFacesCount
+                      , boost::optional<float> maxEdgeLength = boost::none);
 
 /** Removes non manifold edges (edges with more than 2 incident faces)
  ** and their incident faces.
