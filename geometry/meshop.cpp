@@ -530,9 +530,9 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
                 mesh.vertices.push_back(imesh.vertices[vindices[i]]);
                 vit = vertexMap.insert(std::make_pair(vindices[i],mesh.vertices.size()-1)).first;
             }
-            if(tit == tCoordsMap.end()){
+            if(imesh.tCoords.size() > 0 && tit == tCoordsMap.end()){
                 mesh.tCoords.push_back(imesh.vertices[tindices[i]]);
-                tit = vertexMap.insert(std::make_pair(tindices[i],mesh.tCoords.size()-1)).first;
+                tit = tCoordsMap.insert(std::make_pair(tindices[i],mesh.tCoords.size()-1)).first;
             }
 
             vindices[i] = vit->second;
