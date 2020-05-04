@@ -52,7 +52,7 @@ namespace geometry {
  * The estimation of the normal is based on the principal-component analysis
  * of the data, a SVD of the covariance matrix (K x K) is performed.
  **/
-Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data);
+Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data, bool confidence);
 
 /**
  *  Interface to access dimension values of a point, and to calculate the
@@ -89,7 +89,8 @@ struct DefaultAccessor {
 template<typename T, unsigned K = 3, typename A = DefaultAccessor<T>>
 std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
                                unsigned nEstimatorPts = 40,
-                               double radius = 0)
+                               double radius = 0,
+                               bool confidence = false)
 {
     static_assert(K >= 2,
                   "Estimation of point normals makes sense only in at least "
@@ -170,7 +171,7 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
         }
 
         // calculate normal
-        normal = fromEigen(estimateNormal(samples));
+        normal = fromEigen(estimateNormal(samples, confidence));
     }
     return normals;
 }

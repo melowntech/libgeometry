@@ -27,6 +27,7 @@
 #include "bvh.hpp"
 #include "math/math.hpp"
 #include "math/geometry.hpp"
+#include "utility/expect.hpp"
 
 #include <boost/iterator/counting_iterator.hpp>
 
@@ -34,7 +35,8 @@ namespace geometry {
 
 namespace ublas = math::ublas;
 
-Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data)
+Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data
+                               , const bool confidence)
 {
     using namespace Eigen;
     // calculate centroid (1 x K) of all (N) data points
@@ -52,8 +54,14 @@ Eigen::VectorXd estimateNormal(const Eigen::MatrixXd& data)
     // (i.e., the direction of the least variability in the data)
     VectorXd sgVec(svd.matrixU().col(data.cols() - 1));
 
+    double weight = 1.;
+    if (confidence) {
+        double norm = svd.singularValues().norm();
+        weight = 1. - svd.singularValues()[data.cols() - 1] / norm;
+        weight = (exp(8. * weight) - 1.) / (exp(8.) - 1.);
+    }
     // normalization shouldn't be needed as U should be a unitary matrix.
-    return sgVec;//.normalized();
+    return sgVec * weight;
 }
 
 namespace {
