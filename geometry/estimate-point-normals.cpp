@@ -69,7 +69,7 @@ namespace {
         BvhDisk(const math::Point3& center
                 , const math::Point3& normal
                 , const double radius
-                , const uint index)
+                , const std::uint32_t index)
             : center_(center)
             , normal_(normal)
             , radius_(radius) {
@@ -131,7 +131,7 @@ void reorientNormals(const std::vector<math::Point3>& pc
 {
     std::vector<BvhDisk> disks(pc.size());
     UTILITY_OMP(parallel for)
-    for (uint i = 0; i < pc.size(); ++i) {
+    for (std::uint32_t i = 0; i < pc.size(); ++i) {
         disks[i] = BvhDisk(pc[i], normals[i], pointRadius, i);
     }
 
@@ -140,19 +140,19 @@ void reorientNormals(const std::vector<math::Point3>& pc
     bvh.build(std::move(disks));
 
     // find order in z-direction
-    std::vector<uint> orderZ(pc.size());
-    std::copy(boost::counting_iterator<uint>(0)
-              , boost::counting_iterator<uint>(pc.size())
+    std::vector<std::uint32_t> orderZ(pc.size());
+    std::copy(boost::counting_iterator<std::uint32_t>(0)
+              , boost::counting_iterator<std::uint32_t>(pc.size())
               , orderZ.begin());
     std::sort(orderZ.begin(), orderZ.end()
-              , [&](uint i1, uint i2) { return pc[i1](2) > pc[i2](2); });
+              , [&](std::uint32_t i1, std::uint32_t i2) { return pc[i1](2) > pc[i2](2); });
 
     // step 1 - determine normal orientation based on normals of already determined points,
     // assuming the topmost points (roofs) have z>0 orientation.
     LOG(info2) << "Estimating normal orientations";
     UTILITY_OMP(parallel for)
-    for (uint rankZ = 0; rankZ < orderZ.size(); ++rankZ) {
-        const uint i = orderZ[rankZ];
+    for (std::uint32_t rankZ = 0; rankZ < orderZ.size(); ++rankZ) {
+        const std::uint32_t i = orderZ[rankZ];
         int doFlip = 0;
         for (math::Point3 dir : ALL_DIRS) {
             dir = math::normalize(dir);
@@ -161,7 +161,7 @@ void reorientNormals(const std::vector<math::Point3>& pc
             const Ray ray(pc[i] + pointRadius * dir, dir);
             IntersectionInfo is;
             if (bvh.getFirstIntersection(ray, is)) {
-                const uint j = is.object->userData;
+                const std::uint32_t j = is.object->userData;
                 // if this is an outward ray, flip the normal if the intersected point has
                 // the same orientation as the ray (i.e. likely a backface);
                 // for an inward ray, flip the normal if the intersected point is NOT a backface.
@@ -184,13 +184,13 @@ void reorientNormals(const std::vector<math::Point3>& pc
     std::vector<uint8_t> doFlip(pc.size(), false);
     std::vector<math::Points3::const_iterator> neighs;
     UTILITY_OMP(parallel for private(neighs))
-    for (uint i = 0; i < pc.size(); ++i) {
+    for (std::uint32_t i = 0; i < pc.size(); ++i) {
         neighs.clear();
         tree.range(pc[i], 2 * pointRadius, neighs);
 
         double count = 0.;
         for (auto& n : neighs) {
-            const uint j = uint(n - pc.begin());
+            const std::uint32_t j = std::uint32_t(n - pc.begin());
             count += inner_prod(normals[i], normals[j]);
         }
         if (count < 0.) {
@@ -198,7 +198,7 @@ void reorientNormals(const std::vector<math::Point3>& pc
         }
     }
     UTILITY_OMP(parallel for)
-    for (uint i = 0; i < pc.size(); ++i) {
+    for (std::uint32_t i = 0; i < pc.size(); ++i) {
         if (doFlip[i]) {
             normals[i] *= -1;
         }
