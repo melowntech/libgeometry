@@ -427,17 +427,17 @@ std::vector<ClipPlane> planes(const math::Extents3 &extents)
 
 } // namespace
 
-Mesh::pointer clip(const Mesh &omesh, const math::Extents2 &extents)
+Mesh clip(const Mesh &omesh, const math::Extents2 &extents)
 {
-    auto out(std::make_shared<Mesh>());
-    clipImpl(omesh, *out, planes(extents));
+    Mesh out;
+    clipImpl(omesh, out, planes(extents));
     return out;
 }
 
-Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents)
+Mesh clip(const Mesh &omesh, const math::Extents3 &extents)
 {
-    auto out(std::make_shared<Mesh>());
-    clipImpl(omesh, *out, planes(extents));
+    Mesh out;
+    clipImpl(omesh, out, planes(extents));
     return out;
 }
 

@@ -241,7 +241,7 @@ Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
  * \param extents extents defining where to keep geometry
  * \return processed mesh, texture coordinates are at the moment discarted
  */
-Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents);
+Mesh clip(const Mesh &omesh, const math::Extents3 &extents);
 
 /** Clips mesh to the given 2d extents 
  *
@@ -249,7 +249,7 @@ Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents);
  * \param extents extents defining where to keep geometry
  * \return processed mesh, texture coordinates are at the moment discarted
  */
-Mesh::pointer clip(const Mesh &omesh, const math::Extents2 &extents);
+Mesh clip(const Mesh &omesh, const math::Extents2 &extents);
 
 /** Appends one mesh to the another. Fixed face indices.
  */
