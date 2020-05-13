@@ -337,7 +337,7 @@ public:
         intersection.object = nullptr;
 
         this->getIntersections(ray, [&intersection](IntersectionInfo& current) {
-            if (current.t < intersection.t) {
+            if (current.t >= 0 && current.t < intersection.t) {
                 intersection = current;
             }
             return true;
