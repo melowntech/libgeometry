@@ -87,12 +87,12 @@ void addVertex(Mesh &m, double x, double y, double z)
 
 Mesh clip2(const Mesh &m, const math::Extents2 &e)
 {
-    return *geometry::clip(m, e);
+    return geometry::clip(m, e);
 }
 
 Mesh clip3(const Mesh &m, const math::Extents3 &e)
 {
-    return *geometry::clip(m, e);
+    return geometry::clip(m, e);
 }
 
 void appendMesh(Mesh &mesh, const Mesh &added)
