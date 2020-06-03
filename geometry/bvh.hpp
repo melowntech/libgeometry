@@ -34,6 +34,7 @@
 #define bvh_hpp_included_
 
 #include "math/geometry_core.hpp"
+#include "math/extent.hpp"
 #include <set>
 
 namespace geometry {
@@ -132,9 +133,39 @@ struct IntersectionInfo {
         return t < other.t;
     }
 
+    typedef std::vector<IntersectionInfo> list;
     typedef std::set<IntersectionInfo> set;
 };
 
+/**
+ * \brief Type traits for adding intersection results into a container
+ */
+template <typename TContainer>
+struct BvhContainerTraits;
+
+// specialization for std::vector
+template <>
+struct BvhContainerTraits<IntersectionInfo::list> {
+    static void clear(IntersectionInfo::list& list) {
+        list.clear();
+    }
+    static void add(IntersectionInfo::list& list,
+                    const IntersectionInfo& intersection) {
+        list.push_back(intersection);
+    }
+};
+
+// specialization for std::set
+template <>
+struct BvhContainerTraits<IntersectionInfo::set> {
+    static void clear(IntersectionInfo::set& set) {
+        set.clear();
+    }
+    static void add(IntersectionInfo::set& set,
+                    const IntersectionInfo& intersection) {
+        set.insert(intersection);
+    }
+};
 
 /**
  * @brief Stack with fixed maximum number of elements.
@@ -191,6 +222,8 @@ private:
         }
     }
 };
+
+const double MAX_RAY_PARAM = std::numeric_limits<double>::max();
 
 /**
  * @brief Bounding volume hierarchy
@@ -328,40 +361,66 @@ public:
         nodes_ = std::move(buildNodes);
     }
 
+    template<typename TIterator>
+    void build(TIterator begin, TIterator end) {
+        build(std::vector<TBvhObject>(begin, end));
+    }
+
     /// \brief Finds the closest intersection of the ray.
     ///
     /// Returns true if an intersection has been found.
     bool getFirstIntersection(const Ray& ray
                               , IntersectionInfo& intersection) const {
-        intersection.t = INFINITY;
+        intersection.t = MAX_RAY_PARAM;
         intersection.object = nullptr;
-
-        this->getIntersections(ray, [&intersection](IntersectionInfo& current) {
-            if (current.t >= 0 && current.t < intersection.t) {
-                intersection = current;
-            }
-            return true;
-        });
-        return intersection.object != nullptr;
-    }
-
-    /// \brief Returns all intersections of the ray.
-    void getAllIntersections(const Ray& ray
-                             , IntersectionInfo::set& intersections) const {
-        intersections.clear();
-        this->getIntersections(
-            ray, [&intersections](IntersectionInfo& current) {
-                if (current.t > 0.) {
-                    intersections.insert(current);
+        math::Extent segment(0, MAX_RAY_PARAM);
+        this->getIntersections(ray, segment,
+            [&intersection](IntersectionInfo& current) {
+                if (current.t >= 0 && current.t < intersection.t) {
+                    intersection = current;
                 }
                 return true;
             });
+        return intersection.object != nullptr;
+    }
+
+    /**
+     * \brief Returns all intersections of the ray.
+     *
+     * \param ray Intersecting ray
+     * \param intersections Output container of intersection; currenly
+     *                      specialized for std::vector and std::set.
+     */
+    template <typename TContainer>
+    void getAllIntersections(const Ray& ray, TContainer& intersections) const {
+        return getAllIntersections(ray, 0, MAX_RAY_PARAM, intersections);
+    }
+
+    /**
+     * \copydoc getAllIntersections
+     *
+     * \param t_min Minimal ray parameter for valid intersections
+     * \param t_max Maximal ray parameter for valid intersections
+     */
+    template<typename TContainer>
+    void getAllIntersections(const Ray& ray
+                             , double t_min
+                             , double t_max
+                             , TContainer& intersections) const {
+        typedef BvhContainerTraits<TContainer> Traits;
+        Traits::clear(intersections);
+        math::Extent segment(t_min, t_max);
+        this->getIntersections(ray, segment, [&](IntersectionInfo& current) {
+            Traits::add(intersections, current);
+            return true;
+        });
     }
 
     /// \brief Returns true if the ray is occluded by some geometry
     bool isOccluded(const Ray& ray) const {
         bool occluded = false;
-        this->getIntersections(ray, [&occluded](IntersectionInfo&) {
+        math::Extent segment(0, MAX_RAY_PARAM);
+        this->getIntersections(ray, segment, [&occluded](IntersectionInfo&) {
             occluded = true;
             return false; // do not continue with traversal
         });
@@ -376,6 +435,7 @@ public:
 private:
     template <typename TAddIntersection>
     void getIntersections(const Ray& ray
+                          , const math::Extent& segment
                           , const TAddIntersection& addIntersection) const {
         BvhStack<std::size_t, 64> stack;
         stack.pushBack(0); // add root
@@ -393,7 +453,7 @@ private:
                     const TBvhObject& obj = objects_[node.start + objIdx];
                     const bool hit = obj.getIntersection(ray, current);
 
-                    if (hit) {
+                    if (hit && math::inside(segment, current.t)) {
                         if (!addIntersection(current)) {
                             // bailout
                             return;
@@ -402,12 +462,14 @@ private:
                 }
             } else {
                 // inner node
-                double left_t0, left_t1, right_t0, right_t1;
+                math::Extent leftSeg, rightSeg;
                 const bool hitLeft =
-                    intersectBox(nodes_[idx + 1].bbox, ray, left_t0, left_t1);
+                    intersectBox(nodes_[idx + 1].bbox, ray, leftSeg.l, leftSeg.r) 
+                        && math::overlaps(leftSeg, segment);
                 const bool hitRight =
                     intersectBox(nodes_[idx + node.rightOffset].bbox, ray,
-                        right_t0, right_t1);
+                        rightSeg.l, rightSeg.r) 
+                        && math::overlaps(rightSeg, segment);
 
                 std::size_t closer;
                 std::size_t farther;
@@ -415,7 +477,7 @@ private:
                     closer = idx + 1;
                     farther = idx + node.rightOffset;
 
-                    if (right_t0 < left_t0) {
+                    if (rightSeg.l < leftSeg.l) {
                         std::swap(closer, farther);
                     }
                     stack.pushBack(farther);
