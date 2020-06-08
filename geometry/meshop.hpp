@@ -394,6 +394,15 @@ void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
                , const boost::filesystem::path &filepath = "UNKNOWN"
                , bool setFormat = true);
 
+void saveAsGzippedObj(const Mesh &mesh
+                      , const boost::filesystem::path &filepath
+                      , const ObjMaterial &mtl
+                      , const ObjStreamSetup &streamSetup = ObjStreamSetup())
+#ifndef GEOMETRY_HAS_BIO
+    UTILITY_FUNCTION_ERROR("Gzip support is available only when compiled with Boost.IOStreams.")
+#endif
+    ;
+
 void saveAsPly( const Mesh::pointer &mesh
               , const boost::filesystem::path &filepath);
 
