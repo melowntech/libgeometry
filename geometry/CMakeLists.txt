@@ -1,5 +1,5 @@
 # bump version here
-set(geometry_VERSION 1.13)
+set(geometry_VERSION 1.14)
 
 set(geometry_EXTRA_DEPENDS)
 set(geometry_EXTRA_DEFINITIONS)
@@ -88,6 +88,21 @@ else()
   message(STATUS "geometry: compiling without GTS support")
 endif()
 
+if(Boost_IOSTREAMS_FOUND)
+  message(STATUS "geometry: compiling in Boost.IOStreams support")
+
+  # add definitions
+  list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_BIO=1)
+
+  set(geometry_BIO_SOURCES
+    meshop-bio.cpp
+    )
+
+  list(APPEND geometry_EXTRA_DEPENDS Boost_IOSTREAMS)
+else()
+  message(STATUS "geometry: compiling without Boost.IOStreams support")
+endif()
+
 define_module(LIBRARY geometry=${geometry_VERSION}
   DEPENDS math>=1.8 utility>=1.11 dbglog>=1.4
   ${geometry_EXTRA_DEPENDS}
@@ -124,7 +139,8 @@ set(geometry_SOURCES
   ${geometry_CGAL_SOURCES}
   ${geometry_OPENCV_SOURCES}
   ${geometry_MGTS_SOURCES}
-)
+  ${geometry_BIO_SOURCES}
+  )
 
 add_library(geometry STATIC ${geometry_SOURCES})
 buildsys_library(geometry)

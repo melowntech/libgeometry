@@ -241,7 +241,7 @@ Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
  * \param extents extents defining where to keep geometry
  * \return processed mesh, texture coordinates are at the moment discarted
  */
-Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents);
+Mesh clip(const Mesh &omesh, const math::Extents3 &extents);
 
 /** Clips mesh to the given 2d extents 
  *
@@ -249,7 +249,7 @@ Mesh::pointer clip(const Mesh &omesh, const math::Extents3 &extents);
  * \param extents extents defining where to keep geometry
  * \return processed mesh, texture coordinates are at the moment discarted
  */
-Mesh::pointer clip(const Mesh &omesh, const math::Extents2 &extents);
+Mesh clip(const Mesh &omesh, const math::Extents2 &extents);
 
 /** Appends one mesh to the another. Fixed face indices.
  */
@@ -393,6 +393,15 @@ void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
                , const ObjMaterial &mtl
                , const boost::filesystem::path &filepath = "UNKNOWN"
                , bool setFormat = true);
+
+void saveAsGzippedObj(const Mesh &mesh
+                      , const boost::filesystem::path &filepath
+                      , const ObjMaterial &mtl
+                      , const ObjStreamSetup &streamSetup = ObjStreamSetup())
+#ifndef GEOMETRY_HAS_BIO
+    UTILITY_FUNCTION_ERROR("Gzip support is available only when compiled with Boost.IOStreams.")
+#endif
+    ;
 
 void saveAsPly( const Mesh::pointer &mesh
               , const boost::filesystem::path &filepath);
