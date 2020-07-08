@@ -432,12 +432,16 @@ public:
         return nodes_[0].bbox;
     }
 
+    std::size_t getMemoryUsage() const {
+        return sizeof(*this) + objects_.size() * sizeof(TBvhObject) +
+               nodes_.size() * sizeof(BvhNode);
+    }
 private:
     template <typename TAddIntersection>
     void getIntersections(const Ray& ray
                           , const math::Extent& segment
                           , const TAddIntersection& addIntersection) const {
-        BvhStack<std::size_t, 64> stack;
+        BvhStack<std::size_t, 128> stack;
         stack.pushBack(0); // add root
 
         while (!stack.empty()) {
