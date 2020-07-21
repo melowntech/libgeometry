@@ -256,6 +256,7 @@ Mesh loadPly( const boost::filesystem::path &filename )
     }
 
     Mesh mesh;
+    mesh.vertices.reserve(nvert);
 
     // load points
     for (int i = 0; i < nvert; i++) {
@@ -263,6 +264,8 @@ Mesh loadPly( const boost::filesystem::path &filename )
         f >> x >> y >> z;
         mesh.vertices.emplace_back(x, y, z);
     }
+
+    mesh.faces.reserve(ntris);
 
     // load triangles
     for (int i = 0; i < ntris; i++) {
