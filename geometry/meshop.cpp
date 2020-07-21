@@ -201,14 +201,21 @@ void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
         << "element vertex " << mesh.vertices.size() << '\n'
         << "property float x\n"
         << "property float y\n"
-        << "property float z\n"
-        << "element face " << validFaces << '\n'
+        << "property float z\n";
+    if (!mesh.vertecesClass.empty()) {
+        out << "property uchar class\n";
+    }
+    out << "element face " << validFaces << '\n'
         << "property list uchar int vertex_indices\n"
         << "end_header\n";
 
-    for (const auto &vertex : mesh.vertices)
-    {
-        out << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2) << '\n';
+    for (std::size_t i = 0; i < mesh.vertices.size(); ++i) {
+        const math::Point3& vertex = mesh.vertices[i];
+        if (mesh.vertecesClass.empty()) {
+            out << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2) << '\n';
+        } else {
+            out << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2) << ' ' << mesh.vertecesClass[i] << '\n';
+        }
     }
 
     for (const auto &face : mesh.faces)
@@ -260,8 +267,13 @@ Mesh loadPly( const boost::filesystem::path &filename )
     // load points
     for (int i = 0; i < nvert; i++) {
         double x, y, z;
-        f >> x >> y >> z;
+        int c;
+        std::getline(f, line);
+        int parsed = sscanf(line.c_str(), "%lf%lf%lf%d", &x, &y, &z, &c);
         mesh.vertices.emplace_back(x, y, z);
+        if (parsed == 4) {
+            mesh.vertecesClass.emplace_back(c);
+        }
     }
 
     // load triangles
@@ -848,6 +860,10 @@ void append(Mesh &mesh, const Mesh &added)
     const auto tcShift(mesh.tCoords.size());
     mesh.tCoords.insert(mesh.tCoords.end(), added.tCoords.begin()
                         , added.tCoords.end());
+
+    mesh.vertecesClass.insert(mesh.vertecesClass.end(),
+                              added.vertecesClass.begin(),
+                              added.vertecesClass.end());
 
     // append faces with shifts applied
     for (const auto &f : added.faces) {

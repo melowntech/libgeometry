@@ -160,7 +160,7 @@ math::Extents2 toOpenMesh(const geometry::Mesh &mesh, OMMesh& omMesh)
 }
 
 
-void fromOpenMesh(const OMMesh& omMesh, geometry::Mesh& mesh)
+void fromOpenMesh(const OMMesh& omMesh, geometry::Mesh& mesh, bool copyClasses = false)
 {
     // create our vertices
     for (auto v_it = omMesh.vertices_begin();
@@ -169,6 +169,9 @@ void fromOpenMesh(const OMMesh& omMesh, geometry::Mesh& mesh)
     {
         const auto& pt = omMesh.point(v_it.handle());
         mesh.vertices.emplace_back(pt[0], pt[1], pt[2]);
+        if (copyClasses) {
+             mesh.vertecesClass.emplace_back(omMesh.data(v_it.handle()).classLabel);
+        }
     }
 
     // create our faces
@@ -465,9 +468,11 @@ void simplifyInPlace(Mesh& mesh, int faceCount, const SimplifyOptions& options) 
     decimator.decimate_to_faces(0, faceCount);
     omMesh.garbage_collection();
 
+    bool copyClasses = !mesh.vertecesClass.empty();
     mesh.vertices.clear();
     mesh.faces.clear();
-    fromOpenMesh(omMesh, mesh);
+    mesh.vertecesClass.clear();
+    fromOpenMesh(omMesh, mesh, copyClasses);
 }
 
 #if OM_VERSION >= 0x60000
