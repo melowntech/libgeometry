@@ -147,10 +147,4 @@ buildsys_library(geometry)
 target_link_libraries(geometry ${MODULE_LIBRARIES})
 buildsys_target_compile_definitions(geometry ${MODULE_DEFINITIONS})
 
-# compatibility tweaking
-if (${Boost_VERSION} LESS 105200)
-  # Boost.Polygon before version 1.52 lacked Voronoi diagram support
-  target_include_directories(geometry PRIVATE compat)
-endif()
-
 add_subdirectory(test-tools EXCLUDE_FROM_ALL)
