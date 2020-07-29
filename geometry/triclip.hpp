@@ -192,11 +192,11 @@ ClipTriangle::list clipTriangles( const ClipTriangle::list &triangles
             else if (!positive[1]) a = 1, b = 2, c = 0;
             else a = 2, b = 0, c = 1;
 
+            auto tmp(1.0 - t);
             auto x1pos(detail::intersection(tri.pos[a], tri.pos[b], plane, t));
-            auto x1uv((1.0 - t)*tri.uv[a] + t*tri.uv[b]);
+            auto x1uv(tmp*tri.uv[a] + t*tri.uv[b]);
 
             auto x2pos(detail::intersection(tri.pos[c], tri.pos[a], plane, t));
-            auto tmp(1.0 - t);
             auto x2uv(tmp*tri.uv[c] + t*tri.uv[a]);
 
             result.emplace_back(x1pos, tri.pos[b], tri.pos[c],
