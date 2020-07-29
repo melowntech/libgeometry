@@ -227,7 +227,7 @@ Mesh::pointer refine( const Mesh &mesh, unsigned int maxFacesCount);
  */
 Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
 
-/** Removes isolated vertices, e.g vertices incidental with 0 faces 
+/** Removes isolated vertices, e.g vertices incidental with 0 faces
  * Works with untextured meshes
  *
  * \param mesh mesh to process
@@ -235,7 +235,7 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
  */
 Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
 
-/** Clips mesh to the given 3d extents 
+/** Clips mesh to the given 3d extents
  *
  * \param mesh mesh to clip
  * \param extents extents defining where to keep geometry
@@ -243,7 +243,7 @@ Mesh::pointer removeIsolatedVertices( const Mesh& omesh );
  */
 Mesh clip(const Mesh &omesh, const math::Extents3 &extents);
 
-/** Clips mesh to the given 2d extents 
+/** Clips mesh to the given 2d extents
  *
  * \param mesh mesh to clip
  * \param extents extents defining where to keep geometry
@@ -427,6 +427,8 @@ struct MeshInfo {
 };
 
 MeshInfo measurePly(const boost::filesystem::path &path);
+
+bool objHasVertexOrFace(const boost::filesystem::path &path);
 
 /** Splits mesh by image identifier. Duplicates vertices shared by different
  *  images.

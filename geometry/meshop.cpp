@@ -543,7 +543,7 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
         }
 
         if(imesh.tCoords.size() > 0){
-            mesh.addFace( vindices[0], vindices[1], vindices[2] 
+            mesh.addFace( vindices[0], vindices[1], vindices[2]
                         , tindices[0], tindices[1], tindices[2] );
         }
         else{
@@ -823,6 +823,32 @@ MeshInfo measurePly(const boost::filesystem::path &path)
     f.close();
 
     return mi;
+}
+
+bool objHasVertexOrFace(const boost::filesystem::path &path)
+{
+    bool hasVorF(false);
+
+    std::ifstream f(path.string());
+    if (!f.good()) {
+        LOGTHROW(err2, std::runtime_error)
+            << "Can't open OBJ file " << path << ".";
+    }
+
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+
+    std::string line;
+    do {
+        if (getline(f, line).eof()) break;
+        if (line.empty()) continue;
+        if (line[0] == 'v' || line[0] == 'f') {
+            hasVorF = true;
+            break;
+        }
+    } while (true);
+    f.close();
+
+    return hasVorF;
 }
 
 void loadPly(ObjParserBase &parser, const boost::filesystem::path &path)
