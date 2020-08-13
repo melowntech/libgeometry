@@ -411,11 +411,13 @@ void saveAsPly( const Mesh &mesh
 
 Mesh loadPly( const boost::filesystem::path &filepath );
 
+// parses PLY from a file, throws on any error
+void loadPly(ObjParserBase &parser, const boost::filesystem::path &path);
+
 Mesh loadObj(const boost::filesystem::path &filepath
              , ObjMaterial *mtl = nullptr);
 
-// parses PLY from a file, throws on any error
-void loadPly(ObjParserBase &parser, const boost::filesystem::path &path);
+void loadObj(ObjParserBase &parser, const boost::filesystem::path &filepath);
 
 struct MeshInfo {
     std::size_t vertexCount;
