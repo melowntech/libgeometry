@@ -280,6 +280,16 @@ Mesh loadPly( const boost::filesystem::path &filename )
 
 const unsigned int imageIdLimit(1<<16);
 
+void loadObj( ObjParserBase &parser
+            , const boost::filesystem::path &filename)
+{
+    std::ifstream file;
+    file.exceptions(std::ios::badbit | std::ios::failbit);
+    file.open(filename.string());
+
+    parser.parse(file);
+}
+
 Mesh loadObj(const boost::filesystem::path &filename, ObjMaterial *mtl)
 {
     struct Obj2MeshParser : public ObjParserBase {
@@ -329,11 +339,7 @@ Mesh loadObj(const boost::filesystem::path &filename, ObjMaterial *mtl)
         int namedCount;
     } parser_;
 
-    std::ifstream file;
-    file.exceptions(std::ios::badbit | std::ios::failbit);
-    file.open(filename.string());
-
-    parser_.parse(file);
+    loadObj(parser_, filename);
 
     std::vector<std::string> materials;
 
@@ -835,11 +841,17 @@ bool objHasVertexOrFace(const boost::filesystem::path &path)
             << "Can't open OBJ file " << path << ".";
     }
 
-    f.exceptions(std::ios::badbit | std::ios::failbit);
+    f.exceptions(std::ios::badbit);
 
     std::string line;
     do {
-        if (getline(f, line).eof()) break;
+        getline(f, line);
+        if (f.eof()) break;
+        if (f.fail()) {
+            LOGTHROW(err2, std::runtime_error)
+                << "Failbit when reading <" << path << ">";
+        }
+
         if (line.empty()) continue;
         if (line[0] == 'v' || line[0] == 'f') {
             hasVorF = true;
