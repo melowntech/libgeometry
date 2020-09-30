@@ -852,7 +852,7 @@ bool Giterator_t<Value_t, Container_t>::operator <
     Displacement_s df = s.pos - pos;
     if ( df.x * diff.x < 0 || df.y * diff.y < 0 || df.z * diff.z < 0 )
         return false;
-    if ( abs( df.x > 0 ) || abs( df.y > 0 ) || abs( df.z ) > 0 )
+    if (abs(df.x) > 0 || abs(df.y) > 0 || abs(df.z) > 0)
         return true;
     else
         return false;
