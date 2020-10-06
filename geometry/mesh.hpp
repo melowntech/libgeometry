@@ -76,6 +76,11 @@ struct Face {
         return abc[idx];
     }
 
+    index_type& vertex(const int idx) {
+        std::reference_wrapper<index_type> abc[] = { a, b, c };
+        return abc[idx];
+    }
+
     /** Calculate normal of this face.
      */
     math::Point3 normal(const math::Points3 &vertices) const {
