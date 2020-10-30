@@ -131,8 +131,6 @@ struct IntersectionInfo {
     bool operator<(const IntersectionInfo& other) const {
         return t < other.t;
     }
-
-    typedef std::set<IntersectionInfo> set;
 };
 
 
@@ -346,16 +344,13 @@ public:
     }
 
     /// \brief Returns all intersections of the ray.
-    void getAllIntersections(const Ray& ray
-                             , IntersectionInfo::set& intersections) const {
-        intersections.clear();
-        this->getIntersections(
-            ray, [&intersections](IntersectionInfo& current) {
-                if (current.t > 0.) {
-                    intersections.insert(current);
-                }
-                return true;
-            });
+    template<typename OutIter>
+    void getAllIntersections(const Ray& ray, OutIter iter) const {
+        this->getIntersections(ray, [&iter](IntersectionInfo& current) {
+            *iter = current;
+            ++iter;
+            return true;
+        });
     }
 
     /// \brief Returns true if the ray is occluded by some geometry
@@ -393,7 +388,7 @@ private:
                     const TBvhObject& obj = objects_[node.start + objIdx];
                     const bool hit = obj.getIntersection(ray, current);
 
-                    if (hit) {
+                    if (hit && current.t > 0.) {
                         if (!addIntersection(current)) {
                             // bailout
                             return;
