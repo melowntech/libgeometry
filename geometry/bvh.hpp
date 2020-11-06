@@ -334,7 +334,7 @@ public:
         intersection.t = INFINITY;
         intersection.object = nullptr;
 
-        this->getIntersections(ray, [&intersection](IntersectionInfo& current) {
+        getIntersections(ray, [&intersection](IntersectionInfo& current) {
             if (current.t < intersection.t) {
                 intersection = current;
             }
@@ -346,7 +346,7 @@ public:
     /// \brief Returns all intersections of the ray.
     template<typename OutIter>
     void getAllIntersections(const Ray& ray, OutIter iter) const {
-        this->getIntersections(ray, [&iter](IntersectionInfo& current) {
+        getIntersections(ray, [&iter](IntersectionInfo& current) {
             *iter = current;
             ++iter;
             return true;
@@ -356,7 +356,7 @@ public:
     /// \brief Returns true if the ray is occluded by some geometry
     bool isOccluded(const Ray& ray) const {
         bool occluded = false;
-        this->getIntersections(ray, [&occluded](IntersectionInfo&) {
+        getIntersections(ray, [&occluded](IntersectionInfo&) {
             occluded = true;
             return false; // do not continue with traversal
         });
@@ -399,10 +399,12 @@ private:
                 // inner node
                 double left_t0, left_t1, right_t0, right_t1;
                 const bool hitLeft =
-                    intersectBox(nodes_[idx + 1].bbox, ray, left_t0, left_t1);
+                    intersectBox(nodes_[idx + 1].bbox, ray, left_t0, left_t1)
+                    && left_t1 > 0;
                 const bool hitRight =
                     intersectBox(nodes_[idx + node.rightOffset].bbox, ray,
-                        right_t0, right_t1);
+                        right_t0, right_t1)
+                    && right_t1 > 0;
 
                 std::size_t closer;
                 std::size_t farther;
