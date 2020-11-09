@@ -131,8 +131,6 @@ struct IntersectionInfo {
     bool operator<(const IntersectionInfo& other) const {
         return t < other.t;
     }
-
-    typedef std::set<IntersectionInfo> set;
 };
 
 
@@ -336,7 +334,7 @@ public:
         intersection.t = INFINITY;
         intersection.object = nullptr;
 
-        this->getIntersections(ray, [&intersection](IntersectionInfo& current) {
+        getIntersections(ray, [&intersection](IntersectionInfo& current) {
             if (current.t < intersection.t) {
                 intersection = current;
             }
@@ -346,22 +344,19 @@ public:
     }
 
     /// \brief Returns all intersections of the ray.
-    void getAllIntersections(const Ray& ray
-                             , IntersectionInfo::set& intersections) const {
-        intersections.clear();
-        this->getIntersections(
-            ray, [&intersections](IntersectionInfo& current) {
-                if (current.t > 0.) {
-                    intersections.insert(current);
-                }
-                return true;
-            });
+    template<typename OutIter>
+    void getAllIntersections(const Ray& ray, OutIter iter) const {
+        getIntersections(ray, [&iter](IntersectionInfo& current) {
+            *iter = current;
+            ++iter;
+            return true;
+        });
     }
 
     /// \brief Returns true if the ray is occluded by some geometry
     bool isOccluded(const Ray& ray) const {
         bool occluded = false;
-        this->getIntersections(ray, [&occluded](IntersectionInfo&) {
+        getIntersections(ray, [&occluded](IntersectionInfo&) {
             occluded = true;
             return false; // do not continue with traversal
         });
@@ -393,7 +388,7 @@ private:
                     const TBvhObject& obj = objects_[node.start + objIdx];
                     const bool hit = obj.getIntersection(ray, current);
 
-                    if (hit) {
+                    if (hit && current.t > 0.) {
                         if (!addIntersection(current)) {
                             // bailout
                             return;
@@ -404,10 +399,12 @@ private:
                 // inner node
                 double left_t0, left_t1, right_t0, right_t1;
                 const bool hitLeft =
-                    intersectBox(nodes_[idx + 1].bbox, ray, left_t0, left_t1);
+                    intersectBox(nodes_[idx + 1].bbox, ray, left_t0, left_t1)
+                    && left_t1 > 0;
                 const bool hitRight =
                     intersectBox(nodes_[idx + node.rightOffset].bbox, ray,
-                        right_t0, right_t1);
+                        right_t0, right_t1)
+                    && right_t1 > 0;
 
                 std::size_t closer;
                 std::size_t farther;
