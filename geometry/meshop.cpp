@@ -287,7 +287,10 @@ void loadObj( ObjParserBase &parser
     file.exceptions(std::ios::badbit | std::ios::failbit);
     file.open(filename.string());
 
-    parser.parse(file);
+    if (!parser.parse(file)) {
+        LOGTHROW(err2, std::runtime_error)
+            << "LoadObj failed to parse file " << filename << ".";
+    }
 }
 
 Mesh loadObj(const boost::filesystem::path &filename, ObjMaterial *mtl)
