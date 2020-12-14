@@ -130,8 +130,8 @@ void reorientNormals(const std::vector<math::Point3>& pc
                      , const double pointRadius)
 {
     std::vector<BvhDisk> disks(pc.size());
-    UTILITY_OMP(parallel for)
-    for (std::uint32_t i = 0; i < pc.size(); ++i) {
+    UTILITY_OMP(parallel for shared(pc))
+    for (int64_t i = 0; i < pc.size(); ++i) {
         disks[i] = BvhDisk(pc[i], normals[i], pointRadius, i);
     }
 
@@ -150,8 +150,8 @@ void reorientNormals(const std::vector<math::Point3>& pc
     // step 1 - determine normal orientation based on normals of already determined points,
     // assuming the topmost points (roofs) have z>0 orientation.
     LOG(info2) << "Estimating normal orientations";
-    UTILITY_OMP(parallel for)
-    for (std::uint32_t rankZ = 0; rankZ < orderZ.size(); ++rankZ) {
+    UTILITY_OMP(parallel for shared(orderZ))
+    for (int64_t rankZ = 0; rankZ < orderZ.size(); ++rankZ) {
         const std::uint32_t i = orderZ[rankZ];
         int doFlip = 0;
         for (math::Point3 dir : ALL_DIRS) {
@@ -184,7 +184,7 @@ void reorientNormals(const std::vector<math::Point3>& pc
     std::vector<uint8_t> doFlip(pc.size(), false);
     std::vector<math::Points3::const_iterator> neighs;
     UTILITY_OMP(parallel for private(neighs))
-    for (std::uint32_t i = 0; i < pc.size(); ++i) {
+    for (int64_t i = 0; i < pc.size(); ++i) {
         neighs.clear();
         tree.range(pc[i], 2 * pointRadius, neighs);
 
@@ -197,8 +197,8 @@ void reorientNormals(const std::vector<math::Point3>& pc
             doFlip[i] = true;
         }
     }
-    UTILITY_OMP(parallel for)
-    for (std::uint32_t i = 0; i < pc.size(); ++i) {
+    UTILITY_OMP(parallel for shared(pc))
+    for (int64_t i = 0; i < pc.size(); ++i) {
         if (doFlip[i]) {
             normals[i] *= -1;
         }

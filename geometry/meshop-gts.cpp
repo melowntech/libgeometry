@@ -368,7 +368,7 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
             // Solution: prepare all sub surfaces for this bunch in advance
 
             UTILITY_OMP(parallel for schedule(dynamic, 1) collapse(2))
-            for (unsigned int row = cellRowStart ; row < rows; row+=cellRowShift)
+            for (int64_t row = cellRowStart ; row < rows; row+=cellRowShift)
             for (unsigned int column = cellColumnStart ; column < columns;
                  column+=cellColumnShift)
             {
