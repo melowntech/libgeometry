@@ -40,6 +40,7 @@
 #include <vector>
 #include <algorithm>
 #include <utility>
+#include <cmath>
 
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
