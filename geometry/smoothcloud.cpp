@@ -62,7 +62,7 @@ math::Points3 CloudSmoother::operator()(const math::Points3 &points
     utility::ts::Progress progress("Cloud smoothing", size);
 
     UTILITY_OMP(parallel for private(neighbors))
-    for (int64_t i = 0; i < size; ++i) {
+    for (int64_t i = 0; i < (int64_t)size; ++i) {
         const auto &point(points[i]);
         auto &spoint(smooth[i]);
 
