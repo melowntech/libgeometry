@@ -2287,15 +2287,20 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
     geometry::Mesh ret;
 
     std::map<math::Point3,uint> vidMap;
+    uint numNaNs = 0;
 
     //reconstruct faces
     for(uint face = 0; face<vertices.size()/3;++face){
         uint indices[3];
+        bool finite = true;
         for(uint vertex = 0; vertex<3; ++vertex){
             math::Point3 pVertex(
                       vertices[face*3+vertex].x
                     , vertices[face*3+vertex].y
                     , vertices[face*3+vertex].z);
+            finite &= std::isfinite(pVertex(0)) &&
+                      std::isfinite(pVertex(1)) &&
+                      std::isfinite(pVertex(2));
 
             auto it = vidMap.find(pVertex);
             if(it==vidMap.end()){
@@ -2311,8 +2316,15 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
                 || indices[1] == indices[2] ){
             continue;
         }
+        if (!finite) {
+            numNaNs++;
+            continue;
+        }
 
         ret.addFace(indices[0],indices[1],indices[2]);
+    }
+    if (numNaNs > 0) {
+        LOG(warn4) << "Extracted isosurface mesh has " << numNaNs << " NaN points.";
     }
     return ret;
 }
