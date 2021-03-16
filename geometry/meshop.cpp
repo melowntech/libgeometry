@@ -453,15 +453,21 @@ Mesh clip(const Mesh &omesh, const math::Extents3 &extents)
     return out;
 }
 
-Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
-    auto pmesh(std::make_shared<geometry::Mesh>(omesh));
-    auto & mesh(*pmesh);
+Mesh::pointer removeNonManifoldEdges(Mesh omesh)
+{
+    auto ofaces = omesh.faces;
+    auto pmesh(std::make_shared<geometry::Mesh>(std::move(omesh)));
+    auto& mesh(*pmesh);
+    mesh.faces.clear();
+    mesh.faces.shrink_to_fit();
+
+    typedef Face::index_type index_type;
 
     struct EdgeKey
     {
-        std::size_t v1, v2; // vertex indices
+        index_type v1, v2; // vertex indices
 
-        EdgeKey(std::size_t v1, std::size_t v2)
+        EdgeKey(index_type v1, index_type v2)
         {
             this->v1 = std::min(v1, v2);
             this->v2 = std::max(v1, v2);
@@ -474,13 +480,13 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
     };
 
     struct Edge {
-        std::set<size_t> facesIndices;
+        std::set<index_type> facesIndices;
     };
 
     //count faces for each edge
     std::map<EdgeKey,Edge> edgeMap;
-    for(unsigned int fi=0; fi<mesh.faces.size(); fi++){
-        const auto & face(mesh.faces[fi]);
+    for(index_type fi=0; fi<ofaces.size(); fi++){
+        const auto & face(ofaces[fi]);
         EdgeKey edgeKeys[3] = { EdgeKey(face.a,face.b)
                            , EdgeKey(face.b,face.c)
                            , EdgeKey(face.c,face.a) };
@@ -501,7 +507,7 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
 
 
     //collect faces incident with non-manifold edge
-    std::set<size_t> facesToOmit;
+    std::set<index_type> facesToOmit;
     for(auto it = edgeMap.begin(); it!=edgeMap.end(); it++){
         if(it->second.facesIndices.size()>2){
             for(const auto & fi : it->second.facesIndices){
@@ -510,9 +516,8 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
         }
     }
 
-    mesh.faces.clear();
-    for(unsigned int fi=0; fi<omesh.faces.size(); fi++){
-        const auto & face(omesh.faces[fi]);
+    for(index_type fi=0; fi<ofaces.size(); fi++){
+        const auto & face(ofaces[fi]);
         if(facesToOmit.find(fi)==facesToOmit.end()){
             mesh.addFace( face.a, face.b, face.c
                         , face.ta, face.tb, face.tc );
@@ -521,7 +526,6 @@ Mesh::pointer removeNonManifoldEdges( const Mesh& omesh ){
 
     return pmesh;
 }
-
 
 Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
     auto pmesh(std::make_shared<geometry::Mesh>());

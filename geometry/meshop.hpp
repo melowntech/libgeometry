@@ -225,7 +225,7 @@ Mesh::pointer refine( const Mesh &mesh, unsigned int maxFacesCount);
  * \param mesh mesh to process
  * \return processed mesh
  */
-Mesh::pointer removeNonManifoldEdges( const Mesh& omesh );
+Mesh::pointer removeNonManifoldEdges(Mesh omesh);
 
 /** Removes isolated vertices, e.g vertices incidental with 0 faces
  * Works with untextured meshes
