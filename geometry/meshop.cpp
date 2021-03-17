@@ -38,6 +38,7 @@
 #include "triclip.hpp"
 
 #include "utility/expect.hpp"
+#include "utility/small_list.hpp"
 
 #include <set>
 #include <boost/numeric/ublas/vector.hpp>
@@ -480,7 +481,7 @@ Mesh::pointer removeNonManifoldEdges(Mesh omesh)
     };
 
     struct Edge {
-        std::set<index_type> facesIndices;
+        utility::small_list<index_type, 2> facesIndices;
     };
 
     //count faces for each edge
@@ -505,14 +506,13 @@ Mesh::pointer removeNonManifoldEdges(Mesh omesh)
         }
     }
 
-
     //collect faces incident with non-manifold edge
     std::set<index_type> facesToOmit;
     for(auto it = edgeMap.begin(); it!=edgeMap.end(); it++){
         if(it->second.facesIndices.size()>2){
-            for(const auto & fi : it->second.facesIndices){
+            it->second.facesIndices.for_each([&](index_type fi) {
                 facesToOmit.insert(fi);
-            }
+            });
         }
     }
 
