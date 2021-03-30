@@ -59,30 +59,30 @@ typedef geometry::Face::index_type index_type;
 
 void addFace3(Mesh &m, index_type a, index_type b, index_type c)
 {
-    return m.addFace(a, b, c);
+    m.addFace(a, b, c);
 }
 
 void addFace4(Mesh &m, index_type a, index_type b, index_type c
               , unsigned int imageId)
 {
-    return m.addFace(a, b, c, imageId);
+    m.addFace(a, b, c, imageId);
 }
 
 void addFace6(Mesh &m, index_type a, index_type b, index_type c, index_type ta
               , index_type tb, index_type tc)
 {
-    return m.addFace(a, b, c, ta, tb, tc);
+    m.addFace(a, b, c, ta, tb, tc);
 }
 
 void addFace7(Mesh &m, index_type a, index_type b, index_type c, index_type ta
               , index_type tb, index_type tc, unsigned int imageId)
 {
-    return m.addFace(a, b, c, ta, tb, tc, imageId);
+    m.addFace(a, b, c, ta, tb, tc, imageId);
 }
 
 void addVertex(Mesh &m, double x, double y, double z)
 {
-    return m.vertices.emplace_back(x, y, z);
+    m.vertices.emplace_back(x, y, z);
 }
 
 Mesh clip2(const Mesh &m, const math::Extents2 &e)
@@ -97,7 +97,7 @@ Mesh clip3(const Mesh &m, const math::Extents3 &e)
 
 void appendMesh(Mesh &mesh, const Mesh &added)
 {
-    return geometry::append(mesh, added);
+    geometry::append(mesh, added);
 }
 
 Mesh loadObj(const boost::filesystem::path &filepath)
@@ -107,19 +107,19 @@ Mesh loadObj(const boost::filesystem::path &filepath)
 
 void saveObj1(const geometry::Mesh &mesh, const fs::path &path)
 {
-    return geometry::saveAsObj(mesh, path, {});
+    geometry::saveAsObj(mesh, path, {});
 }
 
 void saveObj2(const geometry::Mesh &mesh, const fs::path &path
               , const std::string &mtlLibrary)
 {
-    return geometry::saveAsObj(mesh, path, mtlLibrary);
+    geometry::saveAsObj(mesh, path, mtlLibrary);
 }
 
 void saveObj3(const geometry::Mesh &mesh, const fs::path &path
               , const ObjMaterial &mtl)
 {
-    return geometry::saveAsObj(mesh, path, mtl);
+    geometry::saveAsObj(mesh, path, mtl);
 }
 
 } } // namespace geometry::py
