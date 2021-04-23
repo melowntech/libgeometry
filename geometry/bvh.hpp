@@ -106,12 +106,7 @@ inline bool intersectBox(const math::Extents3& box
     return true;
 }
 
-
-struct BvhPrimitive {
-    /** Generic user data, can be used to store additional information to the
-     * primitives. */
-    std::size_t userData = std::size_t(-1);
-};
+struct BvhPrimitive;
 
 /**
  * \brief Holds intormation about intersection.
@@ -133,6 +128,14 @@ struct IntersectionInfo {
     }
 };
 
+
+struct BvhPrimitive {
+    /** Generic user data, can be used to store additional information to the
+     * primitives. */
+    std::size_t userData = std::size_t(-1);
+
+    typedef IntersectionInfo Intersection;
+};
 
 /**
  * @brief Stack with fixed maximum number of elements.
@@ -226,6 +229,8 @@ private:
     };
 
     std::vector<BvhNode> nodes_;
+
+    typedef typename TBvhObject::Intersection Intersection;
 
 public:
     explicit Bvh(const std::size_t leafSize = 4)
@@ -330,11 +335,11 @@ public:
     ///
     /// Returns true if an intersection has been found.
     bool getFirstIntersection(const Ray& ray
-                              , IntersectionInfo& intersection) const {
+                              , Intersection& intersection) const {
         intersection.t = INFINITY;
         intersection.object = nullptr;
 
-        getIntersections(ray, [&intersection](IntersectionInfo& current) {
+        getIntersections(ray, [&intersection](Intersection& current) {
             if (current.t < intersection.t) {
                 intersection = current;
             }
@@ -346,7 +351,7 @@ public:
     /// \brief Returns all intersections of the ray.
     template<typename OutIter>
     void getAllIntersections(const Ray& ray, OutIter iter) const {
-        getIntersections(ray, [&iter](IntersectionInfo& current) {
+        getIntersections(ray, [&iter](Intersection& current) {
             *iter = current;
             ++iter;
             return true;
@@ -356,7 +361,7 @@ public:
     /// \brief Returns true if the ray is occluded by some geometry
     bool isOccluded(const Ray& ray) const {
         bool occluded = false;
-        getIntersections(ray, [&occluded](IntersectionInfo&) {
+        getIntersections(ray, [&occluded](Intersection&) {
             occluded = true;
             return false; // do not continue with traversal
         });
@@ -383,7 +388,7 @@ private:
             if (node.isLeaf()) {
                 // leaf -> intersect stored objects
                 for (std::size_t objIdx = 0; objIdx < node.objCnt; ++objIdx) {
-                    IntersectionInfo current;
+                    Intersection current;
 
                     const TBvhObject& obj = objects_[node.start + objIdx];
                     const bool hit = obj.getIntersection(ray, current);
