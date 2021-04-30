@@ -332,18 +332,11 @@ void lockCorners(OMMesh &omMesh)
     }
 }
 
-math::Extents2 prepareMesh(OMMesh &omMesh, const Mesh &mesh
-                           , const SimplifyOptions &options)
+math::Extents2 prepareMeshImpl(OMMesh &omMesh, const Mesh& mesh
+                               , const SimplifyOptions &options)
 {
     math::Extents2 me;
-
-    // preprocess mesh - remove non-manifold edges
-    if (options.check(SimplifyOption::RMNONMANIFOLDEDGES)) {
-        auto pmesh(geometry::removeNonManifoldEdges(mesh));
-        me = toOpenMesh(*pmesh, omMesh);
-    } else{
-        me = toOpenMesh(mesh, omMesh);
-    }
+    me = toOpenMesh(mesh, omMesh);
     omMesh.update_normals();
 
     // lock the corner and/or border vertices based on flags
@@ -356,9 +349,32 @@ math::Extents2 prepareMesh(OMMesh &omMesh, const Mesh &mesh
     if (options.check(SimplifyOption::OUTERBORDER)) {
         lockBorder(omMesh, false, true);
     }
-
     // return accumulated extents
     return me;
+}
+
+math::Extents2 prepareMesh(OMMesh &omMesh, const Mesh& mesh
+                           , const SimplifyOptions &options)
+{
+    // preprocess mesh - remove non-manifold edges
+    if (options.check(SimplifyOption::RMNONMANIFOLDEDGES)) {
+        auto pmesh(geometry::removeNonManifoldEdges(mesh));
+        return prepareMeshImpl(omMesh, *pmesh, options);
+    } else {
+        return prepareMeshImpl(omMesh, mesh, options);
+    }
+}
+
+math::Extents2 prepareMesh(OMMesh &omMesh, Mesh&& mesh
+                           , const SimplifyOptions &options)
+{
+    // preprocess mesh - remove non-manifold edges
+    if (options.check(SimplifyOption::RMNONMANIFOLDEDGES)) {
+        auto pmesh(geometry::removeNonManifoldEdges(std::move(mesh)));
+        return prepareMeshImpl(omMesh, *pmesh, options);
+    } else {
+        return prepareMeshImpl(omMesh, mesh, options);
+    }
 }
 
 void prepareDecimator(Decimator &decimator
@@ -456,7 +472,7 @@ Mesh::pointer simplify(const Mesh &mesh, int faceCount
 
 void simplifyInPlace(Mesh& mesh, int faceCount, const SimplifyOptions& options) {
     OMMesh omMesh;
-    prepareMesh(omMesh, mesh, options);
+    prepareMesh(omMesh, std::move(mesh), options);
 
     Decimator decimator(omMesh);
     prepareDecimator(decimator, options);
