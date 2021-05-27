@@ -143,8 +143,9 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
         if (radius <= 0.0) {
             // Mode 2: search radius is variable and is based on the average
             // radius needed to reach the specified number of neighbors
-            searchRadius
-                = (pointsProcessed ? (searchRadiusTotal / pointsProcessed) : 1.0);
+            searchRadius = ((searchRadiusTotal && pointsProcessed)
+                                ? (searchRadiusTotal / pointsProcessed)
+                                : 1.0);
             ++pointsProcessed;
         }
 
