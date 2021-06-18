@@ -34,6 +34,8 @@
 
 namespace geometry {
 
+namespace bp = boost::polygon;
+
 namespace {
 
 const double eps = 1e-12;
@@ -169,19 +171,52 @@ bool pointInMultiPolygon(const math::Point2d &test,
     return c;
 }
 
+// Converts input coordinates to interval [0, 2^16] and vice versa
+// (work around boost polygon integer nature)
+class CoordConverter {
+    math::Point2 offset_;
+    double mult_;
+    double invMult_;
+
+public:
+    explicit CoordConverter(const math::MultiPolygon& mpoly)
+    {
+        math::Extents2 ext(math::InvalidExtents{});
+        for (const auto& poly : mpoly) {
+            for (const auto& p : poly) {
+                math::update(ext, p);
+            }
+        }
+        auto size = math::size(ext);
+        const double MaxValue = 1 << 16;
+
+        mult_ = MaxValue / std::max(size.width, size.height);
+        invMult_ = 1.0 / mult_;
+        offset_ = ext.ll;
+    }
+
+    inline bp::point_data<double> operator()(const math::Point2& p)
+    {
+        return bp::point_data<double>((p(0) - offset_(0)) * mult_,
+                                      (p(1) - offset_(1)) * mult_);
+    }
+
+    inline math::Point2 operator()(const bp::point_data<double>& p)
+    {
+        return math::Point2(p.x() * invMult_ + offset_(0),
+                            p.y() * invMult_ + offset_(1));
+    }
+};
+
 } // namespace
-
-namespace bp = boost::polygon;
-
-const double Mult = 1 << 16; // work around boost polygon integer nature
-const double InvMult = 1.0 / Mult;
 
 math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
 {
+    CoordConverter cnv(mpolygon);
     std::vector<bp::point_data<double> > points;
     for (const auto &poly : mpolygon) {
         for (const auto &p : poly) {
-            points.emplace_back(p(0)*Mult, p(1)*Mult);
+            points.emplace_back(cnv(p));
         }
     }
 
@@ -203,7 +238,7 @@ math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
             assert(cell->contains_point());
 
             const auto &v = points[cell->source_index()];
-            tri.emplace_back(v.x()*InvMult, v.y()*InvMult);
+            tri.emplace_back(cnv(v));
 
             if (tri.size() == 3)
             {
