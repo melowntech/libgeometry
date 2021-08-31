@@ -24,36 +24,18 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- * @file delaunay2d.hpp
- * @author Jakub Cerveny <jakub.cerveny@melown.com>
- *
- * Computation of 2D Delaunay triangulation using the GTS library.
+ * @file gtsutils.hpp
+ * @author Pavel Sevecek <pavel.sevecek@melown.com>
  */
 
-#ifndef geometry_delaunay_hpp_included_
-#define geometry_delaunay_hpp_included_
-
-#include <array>
-#include <vector>
-
-#include "math/geometry_core.hpp"
-
-#include "utility/gccversion.hpp"
+#include <mgts.h>
 
 namespace geometry {
 
-typedef std::array<unsigned, 3> DTriangle;
-
-/** Calculates the 2D Delaunay triangulation of a set of points.
- *  Returns a list of (finite) triangles. Each triangle indexes three
- *  points from the original set.
- */
-std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
+void checkGtsInitialized()
 #ifndef GEOMETRY_HAS_GTS
-    UTILITY_FUNCTION_ERROR("Delaunay triangulation is available only when compiled with GTS.")
+    UTILITY_FUNCTION_ERROR("Only available when compiled with GTS.")
 #endif
 ;
 
-} // namespace geometry
-
-#endif // geometry_delaunay_hpp_included_
+}
