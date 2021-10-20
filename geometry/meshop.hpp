@@ -403,6 +403,20 @@ void saveAsPly( const Mesh::pointer &mesh
 void saveAsPly( const Mesh &mesh
                , const boost::filesystem::path &filepath);
 
+/** Save mesh as PLY, optionally include vertex colors, normals or face colors.
+ *
+ * \param mesh mesh to save
+ * \param vertexColors vertex colors, pass empty if no colors are to be saved
+ * \param faceColors face colors, pass empty if no colors are to be saved
+ * \param vertexNormals vertex normals, pass empty if no normals are to be saved
+ * \param filepath path to output file
+ */
+void saveAsPlyWithFeatures(const Mesh& mesh,
+                           const math::Points3i& vertexColors,
+                           const math::Points3i& faceColors,
+                           const math::Points3& vertexNormals,
+                           const boost::filesystem::path& filepath);
+
 Mesh loadPly( const boost::filesystem::path &filepath );
 
 // parses PLY from a file, throws on any error
