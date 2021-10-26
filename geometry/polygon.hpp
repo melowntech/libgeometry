@@ -217,8 +217,8 @@ inline bool inside(const std::vector<math::Point2_<T> > &polygon
     return true;
 }
 
-template <typename PolygonType, typename PointType2>
-bool insidePolygon(const PolygonType &polygon
+template <typename PointType1, typename PointType2>
+bool insidePolygon(const std::vector<PointType1> &polygon
                    , const PointType2 &point)
 {
     // NB: works only for convex polygons
