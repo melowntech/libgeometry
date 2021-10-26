@@ -44,6 +44,12 @@ namespace geometry {
 template <typename T>
 double area( const std::vector<math::Point2_<T> > & polygon  );
 
+/** Compute polygon area and centroid (via shoelace formula)
+ */
+template <typename T>
+double areaAndCentroid(math::Point2_<T>& centroid,
+                       const std::vector<math::Point2_<T>>& polygon);
+
 /** Clip polygon by provided viewport.
  *
  *  Returns polygon of same type as is input. Internally works with double
@@ -99,6 +105,29 @@ double area( const std::vector<math::Point2_<T> > & polygon  ) {
     return 0.5 * retval;
 }
 
+template <typename T>
+double areaAndCentroid(math::Point2_<T>& centroid,
+                       const std::vector<math::Point2_<T>>& polygon)
+{
+    auto n = polygon.size();
+    centroid = math::Point2_<T>(0, 0);
+    double a = 0.0;
+
+    for ( decltype(n) i = 0; i < n; i++ ) {
+        decltype(n) iN = (i + 1) % n;
+
+        double l = (polygon[i](0) * polygon[iN](1))
+                   - (polygon[iN](0) * polygon[i](1));
+        
+        centroid(0) += (polygon[i](0) + polygon[iN](0)) * l;
+        centroid(1) += (polygon[i](1) + polygon[iN](1)) * l;
+        a += l;
+    }
+    a *= 0.5;
+    centroid(0) /= 6 * a;
+    centroid(1) /= 6 * a;
+    return a;
+}
 
 namespace detail {
     math::Points2 clip(const math::Viewport2f &viewport
