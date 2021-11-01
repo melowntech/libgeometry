@@ -236,6 +236,7 @@ void saveAsPlyWithFeatures(const Mesh& mesh,
                            const math::Points3i& vertexColors,
                            const math::Points3i& faceColors,
                            const math::Points3& vertexNormals,
+                           const std::vector<int>& faceLabels,
                            const boost::filesystem::path& filepath)
 {
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
@@ -290,6 +291,9 @@ void saveAsPlyWithFeatures(const Mesh& mesh,
             << "property uchar green\n"
             << "property uchar blue\n";
     }
+
+    if (faceLabels.size()) { out << "property int label\n"; }
+
     out << "end_header\n";
 
     // write vertices
@@ -327,6 +331,7 @@ void saveAsPlyWithFeatures(const Mesh& mesh,
             auto& color = faceColors[i];
             out << ' ' << color(0) << ' ' << color(1) << ' ' << color(2);
         }
+        if (faceLabels.size()) { out << ' ' << faceLabels[i]; }
         out << '\n';
     }
 
