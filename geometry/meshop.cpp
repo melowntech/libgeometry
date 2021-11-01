@@ -481,6 +481,138 @@ Mesh loadObj(const boost::filesystem::path &filename, ObjMaterial *mtl)
     return parser_.mesh;
 }
 
+/// Check that the following lines contain properties in the given order
+bool hasProperties(std::ifstream& f,
+                   std::string& line,
+                   const std::vector<std::string>& props)
+{
+    for (std::size_t i = 0; i < props.size(); ++i)
+    {
+        char pType[20];
+        char prop[20];
+        sscanf(line.c_str(), "property %s %s", pType, prop);
+
+        if (props[i] != prop) { return false; }
+        if (getline(f, line).eof()) { return false; }
+    }
+
+    return true;
+}
+
+Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
+                         math::Points3i* vertexColors,
+                         math::Points3i* faceColors,
+                         math::Points3* vertexNormals,
+                         std::vector<int>* faceLabels)
+{
+    std::ifstream f(filename.native());
+    if (!f.good())
+    {
+        LOGTHROW(err2, std::runtime_error) << "Can't open " << filename;
+    }
+
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+
+    // read header
+    std::string line;
+
+    bool hasVertexColors = false;
+    bool hasVertexNormals = false;
+    bool hasFaceColors = false;
+    bool hasFaceLabels = false;
+    int nvert = -1;
+    int ntris = -1;
+
+    do
+    {
+        if (getline(f, line).eof()) { break; }
+
+        if (sscanf(line.c_str(), "element vertex %d", &nvert))
+        {
+            if (getline(f, line).eof()) { break; }
+            utility::expect(hasProperties(f, line, { "x", "y", "z" }),
+                            "Vertices have to have properties x, y, z");
+            if (hasProperties(f, line, { "red", "green", "blue" }))
+            {
+                hasVertexColors = true;
+            }
+            if (hasProperties(f, line, { "nx", "ny", "nz" }))
+            {
+                hasVertexNormals = true;
+            }
+        }
+
+        if (sscanf(line.c_str(), "element face %d", &ntris))
+        {
+            if (getline(f, line).eof()) { break; }
+            utility::expect(line == "property list uchar int vertex_indices",
+                            "Faces have to have list property");
+            if (getline(f, line).eof()) { break; }
+            if (hasProperties(f, line, { "red", "green", "blue" }))
+            {
+                hasFaceColors = true;
+            }
+            if (hasProperties(f, line, { "label" })) { hasFaceLabels = true; }
+        }
+    }
+    while (line != "end_header");
+
+    if (nvert < 0 || ntris < 0)
+    {
+        LOGTHROW(err2, std::runtime_error)
+            << filename << ": unknown PLY format.";
+    }
+
+    Mesh mesh;
+    mesh.vertices.reserve(nvert);
+
+    // load points
+    for (int i = 0; i < nvert; i++)
+    {
+        double x, y, z;
+        f >> x >> y >> z;
+        if (hasVertexColors)
+        {
+            int r, g, b;
+            f >> r >> g >> b;
+            if (vertexColors) { vertexColors->emplace_back(r, g, b); }
+        }
+        if (hasVertexNormals)
+        {
+            double nx, ny, nz;
+            f >> nx >> ny >> nz;
+            if (vertexNormals) { vertexNormals->emplace_back(nx, ny, nz); }
+        }
+        mesh.vertices.emplace_back(x, y, z);
+    }
+
+    mesh.faces.reserve(ntris);
+
+    // load triangles
+    for (int i = 0; i < ntris; i++)
+    {
+        int n, a, b, c;
+        f >> n >> a >> b >> c;
+        utility::expect(n == 3, "Only triangles are supported in PLY files.");
+        mesh.faces.emplace_back(a, b, c);
+
+        if (hasFaceColors)
+        {
+            int r, g, b;
+            f >> r >> g >> b;
+            if (faceColors) { faceColors->emplace_back(r, g, b); }
+        }
+        if (hasFaceLabels)
+        {
+            int label;
+            f >> label;
+            if (faceLabels) { faceLabels->emplace_back(label); }
+        }
+    }
+
+    return mesh;
+}
+
 namespace {
 
 void clipImpl(const Mesh &omesh, Mesh &mesh

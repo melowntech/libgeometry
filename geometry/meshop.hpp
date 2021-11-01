@@ -429,6 +429,29 @@ Mesh loadObj(const boost::filesystem::path &filepath
 
 void loadObj(ObjParserBase &parser, const boost::filesystem::path &filepath);
 
+/** Load PLY file, optionally loading vertex or face features
+ * 
+ * The features must be listed in ply in order:
+ * - vertices:
+ *      1. colors (r, g, b)
+ *      2. normals (nx, ny, nz)
+ * - faces:
+ *      1. colors (r, g, b)
+ *      2. labels (int)
+ * 
+ * \param filename path to ply file
+ * \param vertexColors place for vertex colors if specified and found in ply
+ * \param faceColors place for face colors if specified and found in ply
+ * \param vertexNormals place for vertex normals if specified and found in ply
+ * \param faceLabels place for face labels if specified and found in ply
+ * \returns loaded mesh
+ */
+Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
+                         math::Points3i* vertexColors = nullptr,
+                         math::Points3i* faceColors = nullptr,
+                         math::Points3* vertexNormals = nullptr,
+                         std::vector<int>* faceLabels = nullptr);
+
 struct MeshInfo {
     std::size_t vertexCount;
     std::size_t faceCount;
