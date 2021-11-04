@@ -517,8 +517,10 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
     std::string line;
 
     bool hasVertexColors = false;
+    bool hasAlphaVertexColor = false;
     bool hasVertexNormals = false;
     bool hasFaceColors = false;
+    bool hasAlphaFaceColor = false;
     bool hasFaceLabels = false;
     int nvert = -1;
     int ntris = -1;
@@ -536,6 +538,10 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
             {
                 hasVertexColors = true;
             }
+            if (hasProperties(f, line, {"alpha"}))
+            {
+                hasAlphaVertexColor = true;
+            }
             if (hasProperties(f, line, { "nx", "ny", "nz" }))
             {
                 hasVertexNormals = true;
@@ -551,6 +557,10 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
             if (hasProperties(f, line, { "red", "green", "blue" }))
             {
                 hasFaceColors = true;
+            }
+            if (hasProperties(f, line, {"alpha"}))
+            {
+                hasAlphaFaceColor = true;
             }
             if (hasProperties(f, line, { "label" })) { hasFaceLabels = true; }
         }
@@ -577,6 +587,11 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
             f >> r >> g >> b;
             if (vertexColors) { vertexColors->emplace_back(r, g, b); }
         }
+        if (hasAlphaVertexColor)
+        {
+            int al;
+            f >> al;
+        }
         if (hasVertexNormals)
         {
             double nx, ny, nz;
@@ -601,6 +616,11 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
             int r, g, b;
             f >> r >> g >> b;
             if (faceColors) { faceColors->emplace_back(r, g, b); }
+        }
+        if (hasAlphaFaceColor)
+        {
+            int al;
+            f >> al;
         }
         if (hasFaceLabels)
         {
