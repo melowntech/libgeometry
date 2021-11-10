@@ -68,6 +68,7 @@ if(MGTS_FOUND)
     gtsutils.hpp gtsutils.cpp
     meshop-gts.cpp
     delaunay2d.cpp delaunay2d.hpp
+    multipolygon-triangulate-gts.hpp multipolygon-triangulate-gts.cpp
     )
 
   list(APPEND geometry_EXTRA_DEPENDS MGTS GLIB)
