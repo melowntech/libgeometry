@@ -87,6 +87,14 @@ template <typename PointType1, typename PointType2>
 bool insidePolygon(const std::vector<PointType1> &polygon
                    , const PointType2 &point);
 
+/** Determine whether point is inside a multipolygon.
+ *
+ * Multipolygon is defined by its outer boundary (CCW), followed by holes (CW)
+ */
+template <typename T>
+bool insideMultiPolygon(const std::vector<std::vector<math::Point2_<T>>>& mpoly,
+                        const math::Point2_<T>& point);
+
 /****** implementation ******/
 
 template <typename T>
@@ -274,6 +282,29 @@ bool insidePolygon(const std::vector<PointType1> &polygon
     }
 
     return true;
+}
+
+template <typename T>
+bool insideMultiPolygon(const std::vector<std::vector<math::Point2_<T>>>& mpoly,
+                        const math::Point2_<T>& point)
+{
+    bool c = false;
+    for (const auto& poly : mpoly)
+    {
+        auto nvert = int(poly.size());
+        for (int i = 0, j = nvert - 1; i < nvert; j = i++)
+        {
+            if (((poly[i](1) > point(1)) != (poly[j](1) > point(1)))
+                && (point(0) < (poly[j](0) - poly[i](0))
+                                       * (point(1) - poly[i](1))
+                                       / (poly[j](1) - poly[i](1))
+                                   + poly[i](0)))
+            {
+                c = !c;
+            }
+        }
+    }
+    return c;
 }
 
 } // namespace geometry
