@@ -90,7 +90,6 @@ std::vector<TriangleItPair>
 
     // create vertices
     GSList* verticesList = nullptr;
-    // std::vector<GtsVertex*> verticesVec;
     utility::small_map<GtsVertex*, ItPair> vertexMap;
     for (auto polyIt = mpolygon.begin(); polyIt != mpolygon.end(); ++polyIt)
     {
@@ -119,9 +118,23 @@ std::vector<TriangleItPair>
     GSList* l = verticesList;
     while (l)
     {
-        utility::expect(gts_delaunay_add_vertex(s, (GtsVertex*)l->data, NULL)
-                            == NULL,
-                        "Unable to add vertex");
+        GtsVertex* ret = gts_delaunay_add_vertex(s, (GtsVertex*)l->data, NULL);
+        if(ret == l->data)
+        {
+            LOGTHROW(err4, std::runtime_error)
+                << "Vertex to be added is not contained in the convex hull "
+                   "bounding surface, but it should be (triangle enclosing all "
+                   "vertices was added).";
+        }
+        if(ret != nullptr)
+        {
+            LOG(warn2) << "Found duplicated vertex in the polygon (can be "
+                          "holes touching)";
+            // replace with the first vertex
+            gts_object_destroy(GTS_OBJECT(l->data));
+            l->data = ret;
+        }
+
         l = l->next;
     }
 
