@@ -123,6 +123,8 @@ set(geometry_SOURCES
   nonconvexclip.hpp nonconvexclip.cpp
   triangulate.hpp triangulate.cpp
 
+  multipolymesh.hpp multipolymesh.cpp
+
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}
   ${geometry_OPENCV_SOURCES}
