@@ -232,12 +232,12 @@ void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
     }
 }
 
-void saveAsPlyWithFeatures(const Mesh& mesh,
+void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
+                           const Mesh& mesh,
                            const math::Points3i& vertexColors,
                            const math::Points3i& faceColors,
                            const math::Points3& vertexNormals,
-                           const std::vector<int>& faceLabels,
-                           const boost::filesystem::path& filepath)
+                           const std::vector<int>& faceLabels)
 {
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
