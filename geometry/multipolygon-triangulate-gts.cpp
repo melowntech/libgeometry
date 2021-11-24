@@ -128,7 +128,7 @@ std::vector<TriangleItPair>
         }
         if(ret != nullptr)
         {
-            LOG(warn2) << "Found duplicated vertex in the polygon (can be "
+            LOG(warn1) << "Found duplicated vertex in the polygon (can be "
                           "holes touching)";
             // replace with the first vertex
             gts_object_destroy(GTS_OBJECT(l->data));
