@@ -53,9 +53,7 @@ void saveAsGzippedObj(const Mesh &mesh, const boost::filesystem::path &filepath
     gzipped.push(f);
 
     {
-        bool setFormat(true);
-        if (streamSetup) { setFormat = !streamSetup(f); }
-        saveAsObj(mesh, gzipped, mtl, filepath, setFormat);
+        saveAsObj(mesh, gzipped, mtl, filepath, streamSetup);
     }
 
     gzipped.flush();

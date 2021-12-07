@@ -124,19 +124,23 @@ void addMtl(std::ostream &out, const ObjMaterial &mtl, unsigned int imageId)
 void saveAsObj(const Mesh &mesh, std::ostream &out
                , const ObjMaterial &mtl
                , const boost::filesystem::path &filepath
-               , bool setFormat)
+               , const ObjStreamSetup &streamSetup)
 {
-    if (setFormat) {
-        out.setf(std::ios::scientific, std::ios::floatfield);
-    }
-
     for (const auto &lib : mtl.libs) {
         out << "mtllib " << lib << '\n';
+    }
+
+    if (!streamSetup.vertex(out)) {
+        out.setf(std::ios::scientific, std::ios::floatfield);
     }
 
     for (const auto &vertex : mesh.vertices) {
         out << "v " << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2)
             << '\n';
+    }
+
+    if (!streamSetup.tx(out)) {
+        out.setf(std::ios::scientific, std::ios::floatfield);
     }
 
     for (const auto &tCoord : mesh.tCoords) {
@@ -165,6 +169,23 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
     }
 }
 
+void saveAsObj(const Mesh &mesh, std::ostream &out
+               , const ObjMaterial &mtl
+               , const boost::filesystem::path &filepath
+               , bool setFormat)
+{
+    struct DontSetFormat : ObjStreamSetup {
+        virtual bool vertex(std::ostream&) const { return true; }
+        virtual bool tx(std::ostream&) const { return true; }
+    };
+
+    const ObjStreamSetup &streamSetup(setFormat
+                                      ? ObjStreamSetup()
+                                      : DontSetFormat());
+
+    saveAsObj(mesh, out, mtl, filepath, streamSetup);
+}
+
 void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
                , const ObjMaterial &mtl, const ObjStreamSetup &streamSetup)
 {
@@ -179,9 +200,7 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
             << "Unable to save mesh to <" << filepath << ">.";
     }
 
-    bool setFormat(true);
-    if (streamSetup) { setFormat = !streamSetup(f); }
-    saveAsObj(mesh, f, mtl, filepath, setFormat);
+    saveAsObj(mesh, f, mtl, filepath, streamSetup);
 }
 
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
