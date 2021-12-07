@@ -25,21 +25,6 @@ else()
   message(STATUS "geometry: compiling without OpenMesh support")
 endif()
 
-if (CGAL_FOUND)
-  message(STATUS "geometry: compiling in CGAL support")
-
-  # add definitions
-  list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_CGAL=1)
-
-  set(geometry_CGAL_SOURCES
-    delaunay2d.cpp delaunay2d.hpp
-    )
-
-  list(APPEND geometry_EXTRA_DEPENDS CGAL)
-else()
-  message(STATUS "geometry: compiling without CGAL support")
-endif()
-
 if (OpenCV_FOUND)
   message(STATUS "geometry: compiling in OpenCV support")
 
@@ -80,7 +65,9 @@ if(MGTS_FOUND)
   list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_GTS=1)
 
   set(geometry_MGTS_SOURCES
+    gtsutils.hpp gtsutils.cpp
     meshop-gts.cpp
+    delaunay2d.cpp delaunay2d.hpp
     )
 
   list(APPEND geometry_EXTRA_DEPENDS MGTS GLIB)

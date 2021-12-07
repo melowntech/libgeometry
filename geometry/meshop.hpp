@@ -290,12 +290,6 @@ private:
     PerCellCount goal_;
 };
 
-void make_gts_class_system_threadsafe()
-#ifndef GEOMETRY_HAS_GTS
-    UTILITY_FUNCTION_ERROR("Volume-based mesh simplification is available only when compiled with GTS.")
-#endif
-    ;
-
 Mesh::pointer simplify_gts(const geometry::Mesh &mesh, long long edgeCountMax
                            , double costMax)
 #ifndef GEOMETRY_HAS_GTS

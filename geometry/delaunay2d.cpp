@@ -24,114 +24,75 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-// This is a workaround for CGAL Assertions currently ruining debug mode because
-// CGAL expects flags which are not currently set
-#ifndef NDEBUG
-#  define NDEBUG
-#endif
-
-// WARNING: CGAL is GPL
-// TODO: consider using the GNU Triangulated Surface Library, which is LGPL
-
-#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
-#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-#include <CGAL/Triangulation_vertex_base_with_info_2.h>
-#include <CGAL/Delaunay_triangulation_2.h>
-#include <CGAL/Constrained_Delaunay_triangulation_2.h>
-#include <CGAL/Constrained_triangulation_plus_2.h>
-
 #include "delaunay2d.hpp"
+#include "gtsutils.hpp"
+#include "meshop.hpp"
 
 namespace geometry {
 
+namespace {
+
+const unsigned SUPER_IDX = unsigned(-1);
+
+GtsTriangle* enclosingTriangle(const math::Points2& points)
+{
+    GSList* list = nullptr;
+    for (const math::Point2& p : points) {
+        GtsPoint* point = gts_point_new(gts_point_class(), p(0), p(1), 0);
+        list = g_slist_prepend(list, point);
+    }
+    GtsTriangle* t = gts_triangle_enclosing(gts_triangle_class(), list, 10.);
+    GtsVertex *v1, *v2, *v3;
+    gts_triangle_vertices(t, &v1, &v2, &v3);
+    GTS_OBJECT(v1)->reserved = GINT_TO_POINTER(SUPER_IDX);
+    GTS_OBJECT(v2)->reserved = GINT_TO_POINTER(SUPER_IDX);
+    GTS_OBJECT(v3)->reserved = GINT_TO_POINTER(SUPER_IDX);
+    g_slist_free(list);
+    return t;
+}
+
+gint extractFace(GtsTriangle *t, std::vector<DTriangle>* triangles)
+{
+    GtsVertex *v1, *v2, *v3;
+    gts_triangle_vertices(t, &v1, &v2, &v3);
+    // retrieve the index from reserved
+    const unsigned i1 = GPOINTER_TO_UINT(GTS_OBJECT(v1)->reserved);
+    const unsigned i2 = GPOINTER_TO_UINT(GTS_OBJECT(v2)->reserved);
+    const unsigned i3 = GPOINTER_TO_UINT(GTS_OBJECT(v3)->reserved);
+    if (i1 != SUPER_IDX && i2 != SUPER_IDX && i3 != SUPER_IDX) {
+        triangles->emplace_back(DTriangle{ i1, i2, i3 });
+    }
+    return 0;
+}
+
+} // namespace
+
 std::vector<DTriangle> delaunayTriangulation2d(const math::Points2 &points)
 {
-    typedef CGAL::Exact_predicates_inexact_constructions_kernel      K;
-    typedef CGAL::Triangulation_vertex_base_with_info_2<unsigned, K> Vb;
-    typedef CGAL::Triangulation_data_structure_2<Vb>                 Tds;
-    typedef CGAL::Delaunay_triangulation_2<K, Tds>                   Delaunay;
-    typedef K::Point_2                                               Point;
+    checkGtsInitialized();
+    GtsSurface* gts = gts_surface_new(gts_surface_class(),
+                                      gts_face_class(),
+                                      gts_edge_class(),
+                                      gts_vertex_class());
+    GtsTriangle* super = enclosingTriangle(points);
+    GtsFace* f =
+        gts_face_new(gts_face_class(), super->e1, super->e2, super->e3);
+    gts_surface_add_face(gts, f);
 
-    std::vector<std::pair<Point, unsigned> > cgalPoints;
-    {
-        unsigned index = 0;
-        for (const auto &pt : points) {
-            cgalPoints.emplace_back(Point(pt(0), pt(1)), index++);
-        }
+    for (std::size_t i = 0; i < points.size(); ++i) {
+        const math::Point2& p = points[i];
+        GtsVertex* v = gts_vertex_new(gts_vertex_class(), p(0), p(1), 0);
+        // store the point index to reserved
+        GTS_OBJECT(v)->reserved = GUINT_TO_POINTER(i);
+        GtsVertex* v1 = gts_delaunay_add_vertex(gts, v, nullptr);
+        g_assert(v1 != v);
     }
-
-    Delaunay triangulation;
-    triangulation.insert(cgalPoints.begin(), cgalPoints.end());
 
     std::vector<DTriangle> triangles;
-    triangles.reserve(triangulation.number_of_faces());
+    gts_surface_foreach_face(gts, (GtsFunc)extractFace, &triangles);
 
-    for (auto fit = triangulation.finite_faces_begin();
-              fit != triangulation.finite_faces_end(); ++fit)
-    {
-        DTriangle indices;
-        for (int i = 0; i < 3; i++) {
-            indices[i] = fit->vertex(i)->info();
-        }
-        triangles.push_back(indices);
-    }
-
+    gts_object_destroy(GTS_OBJECT(gts));
     return triangles;
 }
-
-#ifdef GEOMETRY_HAS_CGAL_4_11
-void constrainedDelaunayTriangulation2d(
-        const math::Points2 &points,
-        const std::vector<DEdge> &constrained_edges,
-        math::Points2 &out_points,
-        std::vector<DTriangle> &triangles)
-{
-    // adapted from
-    // cgal/Triangulation_2/examples/Triangulation_2/polylines_triangulation.cpp
-
-    typedef CGAL::Exact_predicates_exact_constructions_kernel                  K;
-    typedef CGAL::Exact_intersections_tag                                   Itag;
-    typedef CGAL::Constrained_Delaunay_triangulation_2<K,CGAL::Default,Itag> CDT;
-    typedef CGAL::Constrained_triangulation_plus_2<CDT>                     CDTP;
-
-    std::vector<K::Point_2> cgalPoints;
-    cgalPoints.reserve(points.size());
-    for (const auto &p : points) {
-        cgalPoints.emplace_back(p(0), p(1));
-    }
-
-    // build triangulation
-    CDTP cdtp;
-    for (const auto &ce : constrained_edges)
-    {
-        cdtp.insert_constraint(cgalPoints[ce[0]], cgalPoints[ce[1]]);
-    }
-    cdtp.insert(cgalPoints.begin(), cgalPoints.end());
-
-    // return new points
-    out_points.clear();
-    out_points.reserve(cdtp.tds().vertices().size());
-
-    for (const auto &v : cdtp.tds().vertices())
-    {
-        out_points.emplace_back(CGAL::to_double(v.point().x()),
-                                CGAL::to_double(v.point().y()));
-    }
-
-    // return triangles
-    triangles.clear();
-    triangles.reserve(cdtp.number_of_faces());
-
-    for (auto fit = cdtp.finite_faces_begin();
-              fit != cdtp.finite_faces_end(); ++fit)
-    {
-        DTriangle indices;
-        for (int i = 0; i < 3; i++) {
-            indices[i] = cdtp.tds().vertices().index(fit->vertex(i));
-        }
-        triangles.push_back(indices);
-    }
-}
-#endif
 
 } // namespace geometry
