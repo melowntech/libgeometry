@@ -619,7 +619,8 @@ public :
     std::vector<FPosition_s>
         isosurfaceCubes( const Value_t & threshold,
             const SurfaceOrientation_t orientation = TO_MIN,
-            const boost::optional<math::Extents3> &ext = boost::none ) const;
+            const boost::optional<math::Extents3> &ext = boost::none,
+            const boost::optional<math::Extents3> &next = boost::none) const;
 
     /**
      * Extract isosurface with given algorithm.
@@ -629,7 +630,8 @@ public :
             const Value_t & threshold
           , const SurfaceOrientation_t orientation = TO_MIN
           , const IsosurfaceAlgorithm_t algorithm = M_CUBES
-          , const boost::optional<math::Extents3> &ext = boost::none);
+          , const boost::optional<math::Extents3> &ext = boost::none
+          , const boost::optional<math::Extents3> &next = boost::none);
 
 private:
     void isoFromCube(
@@ -2093,7 +2095,8 @@ std::vector<typename VolumeBase_t::FPosition_s>
 ScalarField_t<Value_t, Container_t>::isosurfaceCubes(
       const Value_t & threshold
     , const SurfaceOrientation_t orientation
-    , const boost::optional<math::Extents3> &ext ) const
+    , const boost::optional<math::Extents3> &ext
+    , const boost::optional<math::Extents3> &next ) const
 {
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
     // typedef typename VolumeBase_t::Position_s Position_s;
@@ -2139,6 +2142,16 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes(
                     for (uint c(0); (c < 8) && skip; ++c) {
                         const auto &v(vertices[c]);
                         skip = !(inside(*ext, v.x, v.y, v.z));
+                    }
+
+                    if (skip) continue;
+                }
+
+                if (next) {
+                    bool skip(true);
+                    for (uint c(0); (c < 8) && skip; ++c) {
+                        const auto &v(vertices[c]);
+                        skip = inside(*next, v.x, v.y, v.z);
                     }
 
                     if (skip) continue;
@@ -2266,7 +2279,8 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
               const Value_t & threshold
             , const SurfaceOrientation_t orientation
             , const IsosurfaceAlgorithm_t algorithm
-            , const boost::optional<math::Extents3> &ext)
+            , const boost::optional<math::Extents3> &ext
+            , const boost::optional<math::Extents3> &next)
 {
 
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
@@ -2276,7 +2290,7 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
     std::vector<FPosition_s> vertices;
     switch(algorithm){
     case M_CUBES:
-        vertices = this->isosurfaceCubes(threshold,orientation,ext);
+        vertices = this->isosurfaceCubes(threshold,orientation,ext, next);
         break;
     case M_TETRAHEDRONS:
         vertices = this->isosurfaceTetrahedrons(threshold,orientation,ext);
