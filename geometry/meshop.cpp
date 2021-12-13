@@ -41,6 +41,7 @@
 #include "utility/small_list.hpp"
 
 #include <set>
+#include <boost/algorithm/string/trim.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -266,6 +267,7 @@ Mesh loadPly( const boost::filesystem::path &filename )
     int nvert = -1, ntris = -1;
     do {
         if (getline(f, line).eof()) break;
+        boost::algorithm::trim(line);
         sscanf(line.c_str(), "element vertex %d", &nvert);
         sscanf(line.c_str(), "element face %d", &ntris);
     } while (line != "end_header");
