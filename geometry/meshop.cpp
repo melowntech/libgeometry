@@ -515,6 +515,7 @@ bool hasProperties(std::ifstream& f,
 
         if (props[i] != prop) { return false; }
         if (getline(f, line).eof()) { return false; }
+        boost::algorithm::trim(line);
     }
 
     return true;
@@ -549,10 +550,11 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
     do
     {
         if (getline(f, line).eof()) { break; }
-
+        boost::algorithm::trim(line);
         if (sscanf(line.c_str(), "element vertex %d", &nvert))
         {
             if (getline(f, line).eof()) { break; }
+            boost::algorithm::trim(line);
             utility::expect(hasProperties(f, line, { "x", "y", "z" }),
                             "Vertices have to have properties x, y, z");
             if (hasProperties(f, line, { "red", "green", "blue" }))
@@ -572,9 +574,11 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
         if (sscanf(line.c_str(), "element face %d", &ntris))
         {
             if (getline(f, line).eof()) { break; }
+            boost::algorithm::trim(line);
             utility::expect(line == "property list uchar int vertex_indices",
                             "Faces have to have list property");
             if (getline(f, line).eof()) { break; }
+            boost::algorithm::trim(line);
             if (hasProperties(f, line, { "red", "green", "blue" }))
             {
                 hasFaceColors = true;
