@@ -207,7 +207,9 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
-    std::ofstream out(filepath.string().c_str());
+    std::ofstream out;
+    out.exceptions(std::ios::badbit | std::ios::failbit);
+    out.open(filepath.string(), std::ios_base::out | std::ios_base::trunc);
     out.setf(std::ios::scientific, std::ios::floatfield);
 
     unsigned validFaces(0);
@@ -261,7 +263,9 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
 {
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
-    std::ofstream out(filepath.string().c_str());
+    std::ofstream out;
+    out.exceptions(std::ios::badbit | std::ios::failbit);
+    out.open(filepath.string(), std::ios_base::out | std::ios_base::trunc);
     out.setf(std::ios::scientific, std::ios::floatfield);
 
     // create header
