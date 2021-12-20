@@ -279,7 +279,7 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
         << "property float y\n"
         << "property float z\n";
 
-    if (vertexColors.size())
+    if (!vertexColors.empty())
     {
         utility::expect(vertexColors.size() == mesh.vertices.size(),
                         "Length of vertexColors must be the same as number of "
@@ -289,7 +289,7 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
             << "property uchar blue\n";
     }
 
-    if (vertexNormals.size())
+    if (!vertexNormals.empty())
     {
         utility::expect(vertexNormals.size() == mesh.vertices.size(),
                         "Length of vertexNormals must be the same as number of "
@@ -302,7 +302,7 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
     out << "element face " << validFaces << '\n'
         << "property list uchar int vertex_indices\n";
 
-    if (faceColors.size())
+    if (!faceColors.empty())
     {
         utility::expect(faceColors.size() == validFaces,
                         "Length of faceColors must be the same as number of "
@@ -312,7 +312,7 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
             << "property uchar blue\n";
     }
 
-    if (faceLabels.size()) { out << "property int label\n"; }
+    if (!faceLabels.empty()) { out << "property int label\n"; }
 
     out << "end_header\n";
 
@@ -321,12 +321,12 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
     {
         auto& vertex = mesh.vertices[i];
         out << vertex(0) << ' ' << vertex(1) << ' ' << vertex(2);
-        if (vertexColors.size())
+        if (!vertexColors.empty())
         {
             auto& color = vertexColors[i];
             out << ' ' << color(0) << ' ' << color(1) << ' ' << color(2);
         }
-        if (vertexNormals.size())
+        if (!vertexNormals.empty())
         {
             auto& norm = vertexNormals[i];
             out << ' ' << norm(0) << ' ' << norm(1) << ' ' << norm(2);
@@ -346,12 +346,12 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
         }
 
         out << "3 " << face.a << ' ' << face.b << ' ' << face.c;
-        if (faceColors.size())
+        if (!faceColors.empty())
         {
             auto& color = faceColors[i];
             out << ' ' << color(0) << ' ' << color(1) << ' ' << color(2);
         }
-        if (faceLabels.size()) { out << ' ' << faceLabels[i]; }
+        if (!faceLabels.empty()) { out << ' ' << faceLabels[i]; }
         out << '\n';
     }
 
