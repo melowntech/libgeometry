@@ -264,12 +264,6 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
     std::ofstream out(filepath.string().c_str());
     out.setf(std::ios::scientific, std::ios::floatfield);
 
-    unsigned validFaces(0);
-    for (const auto& face : mesh.faces)
-    {
-        if (!face.degenerate() && mesh.good(face)) validFaces++;
-    }
-
     // create header
     out << "ply\n"
         << "format ascii 1.0\n"
@@ -309,18 +303,18 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
             << "property float nz\n";
     }
 
-    out << "element face " << validFaces << '\n'
+    out << "element face " << mesh.faces.size() << '\n'
         << "property list uchar int vertex_indices\n";
 
     if (!faceColors.empty())
     {
-        if (faceColors.size() != validFaces)
+        if (faceColors.size() != mesh.faces.size())
         {
             LOGTHROW(err4, std::runtime_error)
                 << "Length of faceColors (" << faceColors.size()
                 << ") is not the same as the number of "
-                   "valid mesh faces ("
-                << validFaces << ").";
+                   "mesh faces ("
+                << mesh.faces.size() << ").";
         }
         out << "property uchar red\n"
             << "property uchar green\n"
@@ -353,12 +347,6 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
     for (std::size_t i = 0; i < mesh.faces.size(); i++)
     {
         auto& face = mesh.faces[i];
-        if (face.degenerate()) { continue; }
-        if (!mesh.good(face))
-        {
-            LOG(warn2) << "Invalid vertex index in face.";
-            continue;
-        }
 
         out << "3 " << face.a << ' ' << face.b << ' ' << face.c;
         if (!faceColors.empty())
