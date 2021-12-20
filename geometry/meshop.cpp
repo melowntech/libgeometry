@@ -328,16 +328,16 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
     // write vertices
     for (std::size_t i = 0; i < mesh.vertices.size(); i++)
     {
-        auto& vertex = mesh.vertices[i];
+        const auto& vertex = mesh.vertices[i];
         out << vertex(0) << ' ' << vertex(1) << ' ' << vertex(2);
         if (!vertexColors.empty())
         {
-            auto& color = vertexColors[i];
+            const auto& color = vertexColors[i];
             out << ' ' << color(0) << ' ' << color(1) << ' ' << color(2);
         }
         if (!vertexNormals.empty())
         {
-            auto& norm = vertexNormals[i];
+            const auto& norm = vertexNormals[i];
             out << ' ' << norm(0) << ' ' << norm(1) << ' ' << norm(2);
         }
         out << '\n';
@@ -346,12 +346,11 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
     // write faces
     for (std::size_t i = 0; i < mesh.faces.size(); i++)
     {
-        auto& face = mesh.faces[i];
-
+        const auto& face = mesh.faces[i];
         out << "3 " << face.a << ' ' << face.b << ' ' << face.c;
         if (!faceColors.empty())
         {
-            auto& color = faceColors[i];
+            const auto& color = faceColors[i];
             out << ' ' << color(0) << ' ' << color(1) << ' ' << color(2);
         }
         if (!faceLabels.empty()) { out << ' ' << faceLabels[i]; }
