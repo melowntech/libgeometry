@@ -508,6 +508,17 @@ Mesh loadObj(const boost::filesystem::path &filename, ObjMaterial *mtl)
     return parser_.mesh;
 }
 
+/// Helper to check iterator end
+void throwIterEnd(const std::istream_iterator<std::string>& it,
+                  const std::string& line)
+{
+    if (it == std::istream_iterator<std::string>())
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Unexpected end parsing property line: " << line;
+    }
+}
+
 /// Check that the following lines contain properties in the given order
 bool hasProperties(std::ifstream& f,
                    std::string& line,
@@ -515,11 +526,27 @@ bool hasProperties(std::ifstream& f,
 {
     for (std::size_t i = 0; i < props.size(); ++i)
     {
-        char pType[20];
-        char prop[20];
-        sscanf(line.c_str(), "property %s %s", pType, prop);
+        // parse property type and name
+        std::string pType, pName;
 
-        if (props[i] != prop) { return false; }
+        std::istringstream iss(line);
+        auto it = std::istream_iterator<std::string>(iss);
+        throwIterEnd(it, line);
+
+        if(*it != "property"){
+            return false;
+        }
+
+        ++it;
+        throwIterEnd(it, line);
+        pType = *it;
+
+        ++it;
+        throwIterEnd(it, line);
+        pName = *it;
+
+        // check the name
+        if (props[i] != pName) { return false; }
         if (getline(f, line).eof()) { return false; }
         boost::algorithm::trim(line);
     }
