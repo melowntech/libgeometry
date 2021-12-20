@@ -281,9 +281,14 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
 
     if (!vertexColors.empty())
     {
-        utility::expect(vertexColors.size() == mesh.vertices.size(),
-                        "Length of vertexColors must be the same as number of "
-                        "mesh vertices.");
+        if (vertexColors.size() != mesh.vertices.size())
+        {
+            LOGTHROW(err4, std::runtime_error)
+                << "Length of vertexColors (" << vertexColors.size()
+                << ") is not the same as the number of "
+                   "mesh vertices ("
+                << mesh.vertices.size() << ").";
+        }
         out << "property uchar red\n"
             << "property uchar green\n"
             << "property uchar blue\n";
@@ -291,9 +296,14 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
 
     if (!vertexNormals.empty())
     {
-        utility::expect(vertexNormals.size() == mesh.vertices.size(),
-                        "Length of vertexNormals must be the same as number of "
-                        "mesh vertices.");
+        if (vertexNormals.size() != mesh.vertices.size())
+        {
+            LOGTHROW(err4, std::runtime_error)
+                << "Length of vertexNormals (" << vertexNormals.size()
+                << ") is not the same as the number of "
+                   "mesh vertices ("
+                << mesh.vertices.size() << ").";
+        }
         out << "property float nx\n"
             << "property float ny\n"
             << "property float nz\n";
@@ -304,9 +314,14 @@ void saveAsPlyWithFeatures(const boost::filesystem::path& filepath,
 
     if (!faceColors.empty())
     {
-        utility::expect(faceColors.size() == validFaces,
-                        "Length of faceColors must be the same as number of "
-                        "valid mesh vertices.");
+        if (faceColors.size() != validFaces)
+        {
+            LOGTHROW(err4, std::runtime_error)
+                << "Length of faceColors (" << faceColors.size()
+                << ") is not the same as the number of "
+                   "valid mesh faces ("
+                << validFaces << ").";
+        }
         out << "property uchar red\n"
             << "property uchar green\n"
             << "property uchar blue\n";
@@ -555,8 +570,11 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
         {
             if (getline(f, line).eof()) { break; }
             boost::algorithm::trim(line);
-            utility::expect(hasProperties(f, line, { "x", "y", "z" }),
-                            "Vertices have to have properties x, y, z");
+            if (!hasProperties(f, line, { "x", "y", "z" }))
+            {
+                LOGTHROW(err4, std::runtime_error)
+                    << "Vertices have to have properties x, y, z";
+            }
             if (hasProperties(f, line, { "red", "green", "blue" }))
             {
                 hasVertexColors = true;
@@ -575,8 +593,11 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
         {
             if (getline(f, line).eof()) { break; }
             boost::algorithm::trim(line);
-            utility::expect(line == "property list uchar int vertex_indices",
-                            "Faces have to have list property");
+            if (line != "property list uchar int vertex_indices")
+            {
+                LOGTHROW(err4, std::runtime_error)
+                    << "Faces have to have list property";
+            }
             if (getline(f, line).eof()) { break; }
             boost::algorithm::trim(line);
             if (hasProperties(f, line, { "red", "green", "blue" }))
@@ -633,7 +654,11 @@ Mesh loadPlyWithFeatures(const boost::filesystem::path& filename,
     {
         int n, a, b, c;
         f >> n >> a >> b >> c;
-        utility::expect(n == 3, "Only triangles are supported in PLY files.");
+        if(n != 3)
+        {
+            LOGTHROW(err4, std::runtime_error)
+                << "Only triangles are supported in PLY files.";
+        }
         mesh.faces.emplace_back(a, b, c);
 
         if (hasFaceColors)
