@@ -164,7 +164,7 @@ constexpr double eps = 1e-9;
 template <typename FaceLabels>
 FacePlaneCrs MultiPolyMesh<FaceLabels>::getFaceCrs(std::size_t faceIdx) const
 {
-    auto& ob = faces[faceIdx][0];
+    const auto& ob = faces[faceIdx][0];
     math::Point3 p1 = vertices[ob[0]];
 
     std::size_t i = 1;
@@ -202,7 +202,7 @@ FacePlaneCrs MultiPolyMesh<FaceLabels>::getFaceCrs(std::size_t faceIdx) const
 
     // check that the outer boundary has positive area when transformed
     math::Points2 pts2D;
-    for (auto& v : ob)
+    for (const auto& v : ob)
     {
         pts2D.push_back(crs.to2D(vertices[v]));
     }
@@ -266,13 +266,13 @@ Mesh MultiPolyMesh<FaceLabels>::triangulateFaces(
         std::vector<TriangleItPair> triangles
             = multipolygonTriangulateGts(poly2D);
 
-        for (auto& t : triangles)
+        for (const auto& t : triangles)
         {
             std::size_t v1 = itPair2Vertex(t[0], poly2D, mpFace);
             std::size_t v2 = itPair2Vertex(t[1], poly2D, mpFace);
             std::size_t v3 = itPair2Vertex(t[2], poly2D, mpFace);
             triMesh.addFace(v1, v2, v3);
-            if (faceLabels.size() && triFaceLabels)
+            if (!faceLabels.empty() && triFaceLabels)
             {
                 triFaceLabels->push_back(faceLabels[fIdx]);
             }
