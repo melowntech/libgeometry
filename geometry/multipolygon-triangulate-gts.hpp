@@ -38,11 +38,11 @@
 
 namespace geometry {
 
-typedef math::MultiPolygon::const_iterator PolygonIt;
-typedef math::Polygon::const_iterator PointIt;
-typedef std::pair<PolygonIt, PointIt> ItPair;
+using PolygonIt = math::MultiPolygon::const_iterator;
+using PointIt = math::Polygon::const_iterator;
+using ItPair = std::pair<PolygonIt, PointIt>;
 
-typedef std::array<ItPair, 3> TriangleItPair;
+using TriangleItPair = std::array<ItPair, 3>;
 
 /**
  * Triangulate a general multipolygon (with holes).

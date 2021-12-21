@@ -92,7 +92,7 @@ public:
  *
  * First chain - outer boundary (CCW) - is followed by holes (CW).
  */
-typedef std::vector<std::vector<std::size_t>> MultiPolyFace;
+using MultiPolyFace = std::vector<std::vector<std::size_t>>;
 
 /**
  * Mesh with multipolygonal faces (i.e. polygons with holes)
