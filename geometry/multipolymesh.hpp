@@ -150,7 +150,7 @@ struct MultiPolyMesh
      *                           (generated if `faceLabels` is not empty)
      * @returns triangular mesh
      */
-    Mesh triangulateFaces(std::vector<FaceLabels>* triFaceLabels
+    Mesh triangulateFaces(std::vector<FaceLabels>* const triFaceLabels
                           = nullptr) const;
 };
 
@@ -235,7 +235,7 @@ inline std::size_t itPair2Vertex(const ItPair& itPair,
 
 template <typename FaceLabels>
 Mesh MultiPolyMesh<FaceLabels>::triangulateFaces(
-    std::vector<FaceLabels>* triFaceLabels) const
+    std::vector<FaceLabels>* const triFaceLabels) const
 {
     Mesh triMesh;
     if (triFaceLabels) { triFaceLabels->clear(); }
