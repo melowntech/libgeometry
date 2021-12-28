@@ -125,6 +125,8 @@ set(geometry_SOURCES
 
   multipolymesh.hpp multipolymesh.cpp
 
+  parse-ply.cpp parse-ply.hpp
+
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}
   ${geometry_OPENCV_SOURCES}
