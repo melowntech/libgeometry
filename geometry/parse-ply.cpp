@@ -24,10 +24,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  @file geometry/parse-ply.cpp
- *  @author Tomas Novak <tomas.novak@melowntech.com>
+ * @file geometry/parse-ply.cpp
+ * @author Tomas Novak <tomas.novak@melowntech.com>
  *
- *  Simple PLY parser
+ * PLY parser that allows loading ply files using simple interface
+ * 
+ * Specify your own `PlyParserBase` child and load any ply you want!
  */
 
 #include "parse-ply.hpp"
@@ -42,7 +44,8 @@ inline void throwOnEof(const std::ifstream& f)
 {
     if (f.eof())
     {
-        LOGTHROW(err4, std::runtime_error) << "Unexpected EOF reached while parsing PLY header";
+        LOGTHROW(err4, std::runtime_error)
+            << "Unexpected EOF reached while parsing PLY header";
     }
 }
 
@@ -155,8 +158,7 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
         LOGTHROW(err4, std::runtime_error)
             << "Unable to open file " << path << ">.";
     }
-    // not setting std::ios::failbit - std::getline() sets failbit *and* eof
-    // when reaching the end
+    // not setting failbit - is set on eof
     f.exceptions(std::ios::badbit);
 
     // load header
@@ -203,25 +205,42 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
     idx = 0;
     std::size_t fRead = 0;
     std::size_t vRead = 0;
-    std::string line;
-    while(std::getline(f, line))
+    while (!f.eof())
     {
-        ba::trim(line);
+        f.peek(); // skip last line at EOF
+        if (f.eof()) { break; }
+
         if (idx >= fStart && idx < fEnd)
         {
-            parser.addFace(line);
+            parser.addFace(f);
             ++fRead;
         }
         else if (idx >= vStart && idx < vEnd)
         {
-            parser.addVertex(line);
+            parser.addVertex(f);
             ++vRead;
         }
         else
         {
-            parser.addOtherElement(line, idx);
+            parser.addOtherElement(f, idx);
         }
+
         ++idx;
+
+        // deal with newline character
+        char c;
+        f.get(c);
+        if (f.eof()) { break; } // no newline at the end of file
+        if ((c != '\r') && (c != '\n'))
+        {
+            LOGTHROW(err4, std::runtime_error)
+                << "Parser did not reach the EOL - next character: " << c;
+        }
+        if (c == '\r') // deal with "\r\n" or "\r" eol
+        {
+            c = f.peek();
+            if (c == '\n') { f.get(c); }
+        }
     }
 
     // check that the number of loaded elements corresponds to the header
@@ -246,97 +265,5 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
 
     f.close();
 }
-
-
-Mesh loadPlyExperiment(const fs::path& path)
-{
-    class SimplePlyParser : public PlyParserBase
-    {
-    public:
-        Mesh mesh;
-
-        void loadHeader(const std::vector<PlyElement>& elements) override
-        {
-            for (const auto& el : elements)
-            {
-                if (el.name == "vertex")
-                {
-                    mesh.vertices.reserve(el.count);
-
-                    // check vertex properties
-                    if (el.props.size() != 3)
-                    {
-                        LOGTHROW(err4, std::runtime_error)
-                            << "No additional vertex properties supported in "
-                               "simple parser";
-                    }
-                    utility::expect(el.props[0].name == "x");
-                    utility::expect(el.props[1].name == "y");
-                    utility::expect(el.props[2].name == "z");
-                }
-                else if (el.name == "face")
-                {
-                    mesh.faces.reserve(el.count);
-
-                    // check face properties
-                    if (el.props.size() != 1)
-                    {
-                        LOGTHROW(err4, std::runtime_error)
-                            << "No additional face properties supported in "
-                               "simple parser";
-                    }
-                    if (!ba::starts_with(el.props[0].type, "list"))
-                    {
-                        LOGTHROW(err4, std::runtime_error)
-                            << "Expected face property type to be a list, but "
-                               "got: "
-                            << el.props[0].type;
-                    }
-                    // does not check the name which should generally be
-                    // "vertex_index" but might vary
-                }
-                else
-                {
-                    LOGTHROW(err4, std::runtime_error)
-                        << "Unexpected element in header - not supported by "
-                           "simple parser: "
-                        << el.name;
-                }
-            }
-        }
-
-        void addVertex(const std::string& l) override
-        {
-            auto iss = std::istringstream(l);
-            double x, y, z;
-            iss >> x >> y >> z;
-            mesh.vertices.emplace_back(x, y, z);
-        }
-
-        void addFace(const std::string& l) override
-        {
-            auto iss = std::istringstream(l);
-            int n, a, b, c;
-            iss >> n >> a >> b >> c;
-            if (n != 3)
-            {
-                LOGTHROW(err4, std::runtime_error)
-                    << "Simple parser only supports loading triangular meshes, "
-                       "but got face: "
-                    << l;
-            }
-            mesh.faces.emplace_back(a, b, c);
-        }
-    } simpleParser;
-
-    parsePly(simpleParser, path);
-
-    LOG(info1) << "Loaded mesh with " << simpleParser.mesh.vertices.size()
-               << " vertices and " << simpleParser.mesh.faces.size()
-               << " faces";
-
-    return simpleParser.mesh;
-}
-
 
 }  // namespace geometry

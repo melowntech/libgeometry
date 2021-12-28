@@ -24,14 +24,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  @file geometry/parse-ply.hpp
- *  @author Tomas Novak <tomas.novak@melowntech.com>
+ * @file geometry/parse-ply.hpp
+ * @author Tomas Novak <tomas.novak@melowntech.com>
  *
- *  Simple PLY parser
+ * PLY parser that allows loading ply files using simple interface
+ *
+ * Specify your own `PlyParserBase` child and load any ply you want!
  */
 
-#ifndef geometry_plyparser_hpp_included_
-#define geometry_plyparser_hpp_included_
+#ifndef geometry_parseply_hpp_included_
+#define geometry_parseply_hpp_included_
 
 #include <sstream>
 #include <string>
@@ -110,29 +112,37 @@ public:
     virtual void loadHeader(const std::vector<PlyElement>& elements) = 0;
 
     /**
-     * Parses a line corresponding to a vertex element
-     * 
-     * @param[in] l the line (stripped of leading/trailing whitespace)
+     * Reads properties corresponding to a vertex element
+     *
+     * The function reads all properties of a vertex (as specified in header),
+     * but leaves the newline character(s) in place.
+     *
+     * @param[in] f stream to read the properties from
      */
-    virtual void addVertex(const std::string& l) = 0;
+    virtual void addVertex(std::istream& f) = 0;
 
     /**
-     * Parses a line corresponding to a face element
+     * Reads properties corresponding to a face element
      * 
-     * @param[in] l the line (stripped of leading/trailing whitespace)
+     * The function reads all properties of a face (as specified in header),
+     * but leaves the newline character(s) in place.
+     *
+     * @param[in] f stream to read the properties from
      */
-    virtual void addFace(const std::string& l) = 0;
+    virtual void addFace(std::istream& f) = 0;
 
     /**
-     * Parses some other element
+     * Reads properties of elements other than "vertex" and "face"
      *
-     * Other elements are not usual in PLY files, but possible.
+     * Other elements are not common in PLY files, but possible.
+     * The function reads all properties of an element (as specified in header),
+     * but leaves the newline character(s) in place.
      *
-     * @param[in] l the line (stripped of leading/trailing whitespace)
+     * @param[in] f stream to read the properties from
      * @param[in] idx line index to infer element type (line after "end_header"
      *                has idx=0)
      */
-    void addOtherElement(const std::string& /* l */,
+    void addOtherElement(std::istream& /* f */,
                          const std::size_t /* idx */)
     {
         LOGTHROW(err4, std::runtime_error)
@@ -148,11 +158,6 @@ public:
  */
 void parsePly(PlyParserBase& parser, const fs::path& path);
 
-/**
- * Experimental loading of simple ply files with the parser (do not use)
- */
-Mesh loadPlyExperiment(const fs::path& path);
-
 }  // namespace geometry
 
-#endif // geometry_plyparser_hpp_included_
+#endif // geometry_parseply_hpp_included_
