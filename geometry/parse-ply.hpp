@@ -67,6 +67,17 @@ struct PlyProperty
      * Property name
      */
     std::string name;
+
+    /**
+     * Construct a PlyProperty object
+     * 
+     * @param[in] type property type
+     * @param[in] name property name
+     */
+    PlyProperty(const std::string& type, const std::string& name)
+        : type(type),
+          name(name)
+    { }
 };
 
 /**
@@ -88,6 +99,17 @@ struct PlyElement
      * List of element properties
      */
     std::vector<PlyProperty> props;
+
+    /**
+     * Construct a PlyElement object with empty properties
+     *
+     * @param[in] name element name
+     * @param[in] count number of elements in file
+     */
+    PlyElement(const std::string& name, const std::size_t& count)
+        : name(name),
+          count(count)
+    { }
 };
 
 /**
@@ -104,12 +126,15 @@ public:
 
     /**
      * Accepts a list of elements with their properties as defined in header
-     * 
+     *
      * Called exactly once, before calling other methods.
-     * 
+     *
      * @param[in] elements vector containing elements of PLY file
+     * @param[in] comments vector containing comments in the header
      */
-    virtual void loadHeader(const std::vector<PlyElement>& elements) = 0;
+    virtual void loadHeader(const std::vector<PlyElement>& elements,
+                            const std::vector<std::string>& comments)
+        = 0;
 
     /**
      * Reads properties corresponding to a vertex element

@@ -378,7 +378,8 @@ Mesh loadPly(const boost::filesystem::path& filepath)
     public:
         Mesh mesh;
 
-        void loadHeader(const std::vector<PlyElement>& elements) override
+        void loadHeader(const std::vector<PlyElement>& elements,
+                        const std::vector<std::string>& /* comments */) override
         {
             for (const auto& el : elements)
             {

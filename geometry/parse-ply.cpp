@@ -49,104 +49,145 @@ inline void throwOnEof(const std::ifstream& f)
     }
 }
 
-/// Splits property line to name and type
-PlyProperty parseProperty(const std::string& line)
+/// Helper retrieving the next line of file, throws if EOF reached
+inline void nextLine(std::ifstream& f, std::string& line)
 {
-    PlyProperty prop;
+    std::getline(f, line);
+    ba::trim(line);
+    throwOnEof(f);
+}
+
+/// Splits property line to name and type
+bool parseProperty(const std::string& line, std::vector<PlyProperty>& props)
+{
+    if (!ba::starts_with(line, "property")) { return false; }
 
     std::size_t a = line.find_first_of(' ');
     std::size_t b = line.find_last_of(' ');
-
     if ((a == std::string::npos) || (a == b) || (b == line.size() - 1))
     {
         LOGTHROW(err4, std::runtime_error)
             << "Error parsing property line: " << line;
     }
 
-    prop.type = line.substr(a + 1, b - a - 1);
-    prop.name = line.substr(b + 1, line.size() - b - 1);
-    return prop;
+    props.emplace_back(line.substr(a + 1, b - a - 1),          // prop type
+                       line.substr(b + 1, line.size() - b - 1) // prop name
+
+    );
+    return true;
+}
+
+/// Checks if a line contains a comment and optionally parses it
+bool parseComment(const std::string& line, std::vector<std::string>& comments)
+{
+    if (!ba::starts_with(line, "comment")) { return false; }
+
+    comments.push_back(line.substr(7));
+    ba::trim(comments.back()); // trim leading spaces
+    return true;
 }
 
 /// Parses lines of one element (vertex, face, ...) in header
-/// After return, line contains a beginning of the next property or "end_header"
-PlyElement parseElement(std::ifstream& f, std::string& line)
+/// NB: After return, line contains a beginning of the next property, comment,
+/// or "end_header"
+bool parseElement(std::ifstream& f,
+                  std::string& line,
+                  std::vector<PlyElement>& elements,
+                  std::vector<std::string>& comments)
 {
+    if (!ba::starts_with(line, "element")) { return false; }
+
     std::string keyword, name;
     std::size_t count;
-
     if (!(std::istringstream(line) >> keyword >> name >> count))
     {
         LOGTHROW(err4, std::runtime_error)
             << "Error parsing element defined by: " << line;
     }
 
-    if (keyword != "element")
+    elements.emplace_back(name, count);
+    PlyElement& el = elements.back();
+    // parse the element properties
+    do
     {
-        LOGTHROW(err4, std::runtime_error)
-            << "Error parsing element - does not start with \"element\": "
-            << line;
+        nextLine(f, line);
     }
+    while (parseProperty(line, el.props) || parseComment(line, comments));
 
-    PlyElement element;
-    element.name = name;
-    element.count = count;
-
-    std::getline(f, line);
-    ba::trim(line);
-    throwOnEof(f);
-
-    while (ba::starts_with(line, "property"))
-    {
-        element.props.push_back(parseProperty(line));
-
-        std::getline(f, line);
-        ba::trim(line);
-        throwOnEof(f);
-    }
-
-    if (element.props.empty())
+    if (el.props.empty())
     {
         LOGTHROW(err4, std::runtime_error)
             << "Encountered element with no properties: " << name;
     }
 
-    return element;
+    return true;
 }
 
-/// Parses the header section of PLY file and returns a vector of elements with their properties
-std::vector<PlyElement> parseHeader(std::ifstream& f)
+/// Check "format" line in PLY file, throws on unexpected inputs
+void checkFormatLine(std::ifstream& f)
 {
     std::string line;
+    nextLine(f, line); // read whole line
 
-    std::getline(f, line);
-    ba::trim(line);
-    throwOnEof(f);
+    std::string keyword, format, version;
+    if (!(std::istringstream(line) >> keyword >> format >> version))
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Error parsing format line: " << line;
+    }
+    if (keyword != "format")
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Expected the second line to contain \"format\" specification";
+    }
+    if (format != "ascii")
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Only ASCII format is supported, got: " << format;
+    }
+}
 
-    std::vector<PlyElement> elements;
-
+/// Parses the header section of PLY file and returns a vector of elements with
+/// their properties and comments
+std::pair<std::vector<PlyElement>, std::vector<std::string>>
+    parseHeader(std::ifstream& f)
+{
+    // check magic number
+    std::string line; 
+    nextLine(f, line);
     if (line != "ply")
     {
         LOGTHROW(err4, std::runtime_error)
-            << "Unexpected start of PLY file: " << line;
+            << "Unexpected magic number of PLY file: " << line;
     }
 
+    // check line specifying PLY format ("format ascii 1.0")
+    checkFormatLine(f); 
+    
+    // parse elements & comments
+    std::vector<PlyElement> elements;
+    std::vector<std::string> comments;
+    nextLine(f, line);
     do
     {
-        if (ba::starts_with(line, "element"))
+        if (parseElement(f, line, elements, comments))
         {
-            elements.push_back(parseElement(f, line));
+            continue; // parseElement() jumps to the line after element
+                      // definition
         }
-        else
+        else if (!parseComment(line, comments))
         {
-            std::getline(f, line);
-            ba::trim(line);
-            throwOnEof(f);
+            LOGTHROW(err4, std::runtime_error)
+                << "Encountered unexpected line in header (not a comment nor "
+                   "element definition): "
+                << line;
         }
+
+        nextLine(f, line);
     }
     while (!ba::starts_with(line, "end_header"));
 
-    return elements;
+    return std::make_pair(std::move(elements), std::move(comments));
 }
 
 
@@ -156,14 +197,16 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
     std::ifstream f(path.native());
     if (!f.good()) {
         LOGTHROW(err4, std::runtime_error)
-            << "Unable to open file " << path << ">.";
+            << "Unable to open file " << path << ".";
     }
     // not setting failbit - is set on eof
     f.exceptions(std::ios::badbit);
 
     // load header
-    std::vector<PlyElement> elements = parseHeader(f);
-    parser.loadHeader(elements);
+    std::vector<PlyElement> elements;
+    std::vector<std::string> comments;
+    std::tie(elements, comments) = parseHeader(f);
+    parser.loadHeader(elements, comments);
     
     // get face/vertex range
     std::size_t fStart = 0;
