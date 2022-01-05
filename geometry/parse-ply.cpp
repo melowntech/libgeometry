@@ -34,8 +34,12 @@
 
 #include "parse-ply.hpp"
 
+#include <boost/algorithm/string.hpp>
+
 namespace geometry
 {
+
+namespace ba = boost::algorithm;
 
 /// Header parsing functions
 

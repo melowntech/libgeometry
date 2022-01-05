@@ -39,7 +39,6 @@
 #include <string>
 
 #include <boost/filesystem/path.hpp>
-#include <boost/algorithm/string.hpp>
 
 #include "dbglog/dbglog.hpp"
 
@@ -49,7 +48,6 @@ namespace geometry
 {
 
 namespace fs = boost::filesystem;
-namespace ba = boost::algorithm;
 
 /**
  * Property of element in PLY file (e.g. x, y, z, list of vertex indicies, ...)

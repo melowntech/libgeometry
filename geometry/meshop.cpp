@@ -42,13 +42,14 @@
 #include "utility/small_list.hpp"
 
 #include <set>
-#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace geometry {
 
 namespace ublas = boost::numeric::ublas;
+namespace ba = boost::algorithm;
 
 Obj asObj(const Mesh &mesh)
 {
