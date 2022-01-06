@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Melown Technologies SE
+ * Copyright (c) 2022 Melown Technologies SE
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -45,18 +45,38 @@ using ItPair = std::pair<PolygonIt, PointIt>;
 using TriangleItPair = std::array<ItPair, 3>;
 
 /**
- * Triangulate a general multipolygon (with holes).
+ * Triangulate a general multipolygon, return iterators pointing to input
  *
  * The function uses Constrained Delaunay triangulation implemented in GTS
  * library.
  *
- * @param[in] mpolygon input multipolygon (outer boundary CCW followed by inner
- *                     boundaries CW)
+ * @param[in] mpolygon input multipolygon (vector of polygons - first defines
+ *                     outer boundary (CCW orientation), followed by inner
+ *                     boundaries (CW orientation))
  * @return triangles with vertices defined by pairs of iterators - first
- *         pointing to the polygon in `mpolygon`, second to the vertex
+ *         pointing to a polygon in `mpolygon`, second to a vertex in polygon
  */
-std::vector<TriangleItPair> multipolygonTriangulateGts(
+std::vector<TriangleItPair> multipolygonTriangulateGtsToIters(
     const math::MultiPolygon& mpolygon)
+#ifndef GEOMETRY_HAS_GTS
+    UTILITY_FUNCTION_ERROR(
+        "Constrained Delaunay triangulation is available only when compiled "
+        "with GTS.")
+#endif
+        ;
+
+/**
+ * Triangulate a general multipolygon
+ *
+ * The function uses Constrained Delaunay triangulation implemented in GTS
+ * library.
+ *
+ * @param[in] mpolygon input multipolygon (vector of polygons - first defines
+ *                     outer boundary (CCW orientation), followed by inner
+ *                     boundaries (CW orientation))
+ * @return triangles composing the polygon (without holes)
+ */
+math::Triangles2d multipolygonTriangulateGts(const math::MultiPolygon& mpolygon)
 #ifndef GEOMETRY_HAS_GTS
     UTILITY_FUNCTION_ERROR(
         "Constrained Delaunay triangulation is available only when compiled "

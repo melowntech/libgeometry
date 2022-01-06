@@ -264,7 +264,7 @@ Mesh MultiPolyMesh<FaceLabels>::triangulateFaces(
         }
 
         std::vector<TriangleItPair> triangles
-            = multipolygonTriangulateGts(poly2D);
+            = multipolygonTriangulateGtsToIters(poly2D);
 
         for (const auto& t : triangles)
         {

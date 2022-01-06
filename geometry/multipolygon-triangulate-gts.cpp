@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Melown Technologies SE
+ * Copyright (c) 2022 Melown Technologies SE
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -79,7 +79,7 @@ gint extractTriangle(GtsTriangle* t, TriData* data)
 }
 
 std::vector<TriangleItPair>
-    multipolygonTriangulateGts(const math::MultiPolygon& mpolygon)
+    multipolygonTriangulateGtsToIters(const math::MultiPolygon& mpolygon)
 {
     geometry::checkGtsInitialized();
 
@@ -192,6 +192,19 @@ std::vector<TriangleItPair>
     gts_object_destroy(GTS_OBJECT(s));
 
     return tridata.triangles;
+}
+
+math::Triangles2d multipolygonTriangulateGts(const math::MultiPolygon& mpolygon)
+{
+    std::vector<TriangleItPair> iters(
+        multipolygonTriangulateGtsToIters(mpolygon));
+
+    math::Triangles2d tris;
+    for (const auto& itTri : iters)
+    {
+        tris.push_back({*itTri[0].second, *itTri[1].second, *itTri[2].second});
+    }
+    return tris;
 }
 
 } // namespace geometry
