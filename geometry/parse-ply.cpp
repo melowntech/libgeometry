@@ -195,12 +195,12 @@ std::pair<std::vector<PlyElement>, std::vector<std::string>>
     return std::make_pair(std::move(elements), std::move(comments));
 }
 
-
 void parsePly(PlyParserBase& parser, const fs::path& path)
 {
     LOG(info1) << "Loading PLY file from " << path << ".";
     std::ifstream f(path.native());
-    if (!f.good()) {
+    if (!f.good())
+    {
         LOGTHROW(err4, std::runtime_error)
             << "Unable to open file " << path << ".";
     }
@@ -211,13 +211,13 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
     std::vector<std::string> comments;
     std::tie(elements, comments) = parseHeader(f);
     parser.loadHeader(elements, comments);
-    
+
     // get face/vertex range
     std::size_t fStart = 0;
     std::size_t fEnd = 0;
     std::size_t vStart = 0;
     std::size_t vEnd = 0;
-    
+
     std::size_t idx = 0;
     for (const auto& el : elements)
     {
@@ -243,20 +243,16 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
         }
         idx += el.count;
     }
-    std::size_t totNum = idx;  // expected number of lines
+    std::size_t totNum = idx; // expected number of lines
 
     LOG(info1) << "Expecting vertices on lines " << vStart << " - " << vEnd
                << "; faces on lines " << fStart << " - " << fEnd;
 
     // read the rest of the file
-    idx = 0;
     std::size_t fRead = 0;
     std::size_t vRead = 0;
-    while (!f.eof())
+    for (idx = 0; idx < totNum; ++idx)
     {
-        f.peek(); // skip last line at EOF
-        if (f.eof()) { break; }
-
         if (idx >= fStart && idx < fEnd)
         {
             parser.addFace(f);
@@ -271,43 +267,6 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
         {
             parser.addOtherElement(f, idx);
         }
-
-        ++idx;
-
-        // deal with newline character
-        char c;
-        f.get(c);
-        if (f.eof()) { break; } // no newline at the end of file
-        if ((c != '\r') && (c != '\n'))
-        {
-            LOGTHROW(err4, std::runtime_error)
-                << "Parser did not reach the EOL - next character: " << c;
-        }
-        if (c == '\r') // deal with "\r\n" or "\r" eol
-        {
-            c = f.peek();
-            if (c == '\n') { f.get(c); }
-        }
-    }
-
-    // check that the number of loaded elements corresponds to the header
-    if ((fEnd - fStart) != fRead)
-    {
-        LOG(warn4)
-            << "Expected " << fEnd - fStart << " faces (from header) but found "
-            << fRead;
-    }
-    if ((vEnd - vStart) != vRead)
-    {
-        LOG(warn4)
-            << "Expected " << vEnd - vStart
-            << " vertices (from header) but found " << vRead;
-    }
-    if (idx != totNum)
-    {
-        LOG(warn4)
-            << "Expected " << totNum << " lines (from header) but found "
-            << idx;
     }
 
     f.close();
