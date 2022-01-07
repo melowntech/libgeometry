@@ -150,6 +150,11 @@ void checkFormatLine(std::ifstream& f)
         LOGTHROW(err4, std::runtime_error)
             << "Only ASCII format is supported, got: " << format;
     }
+    if (version != "1.0")
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Only PLY version 1.0 supported, got: " << version;
+    }
 }
 
 /// Parses the header section of PLY file and returns a vector of elements with
