@@ -43,22 +43,23 @@ namespace ba = boost::algorithm;
 
 /// Header parsing functions
 
-/// Helper that throws and exception if EOF bit is set
-inline void throwOnEof(const std::ifstream& f)
-{
-    if (f.eof())
-    {
-        LOGTHROW(err4, std::runtime_error)
-            << "Unexpected EOF reached while parsing PLY header";
-    }
-}
-
 /// Helper retrieving the next line of file, throws if EOF reached
 inline void nextLine(std::ifstream& f, std::string& line)
 {
-    std::getline(f, line);
+    try
+    {
+        std::getline(f, line);
+    }
+    catch (const std::exception& e)
+    {
+        if (f.eof())
+        {
+            LOGTHROW(err4, std::runtime_error)
+                << "Unexpected EOF reached while parsing PLY header";
+        }
+        throw e;
+    }
     ba::trim(line);
-    throwOnEof(f);
 }
 
 /// Splits property line to name and type
@@ -203,8 +204,7 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
         LOGTHROW(err4, std::runtime_error)
             << "Unable to open file " << path << ".";
     }
-    // not setting failbit - is set on eof
-    f.exceptions(std::ios::badbit);
+    f.exceptions(std::ios::badbit | std::ios::failbit);
 
     // load header
     std::vector<PlyElement> elements;
