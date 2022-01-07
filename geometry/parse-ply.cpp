@@ -102,12 +102,34 @@ bool parseElement(std::ifstream& f,
 {
     if (!ba::starts_with(line, "element")) { return false; }
 
-    std::string keyword, name;
-    std::size_t count;
-    if (!(std::istringstream(line) >> keyword >> name >> count))
+    std::vector<std::string> tokens;
+    ba::split(tokens, line, ba::is_space());
+    if (tokens.size() != 3)
     {
         LOGTHROW(err4, std::runtime_error)
-            << "Error parsing element defined by: " << line;
+            << "Error parsing element definition line - expected three tokens: "
+            << line;
+    }
+
+    const std::string& name = tokens[1];
+
+    std::size_t count;
+    try
+    {
+        count = std::stoul(tokens[2]);
+    }
+    catch (const std::invalid_argument& e)
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Error parsing element count from: " << tokens[2];
+        throw;
+    }
+    catch (const std::out_of_range& e)
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Error parsing element count - element count out of range: "
+            << tokens[2];
+        throw;
     }
 
     elements.emplace_back(name, count);
@@ -134,26 +156,29 @@ void checkFormatLine(std::ifstream& f)
     std::string line;
     nextLine(f, line); // read whole line
 
-    std::string keyword, format, version;
-    if (!(std::istringstream(line) >> keyword >> format >> version))
+    std::vector<std::string> tokens;
+    ba::split(tokens, line, ba::is_space());
+
+    if (tokens.size() != 3)
     {
         LOGTHROW(err4, std::runtime_error)
-            << "Error parsing format line: " << line;
+            << "Error parsing format line - expected three tokens: "
+            << line;
     }
-    if (keyword != "format")
+    if (tokens[0] != "format")
     {
         LOGTHROW(err4, std::runtime_error)
             << "Expected the second line to contain \"format\" specification";
     }
-    if (format != "ascii")
+    if (tokens[1] != "ascii")
     {
         LOGTHROW(err4, std::runtime_error)
-            << "Only ASCII format is supported, got: " << format;
+            << "Only ASCII format is supported, got: " << tokens[1];
     }
-    if (version != "1.0")
+    if (tokens[2] != "1.0")
     {
         LOGTHROW(err4, std::runtime_error)
-            << "Only PLY version 1.0 supported, got: " << version;
+            << "Only PLY version 1.0 supported, got: " << tokens[2];
     }
 }
 
