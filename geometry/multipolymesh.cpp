@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2020 Melown Technologies SE
+ * Copyright (c) 2021 Melown Technologies SE
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -24,39 +24,37 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
+#include "multipolymesh.hpp"
 
-#include "meshop.hpp"
+#include "math/math.hpp"
 
-namespace bio = boost::iostreams;
+#include <boost/numeric/ublas/matrix.hpp>
 
-namespace geometry {
-
-void saveAsGzippedObj(const Mesh &mesh, const boost::filesystem::path &filepath
-                      , const ObjMaterial &mtl
-                      , const ObjStreamSetup &streamSetup)
+namespace geometry
 {
-    LOG(info2) << "Saving gzipped mesh to file <" << filepath << ">.";
+namespace ublas = boost::numeric::ublas;
 
-    std::ofstream f;
-    f.exceptions(std::ios::badbit | std::ios::failbit);
-    try {
-        f.open(filepath.string(), std::ios_base::out | std::ios_base::trunc);
-    } catch (const std::exception&) {
-        LOGTHROW(err3, std::runtime_error)
-            << "Unable to save mesh to <" << filepath << ">.";
-    }
+FacePlaneCrs::FacePlaneCrs(const math::Point3& p1,
+                           const math::Point3& p2,
+                           const math::Point3& p3)
+{
+    // get base vectors
+    math::Point3 n1 = math::normalize(p2 - p1);
+    normal_ = math::normalize(math::crossProduct(p2 - p1, p3 - p1));
+    math::Point3 n2 = math::normalize(math::crossProduct(normal_, n1));
 
-    bio::filtering_ostream gzipped;
-    gzipped.push(bio::gzip_compressor(bio::gzip_params(9), 1 << 16));
-    gzipped.push(f);
+    p2g_ = math::identity4();
 
-    {
-        saveAsObj(mesh, gzipped, mtl, filepath, streamSetup);
-    }
+    auto col1 = ublas::column(p2g_, 0);
+    auto col2 = ublas::column(p2g_, 1);
+    auto col3 = ublas::column(p2g_, 2);
+    auto col4 = ublas::column(p2g_, 3);
+    ublas::subrange(col1, 0, 3) = n1;
+    ublas::subrange(col2, 0, 3) = n2;
+    ublas::subrange(col3, 0, 3) = normal_;
+    ublas::subrange(col4, 0, 3) = p1;
 
-    gzipped.flush();
+    g2p_ = math::matrixInvert(p2g_);
 }
 
 } // namespace geometry

@@ -68,6 +68,7 @@ if(MGTS_FOUND)
     gtsutils.hpp gtsutils.cpp
     meshop-gts.cpp
     delaunay2d.cpp delaunay2d.hpp
+    multipolygon-triangulate-gts.hpp multipolygon-triangulate-gts.cpp
     )
 
   list(APPEND geometry_EXTRA_DEPENDS MGTS GLIB)
@@ -121,6 +122,10 @@ set(geometry_SOURCES
 
   nonconvexclip.hpp nonconvexclip.cpp
   triangulate.hpp triangulate.cpp
+
+  multipolymesh.hpp multipolymesh.cpp
+
+  parse-ply.cpp parse-ply.hpp
 
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}

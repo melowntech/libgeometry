@@ -367,12 +367,23 @@ struct ObjMaterial {
  *  Returns if stream precision has been set.
  *  Stream precision is configured when false is returned.
  */
-typedef std::function<bool(std::ostream&)> ObjStreamSetup;
+struct ObjStreamSetup {
+    virtual bool vertex(std::ostream&) const { return false; };
+    virtual bool tx(std::ostream&) const { return false; };
+
+    virtual ~ObjStreamSetup() = default;
+};
 
 void saveAsObj(const Mesh &mesh
                , const boost::filesystem::path &filepath
                , const ObjMaterial &mtl
                , const ObjStreamSetup &streamSetup = ObjStreamSetup());
+
+void saveAsObj(const Mesh &mesh
+               , const boost::filesystem::path &filepath
+               , const ObjMaterial &mtl
+               , const std::function<bool(std::ostream&)> &streamSetup);
+
 
 void saveAsObj(const Mesh::pointer &mesh
                , const boost::filesystem::path &filepath
@@ -388,10 +399,25 @@ void saveAsObj(const Mesh::pointer &mesh, std::ostream &os
                , const boost::filesystem::path &filepath = "UNKNOWN"
                , bool setFormat = true);
 
+void saveAsObj(const Mesh &mesh, std::ostream &out
+               , const ObjMaterial &mtl
+               , const boost::filesystem::path &filepath
+               , const ObjStreamSetup &streamSetup);
+
 void saveAsGzippedObj(const Mesh &mesh
                       , const boost::filesystem::path &filepath
                       , const ObjMaterial &mtl
                       , const ObjStreamSetup &streamSetup = ObjStreamSetup())
+#ifndef GEOMETRY_HAS_BIO
+    UTILITY_FUNCTION_ERROR("Gzip support is available only when compiled with Boost.IOStreams.")
+#endif
+    ;
+
+void saveAsGzippedObj(const Mesh &mesh
+                      , const boost::filesystem::path &filepath
+                      , const ObjMaterial &mtl
+                      , const std::function<bool(std::ostream&)>
+                      &streamSetup = {})
 #ifndef GEOMETRY_HAS_BIO
     UTILITY_FUNCTION_ERROR("Gzip support is available only when compiled with Boost.IOStreams.")
 #endif
@@ -478,6 +504,47 @@ inline void saveAsPly( const Mesh::pointer &mesh
                       , const boost::filesystem::path &filepath)
 {
     return saveAsPly(*mesh, filepath);
+}
+
+namespace detail {
+
+class CallbackStreamSetup : public ObjStreamSetup {
+public:
+    CallbackStreamSetup(const std::function<bool(std::ostream&)> &func)
+        : func_(func)
+    {}
+
+    virtual bool vertex(std::ostream &os) const {
+        return func_(os);
+    }
+
+    virtual bool tx(std::ostream &os) const {
+        return func_(os);
+    }
+
+private:
+    std::function<bool(std::ostream&)> func_;
+};
+
+} // namespace detail
+
+inline void saveAsObj(const Mesh &mesh
+                      , const boost::filesystem::path &filepath
+                      , const ObjMaterial &mtl
+                      , const std::function<bool(std::ostream&)> &streamSetup)
+{
+    saveAsObj(mesh, filepath, mtl
+              , detail::CallbackStreamSetup(streamSetup));
+}
+
+inline void saveAsGzippedObj(const Mesh &mesh
+                             , const boost::filesystem::path &filepath
+                             , const ObjMaterial &mtl
+                             , const std::function<bool(std::ostream&)>
+                             &streamSetup)
+{
+    saveAsGzippedObj(mesh, filepath, mtl
+                     , detail::CallbackStreamSetup(streamSetup));
 }
 
 } // namespace geometry

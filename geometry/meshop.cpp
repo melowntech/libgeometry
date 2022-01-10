@@ -35,18 +35,21 @@
 
 #include "meshop.hpp"
 #include "parse-obj.hpp"
+#include "parse-ply.hpp"
 #include "triclip.hpp"
 
 #include "utility/expect.hpp"
 #include "utility/small_list.hpp"
 
 #include <set>
+#include <boost/algorithm/string.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace geometry {
 
 namespace ublas = boost::numeric::ublas;
+namespace ba = boost::algorithm;
 
 Obj asObj(const Mesh &mesh)
 {
@@ -124,19 +127,23 @@ void addMtl(std::ostream &out, const ObjMaterial &mtl, unsigned int imageId)
 void saveAsObj(const Mesh &mesh, std::ostream &out
                , const ObjMaterial &mtl
                , const boost::filesystem::path &filepath
-               , bool setFormat)
+               , const ObjStreamSetup &streamSetup)
 {
-    if (setFormat) {
-        out.setf(std::ios::scientific, std::ios::floatfield);
-    }
-
     for (const auto &lib : mtl.libs) {
         out << "mtllib " << lib << '\n';
+    }
+
+    if (!streamSetup.vertex(out)) {
+        out.setf(std::ios::scientific, std::ios::floatfield);
     }
 
     for (const auto &vertex : mesh.vertices) {
         out << "v " << vertex(0) << ' ' << vertex(1) << ' '  << vertex(2)
             << '\n';
+    }
+
+    if (!streamSetup.tx(out)) {
+        out.setf(std::ios::scientific, std::ios::floatfield);
     }
 
     for (const auto &tCoord : mesh.tCoords) {
@@ -165,6 +172,23 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
     }
 }
 
+void saveAsObj(const Mesh &mesh, std::ostream &out
+               , const ObjMaterial &mtl
+               , const boost::filesystem::path &filepath
+               , bool setFormat)
+{
+    struct DontSetFormat : ObjStreamSetup {
+        virtual bool vertex(std::ostream&) const { return true; }
+        virtual bool tx(std::ostream&) const { return true; }
+    };
+
+    const ObjStreamSetup &streamSetup(setFormat
+                                      ? ObjStreamSetup()
+                                      : DontSetFormat());
+
+    saveAsObj(mesh, out, mtl, filepath, streamSetup);
+}
+
 void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
                , const ObjMaterial &mtl, const ObjStreamSetup &streamSetup)
 {
@@ -179,15 +203,15 @@ void saveAsObj(const Mesh &mesh, const boost::filesystem::path &filepath
             << "Unable to save mesh to <" << filepath << ">.";
     }
 
-    bool setFormat(true);
-    if (streamSetup) { setFormat = !streamSetup(f); }
-    saveAsObj(mesh, f, mtl, filepath, setFormat);
+    saveAsObj(mesh, f, mtl, filepath, streamSetup);
 }
 
 void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
     LOG(info2) << "Saving mesh to file <" << filepath << ">.";
 
-    std::ofstream out(filepath.string().c_str());
+    std::ofstream out;
+    out.exceptions(std::ios::badbit | std::ios::failbit);
+    out.open(filepath.string(), std::ios_base::out | std::ios_base::trunc);
     out.setf(std::ios::scientific, std::ios::floatfield);
 
     unsigned validFaces(0);
@@ -232,51 +256,92 @@ void saveAsPly( const Mesh &mesh, const boost::filesystem::path &filepath){
     }
 }
 
-Mesh loadPly( const boost::filesystem::path &filename )
+Mesh loadPly(const boost::filesystem::path& filepath)
 {
-    std::ifstream f(filename.native());
-    if (!f.good()) {
-        LOGTHROW(err2, std::runtime_error)
-                << "Can't open " << filename;
-    }
+    class SimplePlyParser : public PlyParserBase
+    {
+    public:
+        Mesh mesh;
 
-    f.exceptions(std::ios::badbit | std::ios::failbit);
+        void loadHeader(const std::vector<PlyElement>& elements,
+                        const std::vector<std::string>& /* comments */) override
+        {
+            for (const auto& el : elements)
+            {
+                if (el.name == "vertex")
+                {
+                    mesh.vertices.reserve(el.count);
 
-    // read header
-    std::string line;
-    int nvert = -1, ntris = -1;
-    do {
-        if (getline(f, line).eof()) break;
-        sscanf(line.c_str(), "element vertex %d", &nvert);
-        sscanf(line.c_str(), "element face %d", &ntris);
-    } while (line != "end_header");
+                    // check vertex properties
+                    if (el.props.size() != 3)
+                    {
+                        LOGTHROW(err4, std::runtime_error)
+                            << "No additional vertex properties supported in "
+                               "simple parser";
+                    }
+                    utility::expect(el.props[0].name == "x");
+                    utility::expect(el.props[1].name == "y");
+                    utility::expect(el.props[2].name == "z");
+                }
+                else if (el.name == "face")
+                {
+                    mesh.faces.reserve(el.count);
 
-    if (nvert < 0 || ntris < 0) {
-        LOGTHROW(err2, std::runtime_error)
-                << filename << ": unknown PLY format.";
-    }
+                    // check face properties
+                    if (el.props.size() != 1)
+                    {
+                        LOGTHROW(err4, std::runtime_error)
+                            << "No additional face properties supported in "
+                               "simple parser";
+                    }
+                    if (!ba::starts_with(el.props[0].type, "list"))
+                    {
+                        LOGTHROW(err4, std::runtime_error)
+                            << "Expected face property type to be a list, but "
+                               "got: "
+                            << el.props[0].type;
+                    }
+                    // does not check the name which should generally be
+                    // "vertex_index" but might vary
+                }
+                else
+                {
+                    LOGTHROW(err4, std::runtime_error)
+                        << "Unexpected element in header - not supported by "
+                           "simple parser: "
+                        << el.name;
+                }
+            }
+        }
 
-    Mesh mesh;
-    mesh.vertices.reserve(nvert);
+        void addVertex(std::istream& f) override
+        {
+            double x, y, z;
+            f >> x >> y >> z;
+            mesh.vertices.emplace_back(x, y, z);
+        }
 
-    // load points
-    for (int i = 0; i < nvert; i++) {
-        double x, y, z;
-        f >> x >> y >> z;
-        mesh.vertices.emplace_back(x, y, z);
-    }
+        void addFace(std::istream& f) override
+        {
+            int n, a, b, c;
+            f >> n >> a >> b >> c;
+            if (n != 3)
+            {
+                LOGTHROW(err4, std::runtime_error)
+                    << "Simple parser only supports loading triangular meshes, "
+                       "but got face with " << n << " vertices.";
+            }
+            mesh.faces.emplace_back(a, b, c);
+        }
+    } simpleParser;
 
-    mesh.faces.reserve(ntris);
+    parsePly(simpleParser, filepath);
 
-    // load triangles
-    for (int i = 0; i < ntris; i++) {
-        int n, a, b, c;
-        f >> n >> a >> b >> c;
-        utility::expect(n == 3, "Only triangles are supported in PLY files.");
-        mesh.faces.emplace_back(a, b, c);
-    }
+    LOG(info1) << "Loaded mesh with " << simpleParser.mesh.vertices.size()
+               << " vertices and " << simpleParser.mesh.faces.size()
+               << " faces";
 
-    return mesh;
+    return simpleParser.mesh;
 }
 
 const unsigned int imageIdLimit(1<<16);

@@ -44,6 +44,12 @@ namespace geometry {
 template <typename T>
 double area( const std::vector<math::Point2_<T> > & polygon  );
 
+/** Compute polygon area and centroid (via shoelace formula)
+ */
+template <typename T>
+double areaAndCentroid(math::Point2_<T>& centroid,
+                       const std::vector<math::Point2_<T>>& polygon);
+
 /** Clip polygon by provided viewport.
  *
  *  Returns polygon of same type as is input. Internally works with double
@@ -81,6 +87,14 @@ template <typename PointType1, typename PointType2>
 bool insidePolygon(const std::vector<PointType1> &polygon
                    , const PointType2 &point);
 
+/** Determine whether point is inside a multipolygon.
+ *
+ * Multipolygon is defined by its outer boundary (CCW), followed by holes (CW)
+ */
+template <typename T>
+bool insideMultiPolygon(const std::vector<std::vector<math::Point2_<T>>>& mpoly,
+                        const math::Point2_<T>& point);
+
 /****** implementation ******/
 
 template <typename T>
@@ -99,6 +113,30 @@ double area( const std::vector<math::Point2_<T> > & polygon  ) {
     return 0.5 * retval;
 }
 
+template <typename T>
+double areaAndCentroid(math::Point2_<T>& centroid,
+                       const std::vector<math::Point2_<T>>& polygon)
+{
+    std::size_t n = polygon.size();
+    centroid = math::Point2_<T>(0, 0);
+    double a = 0.0;
+
+    for (std::size_t i = 0; i < n; i++)
+    {
+        std::size_t iN = (i + 1) % n;
+
+        double l = (polygon[i](0) * polygon[iN](1))
+                   - (polygon[iN](0) * polygon[i](1));
+
+        centroid(0) += (polygon[i](0) + polygon[iN](0)) * l;
+        centroid(1) += (polygon[i](1) + polygon[iN](1)) * l;
+        a += l;
+    }
+    a *= 0.5;
+    centroid(0) /= 6 * a;
+    centroid(1) /= 6 * a;
+    return a;
+}
 
 namespace detail {
     math::Points2 clip(const math::Viewport2f &viewport
@@ -217,8 +255,8 @@ inline bool inside(const std::vector<math::Point2_<T> > &polygon
     return true;
 }
 
-template <typename PolygonType, typename PointType2>
-bool insidePolygon(const PolygonType &polygon
+template <typename PointType1, typename PointType2>
+bool insidePolygon(const std::vector<PointType1> &polygon
                    , const PointType2 &point)
 {
     // NB: works only for convex polygons
@@ -245,6 +283,29 @@ bool insidePolygon(const PolygonType &polygon
     }
 
     return true;
+}
+
+template <typename T>
+bool insideMultiPolygon(const std::vector<std::vector<math::Point2_<T>>>& mpoly,
+                        const math::Point2_<T>& point)
+{
+    bool c = false;
+    for (const auto& poly : mpoly)
+    {
+        auto nvert = int(poly.size());
+        for (int i = 0, j = nvert - 1; i < nvert; j = i++)
+        {
+            if (((poly[i](1) > point(1)) != (poly[j](1) > point(1)))
+                && (point(0) < (poly[j](0) - poly[i](0))
+                                       * (point(1) - poly[i](1))
+                                       / (poly[j](1) - poly[i](1))
+                                   + poly[i](0)))
+            {
+                c = !c;
+            }
+        }
+    }
+    return c;
 }
 
 } // namespace geometry
