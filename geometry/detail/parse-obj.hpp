@@ -56,6 +56,8 @@ struct Normal : ObjParserBase::Vector3d {};
 struct Texture : ObjParserBase::Vector3d {};
 struct MaterialLibrary : std::string {};
 struct UseMaterial : std::string {};
+struct Object : std::string {};
+struct Group : std::string {};
 
 typedef ObjParserBase::Facet Facet;
 
@@ -108,6 +110,16 @@ public:
 
     Obj& operator+=(const detail::UseMaterial &m) {
         p_->useMaterial(m);
+        return *this;
+    }
+
+    Obj& operator+=(const detail::Object &o) {
+        p_->addObject(o);
+        return *this;
+    }
+
+    Obj& operator+=(const detail::Group &g) {
+        p_->addGroup(g);
         return *this;
     }
 
@@ -241,6 +253,34 @@ struct useMaterial_parser
 };
 
 template <typename Iterator, typename Skipper>
+struct object_parser
+    : qi::grammar<Iterator, Object(), Skipper>
+{
+    object_parser() : object_parser::base_type(start)  {
+        using qi::char_;
+        using qi::no_skip;
+
+        start %= "o" >> qi::lexeme[+(char_ - ascii::space)];
+    }
+
+    qi::rule<Iterator, Object(), Skipper> start;
+};
+
+template <typename Iterator, typename Skipper>
+struct group_parser
+    : qi::grammar<Iterator, Group(), Skipper>
+{
+    group_parser() : group_parser::base_type(start)  {
+        using qi::char_;
+        using qi::no_skip;
+
+        start %= "g" >> qi::lexeme[+(char_ - ascii::space)];
+    }
+
+    qi::rule<Iterator, Group(), Skipper> start;
+};
+
+template <typename Iterator, typename Skipper>
 struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
 {
     Obj_parser() : Obj_parser::base_type(start)  {
@@ -252,6 +292,8 @@ struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
         facet %= facet_parser<Iterator, Skipper>();
         materialLibrary %= materialLibrary_parser<Iterator, Skipper>();
         useMaterial %= useMaterial_parser<Iterator, Skipper>();
+        object %= object_parser<Iterator, Skipper>();
+        group %= group_parser<Iterator, Skipper>();
 
         start %= omit[*(vertex[qi::_val += qi::_1]
                         | texture[qi::_val += qi::_1]
@@ -259,6 +301,8 @@ struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
                         | facet[qi::_val += qi::_1]
                         | materialLibrary[qi::_val += qi::_1]
                         | useMaterial[qi::_val += qi::_1]
+                        | object[qi::_val += qi::_1]
+                        | group[qi::_val += qi::_1]
                         )]
             [qi::_val];
     }
@@ -271,6 +315,8 @@ struct Obj_parser : qi::grammar<Iterator, Obj(), Skipper>
     facet_parser<Iterator, Skipper> facet;
     materialLibrary_parser<Iterator, Skipper> materialLibrary;
     useMaterial_parser<Iterator, Skipper> useMaterial;
+    object_parser<Iterator, Skipper> object;
+    group_parser<Iterator, Skipper> group;
 };
 
 template <typename Iterator>

@@ -76,6 +76,9 @@ public:
 
     virtual void useMaterial(const std::string&) = 0;
 
+    virtual void addObject(const std::string&) {};
+    virtual void addGroup(const std::string&) {};
+
     // parses OBJ file from a stream, returns true if everything went OK
     bool parse(std::istream &is);
 

@@ -12,19 +12,19 @@ int main(int argc, char *argv[])
     }
 
     struct Loader : geometry::ObjParserBase {
-        virtual void addVertex(const Vector3d &v) {
+        void addVertex(const Vector3d &v) override {
             LOG(info4) << "vertex: (" << v.x << ", " << v.y << ", "
                        << v.z << ")";
         }
-        virtual void addTexture(const Vector3d &t) {
+        void addTexture(const Vector3d &t) override {
             LOG(info4) << "texture: (" << t.x << ", " << t.y << ", "
                        << t.z << ")";
         }
-        virtual void addNormal(const Vector3d &n) {
+        void addNormal(const Vector3d &n) override {
             LOG(info4) << "normal: (" << n.x << ", " << n.y << ", "
                        << n.z << ")";
         }
-        virtual void addFacet(const Facet &f) {
+        void addFacet(const Facet &f) override {
             LOG(info4) << "facet: v=(" << f.v[0] << ", " << f.v[1] << ", "
                        << f.v[2] << "), t=("
                        << "facet: t=(" << f.t[0] << ", " << f.t[1] << ", "
@@ -33,17 +33,29 @@ int main(int argc, char *argv[])
                        << f.n[2] << ")";
         }
 
-        virtual void materialLibrary(const std::string &path) {
+        void materialLibrary(const std::string &path) override {
             LOG(info4) << "material library: " << path;
         }
 
-        virtual void useMaterial(const std::string &name) {
+        void useMaterial(const std::string &name) override{
             LOG(info4) << "material: " << name;
+        }
+
+        void addObject(const std::string &name) override {
+            LOG(info4) << "object: " << name;
+        }
+
+        void addGroup(const std::string &name) override {
+            LOG(info4) << "group: " << name;
         }
     };
 
     Loader loader;
-    loader.parse(argv[1]);
+    auto res(loader.parse(argv[1]));
+    if (!res) {
+        LOG(fatal) << "Failed to parse input file.";
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
