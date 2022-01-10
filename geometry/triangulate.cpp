@@ -30,6 +30,8 @@
 
 #include "utility/gccversion.hpp"
 
+#include "polygon.hpp"
+
 #include "triangulate.hpp"
 
 namespace geometry {
@@ -148,29 +150,6 @@ bool pointInPolygon(const math::Point2d &test, const math::Polygon &poly)
 }
 #endif
 
-bool pointInMultiPolygon(const math::Point2d &test,
-                         const math::MultiPolygon &mpoly)
-    UTILITY_POSSIBLY_UNUSED;
-bool pointInMultiPolygon(const math::Point2d &test,
-                         const math::MultiPolygon &mpoly)
-{
-    bool c = false;
-    for (const auto &poly : mpoly)
-    {
-        auto nvert = int(poly.size());
-        for (int i = 0, j = nvert-1; i < nvert; j = i++)
-        {
-            if ( ((poly[i](1) > test(1)) != (poly[j](1) > test(1))) &&
-                 (test(0) < (poly[j](0) - poly[i](0)) * (test(1) - poly[i](1)) /
-                            (poly[j](1) - poly[i](1)) + poly[i](0)) )
-            {
-               c = !c;
-            }
-        }
-    }
-    return c;
-}
-
 // Converts input coordinates to interval [0, 2^16] and vice versa
 // (work around boost polygon integer nature)
 class CoordConverter {
@@ -243,7 +222,7 @@ math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
             if (tri.size() == 3)
             {
                 math::Point2d c = (tri[0] + tri[1] + tri[2]) * (1.0 / 3);
-                if (pointInMultiPolygon(c, mpolygon))
+                if (insideMultiPolygon(mpolygon, c))
                 {
                     result.push_back({{tri[0], tri[1], tri[2]}});
                 }
