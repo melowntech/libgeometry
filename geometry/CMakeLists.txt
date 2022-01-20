@@ -106,7 +106,7 @@ set(geometry_SOURCES
   triclip.hpp
 
   mesh.hpp mesh.cpp
-  meshop.hpp meshop.cpp
+  meshop.hpp meshop.cpp meshclip.cpp
 
   neighbors.hpp
   bvh.hpp
