@@ -82,7 +82,7 @@ void addFace7(Mesh &m, index_type a, index_type b, index_type c, index_type ta
 
 void addVertex(Mesh &m, double x, double y, double z)
 {
-    return m.vertices.emplace_back(x, y, z);
+    m.vertices.emplace_back(x, y, z);
 }
 
 Mesh clip2(const Mesh &m, const math::Extents2 &e)
