@@ -309,7 +309,7 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
         LOG (info3) << "Filling subSurfaces";
         gts_surface_foreach_face (s, (GtsFunc) getSubSurfaces, &subParams);
 
-        auto computeBunchInParallel ([&](long long cellRowStart
+        auto computeBunchInParallel = [&](long long cellRowStart
                                          , long long cellColumnStart
                                          , long long cellRowShift
                                          , long long cellColumnShift) -> void
@@ -337,7 +337,7 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
                 GtsSurface *subSurface = subSurfaces[row][column];
                 gts_object_destroy (GTS_OBJECT (subSurface));
             }
-        });
+        };
         // These are guaranded to do not have intersection in 2-neghbourhoods
         // Because between every cells that are computed in parallel
         // there is at least one unsimplifyed cell, which has a loooot of triangles
