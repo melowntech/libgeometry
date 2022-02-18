@@ -108,15 +108,19 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
         clipMultiPoly.push_back(part);
     }
 
-    if (std::abs(ccw) < 1e-4) 
+    if (std::abs(ccw) < 1e-4)
     {
         // TODO: handle exactly vertical triangles properly
-        if (bg::within(Point{tri[0](0), tri[0](1)}, clipMultiPoly) && 
-            bg::within(Point{tri[1](0), tri[1](1)}, clipMultiPoly) && 
-            bg::within(Point{tri[2](0), tri[2](1)}, clipMultiPoly)) 
+        if (bg::within(Point{tri[0](0), tri[0](1)}, clipMultiPoly) &&
+            bg::within(Point{tri[1](0), tri[1](1)}, clipMultiPoly) &&
+            bg::within(Point{tri[2](0), tri[2](1)}, clipMultiPoly))
         {
+            LOG(debug)
+                << "Including near vertical triangle, all vertices lie inside.";
             return {tri};
         } else {
+            LOG(debug) << "Excluding near vertical triangle, "
+                          "not all vertices lie inside.";
             return {};
         }
     }
