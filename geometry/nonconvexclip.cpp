@@ -215,6 +215,13 @@ std::tuple<math::Triangles3d, math::Triangles2d>
     // clip the geometry first
     tris3 = clipTriangleNonconvex(tri, clipRegion);
 
+    // if one same triangle -> copy texcoorsds
+    // this clearly solves degen cases.
+    if ((tris3.size() == 1) && (tris3[0] == tri)) {
+        uvs.push_back(uv);
+        return result;
+    }
+
     // interpolate UV coords
     uvs.reserve(tris3.size());
     for (const auto &t3 : tris3)
