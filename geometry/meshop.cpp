@@ -129,6 +129,9 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
                , const boost::filesystem::path &filepath
                , const ObjStreamSetup &streamSetup)
 {
+    // keep current numeric precision for future use
+    const auto oldPrecision(out.precision());
+
     for (const auto &lib : mtl.libs) {
         out << "mtllib " << lib << '\n';
     }
@@ -144,6 +147,8 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
 
     if (!streamSetup.tx(out)) {
         out.setf(std::ios::scientific, std::ios::floatfield);
+        // reset precision to recorded one
+        out.precision(oldPrecision);
     }
 
     for (const auto &tCoord : mesh.tCoords) {
