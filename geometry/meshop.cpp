@@ -155,20 +155,29 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
         out << "vt " << tCoord(0) << ' ' << tCoord(1) << '\n';
     }
 
+    const bool textured(!mesh.tCoords.empty());
+
     unsigned int currentImageId(static_cast<unsigned int>(-1));
 
     for (const auto &face : mesh.faces) {
         if (face.degenerate()) {
             continue;
         }
-        if (face.imageId != currentImageId) {
+
+        if (textured && (face.imageId != currentImageId)) {
             addMtl(out, mtl, face.imageId);
             currentImageId = face.imageId;
         }
 
-        out << "f " << face.a + 1 << '/' << face.ta + 1 << "/ "
-            << face.b + 1 << '/' << face.tb + 1 << "/ "
-            << face.c + 1 << '/' << face.tc + 1 << "/\n";
+        if (textured) {
+            out << "f " << face.a + 1 << '/' << face.ta + 1 << "/ "
+                << face.b + 1 << '/' << face.tb + 1 << "/ "
+                << face.c + 1 << '/' << face.tc + 1 << "/\n";
+        } else {
+            out << "f " << face.a + 1 << ' '
+                << face.b + 1 << ' '
+                << face.c + 1 << "\n";
+        }
     }
 
     if (!out) {
