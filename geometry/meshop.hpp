@@ -251,6 +251,14 @@ Mesh clip(const Mesh &omesh, const math::Extents3 &extents);
  */
 Mesh clip(const Mesh &omesh, const math::Extents2 &extents);
 
+/** Clips mesh to the given 2d contour
+ *
+ * \param mesh mesh to clip
+ * \param clipRegion clipping region
+ * \return processed mesh, including texture coordinates
+ */
+Mesh clip(const Mesh &omesh, const math::MultiPolygon &clipRegion);
+
 /** Appends one mesh to the another. Fixed face indices.
  */
 void append(Mesh &mesh, const Mesh &added);

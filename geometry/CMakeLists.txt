@@ -1,5 +1,5 @@
 # bump version here
-set(geometry_VERSION 1.14)
+set(geometry_VERSION 1.15)
 
 set(geometry_EXTRA_DEPENDS)
 set(geometry_EXTRA_DEFINITIONS)
@@ -92,7 +92,7 @@ else()
 endif()
 
 define_module(LIBRARY geometry=${geometry_VERSION}
-  DEPENDS math>=1.8 utility>=1.35 dbglog>=1.4
+  DEPENDS math>=1.8 utility>=1.38 dbglog>=1.4
   ${geometry_EXTRA_DEPENDS}
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
@@ -106,7 +106,7 @@ set(geometry_SOURCES
   triclip.hpp
 
   mesh.hpp mesh.cpp
-  meshop.hpp meshop.cpp
+  meshop.hpp meshop.cpp meshclip.cpp
 
   neighbors.hpp
   bvh.hpp
