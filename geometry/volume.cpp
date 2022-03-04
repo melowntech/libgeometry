@@ -30,7 +30,6 @@
 #include "volume.hpp"
 
 #include <math/filters.hpp>
-#include <boost/foreach.hpp>
 #include "volumeop.hpp"
 
 /**
@@ -75,14 +74,14 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const Bitfield_t & from,
     dspls.push_back( VolumeBase_t::Displacement_s( -1, 1, 1 ) );
 
     // process all scanlines
-    BOOST_FOREACH( VolumeBase_t::Displacement_s diff, dspls ) {
+    for (VolumeBase_t::Displacement_s diff : dspls) {
 
         LOG ( info1 ) << "Processing direction " << diff;
 
         std::vector<VolumeBase_t::Position_s> poss
             = Giterator::iteratorPositions(distanceMap.container(), diff );
 
-        BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+        for (VolumeBase_t::Position_s pos : poss) {
 
             Giterator begin =  Giterator::gbegin(distanceMap.container(), pos, diff );
             Giterator end =  Giterator::gend(begin);
@@ -156,7 +155,7 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const PointCloud & cloud,
     dspls.push_back( VolumeBase_t::Displacement_s( -1, 1, 1 ) );
 
     // process all scanlines
-    BOOST_FOREACH( VolumeBase_t::Displacement_s diff, dspls ) {
+    for (VolumeBase_t::Displacement_s diff : dspls) {
 
         LOG ( info1 ) << "Processing direction " << diff;
 
@@ -164,7 +163,7 @@ BitfieldReconstruction_t::BitfieldReconstruction_t( const PointCloud & cloud,
         std::vector<VolumeBase_t::Position_s> poss
             = Giterator::iteratorPositions(distanceMap.container(), diff );
 
-        BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+        for (VolumeBase_t::Position_s pos : poss) {
 
             Giterator begin =  Giterator::gbegin(distanceMap.container(), pos, diff );
             Giterator end =  Giterator::gend(begin);
