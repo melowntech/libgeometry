@@ -173,11 +173,11 @@ ClipTriangle::list clipTriangles( const ClipTriangle::list &triangles
             else if (positive[1]) a = 1, b = 2, c = 0;
             else a = 2, b = 0, c = 1;
 
-            auto x1pos(detail::intersection(tri.pos[a], tri.pos[b], plane, t));
-            auto x1uv((1.0 - t)*tri.uv[a] + t*tri.uv[b]);
+            math::Point3 x1pos(detail::intersection(tri.pos[a], tri.pos[b], plane, t));
+            math::Point2 x1uv((1.0 - t)*tri.uv[a] + t*tri.uv[b]);
 
-            auto x2pos(detail::intersection(tri.pos[c], tri.pos[a], plane, t));
-            auto x2uv((1.0 - t)*tri.uv[c] + t*tri.uv[a]);
+            math::Point3 x2pos(detail::intersection(tri.pos[c], tri.pos[a], plane, t));
+            math::Point2 x2uv((1.0 - t)*tri.uv[c] + t*tri.uv[a]);
 
             result.emplace_back(tri.pos[a], x1pos, x2pos,
                                 tri.uv[a],  x1uv,  x2uv);
@@ -193,11 +193,11 @@ ClipTriangle::list clipTriangles( const ClipTriangle::list &triangles
             else a = 2, b = 0, c = 1;
 
             auto tmp(1.0 - t);
-            auto x1pos(detail::intersection(tri.pos[a], tri.pos[b], plane, t));
-            auto x1uv(tmp*tri.uv[a] + t*tri.uv[b]);
+            math::Point3 x1pos(detail::intersection(tri.pos[a], tri.pos[b], plane, t));
+            math::Point2 x1uv(tmp*tri.uv[a] + t*tri.uv[b]);
 
-            auto x2pos(detail::intersection(tri.pos[c], tri.pos[a], plane, t));
-            auto x2uv(tmp*tri.uv[c] + t*tri.uv[a]);
+            math::Point3 x2pos(detail::intersection(tri.pos[c], tri.pos[a], plane, t));
+            math::Point2 x2uv(tmp*tri.uv[c] + t*tri.uv[a]);
 
             result.emplace_back(x1pos, tri.pos[b], tri.pos[c],
                                 x1uv,  tri.uv[b],  tri.uv[c]);
