@@ -129,6 +129,9 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
                , const boost::filesystem::path &filepath
                , const ObjStreamSetup &streamSetup)
 {
+    // keep current numeric precision for future use
+    const auto oldPrecision(out.precision());
+
     for (const auto &lib : mtl.libs) {
         out << "mtllib " << lib << '\n';
     }
@@ -144,11 +147,15 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
 
     if (!streamSetup.tx(out)) {
         out.setf(std::ios::scientific, std::ios::floatfield);
+        // reset precision to recorded one
+        out.precision(oldPrecision);
     }
 
     for (const auto &tCoord : mesh.tCoords) {
         out << "vt " << tCoord(0) << ' ' << tCoord(1) << '\n';
     }
+
+    const bool textured(!mesh.tCoords.empty());
 
     unsigned int currentImageId(static_cast<unsigned int>(-1));
 
@@ -156,14 +163,21 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
         if (face.degenerate()) {
             continue;
         }
-        if (face.imageId != currentImageId) {
+
+        if (textured && (face.imageId != currentImageId)) {
             addMtl(out, mtl, face.imageId);
             currentImageId = face.imageId;
         }
 
-        out << "f " << face.a + 1 << '/' << face.ta + 1 << "/ "
-            << face.b + 1 << '/' << face.tb + 1 << "/ "
-            << face.c + 1 << '/' << face.tc + 1 << "/\n";
+        if (textured) {
+            out << "f " << face.a + 1 << '/' << face.ta + 1 << "/ "
+                << face.b + 1 << '/' << face.tb + 1 << "/ "
+                << face.c + 1 << '/' << face.tc + 1 << "/\n";
+        } else {
+            out << "f " << face.a + 1 << ' '
+                << face.b + 1 << ' '
+                << face.c + 1 << "\n";
+        }
     }
 
     if (!out) {

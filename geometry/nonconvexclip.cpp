@@ -100,8 +100,29 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     bool flip = false;
     double ccw(checkCcw(tri2[0], tri2[1], tri2[2]));
 
-    if (std::abs(ccw) < 1e-4) {
-        return {}; // TODO: handle exactly vertical triangles
+    // convert clipRegion to boost MultiPolygon
+    MultiPolygon clipMultiPoly;
+    for (const auto &pts : clipRegion) {
+        Polygon part;
+        bg::assign_points(part, bgPoints(pts));
+        clipMultiPoly.push_back(part);
+    }
+
+    if (std::abs(ccw) < 1e-4)
+    {
+        // TODO: handle exactly vertical triangles properly
+        if (bg::within(Point{tri[0](0), tri[0](1)}, clipMultiPoly) &&
+            bg::within(Point{tri[1](0), tri[1](1)}, clipMultiPoly) &&
+            bg::within(Point{tri[2](0), tri[2](1)}, clipMultiPoly))
+        {
+            LOG(debug)
+                << "Including near vertical triangle, all vertices lie inside.";
+            return {tri};
+        } else {
+            LOG(debug) << "Excluding near vertical triangle, "
+                          "not all vertices lie inside.";
+            return {};
+        }
     }
 
     // ensure counter-clockwise orientation for clipping
@@ -112,19 +133,12 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     }
 
     // convert input to 2D polygons
-    Polygon poly1;
-    bg::assign_points(poly1, bgPoints(tri));
-
-    MultiPolygon poly2;
-    for (const auto &pts : clipRegion) {
-        Polygon part;
-        bg::assign_points(part, bgPoints(pts));
-        poly2.push_back(part);
-    }
+    Polygon trianglePoly;
+    bg::assign_points(trianglePoly, bgPoints(tri));
 
     // calculate intersection
     std::deque<Polygon> isect;
-    bg::intersection(poly1, poly2, isect);
+    bg::intersection(trianglePoly, clipMultiPoly, isect);
 
     // triangulate
     math::MultiPolygon isect2;
@@ -200,6 +214,13 @@ std::tuple<math::Triangles3d, math::Triangles2d>
 
     // clip the geometry first
     tris3 = clipTriangleNonconvex(tri, clipRegion);
+
+    // if one same triangle -> copy texcoorsds
+    // this clearly solves degen cases.
+    if ((tris3.size() == 1) && (tris3[0] == tri)) {
+        uvs.push_back(uv);
+        return result;
+    }
 
     // interpolate UV coords
     uvs.reserve(tris3.size());
