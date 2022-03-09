@@ -156,7 +156,7 @@ void filter(
     std::vector<VolumeBase_t::Position_s> poss
         = Giterator::iteratorPositions( container, diff );
 
-    BOOST_FOREACH( VolumeBase_t::Position_s pos, poss ) {
+    for (VolumeBase_t::Position_s pos : poss) {
 
         Giterator sit( container, pos, diff );
         Giterator send = Giterator::gend( sit );

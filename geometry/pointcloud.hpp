@@ -222,7 +222,7 @@ template <typename E, typename T>
 std::basic_ostream<E, T> & operator << (
     std::basic_ostream<E,T> & os, const PointCloud & cloud ) {
 
-    BOOST_FOREACH( math::Point3 point, cloud )
+    for (math::Point3 point : cloud)
         os << point(0) << "\t" << point(1) << "\t" << point(2) << "\n";
         
     return os;
