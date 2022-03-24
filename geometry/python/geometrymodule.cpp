@@ -49,6 +49,8 @@
 #include "../mesh.hpp"
 #include "../meshop.hpp"
 
+#include "geometrymodule.hpp"
+
 namespace fs = boost::filesystem;
 namespace bp = boost::python;
 namespace bpc = boost::python::converter;
