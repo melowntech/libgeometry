@@ -53,7 +53,6 @@
 
 #include "geometry/detail/volume.mcubes.hpp"
 
-#include <boost/foreach.hpp>
 #include <set>
 #include <vector>
 //#include <opencv2/opencv.hpp>
@@ -2412,7 +2411,7 @@ DistanceMap_t<Value_t>::DistanceMap_t( const PointCloud & cloud,
     DistVectorField_t dvField( this->container().sizeX(), this->container().sizeY(), this->container().sizeZ(),
         initValue / this->_voxelSize );
 
-    BOOST_FOREACH( math::Point3 point, cloud ) {
+    for (math::Point3 point : cloud) {
 
             typename VolumeBase_t::FPosition_s fpos
                 = GeoVolume_t<Value_t>::geo2gridf( point );

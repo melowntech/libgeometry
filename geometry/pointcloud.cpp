@@ -28,7 +28,6 @@
 #include "pointcloud.hpp"
 
 #include <dbglog/dbglog.hpp>
-#include <boost/foreach.hpp>
 #include <fstream>
 
 namespace geometry {
