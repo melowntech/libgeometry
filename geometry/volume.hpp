@@ -302,6 +302,7 @@ public:
 
     const math::Size3i & capacity() const { return capacity_; }
     const math::Point3i & offset() const { return offset_; }
+    BorderType borderType() const { return border_; }
 
     /** Increments size along given axis and fills new cells according to
      *  the border type set. If front is set, cells are added in front of the
@@ -1512,8 +1513,9 @@ void ScalarField_t<Value_t, Container_t>::downscale(int factor, float cutOffPeri
     LOG(info2) << "Creating volume of size " << volSize
                << " and capacity " << capacity;
 
-    ScalarField_t<Value_t,Container_t> tmp( ll, newVoxel, volSize
-                                          , 0, capacity, offset);
+    auto border = this->container_.borderType();
+    ScalarField_t<Value_t,Container_t> tmp( ll, newVoxel, volSize, 0
+                                           , capacity, offset, border);
 
     Displacement_s dispNew[3];
 
