@@ -24,6 +24,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "geometrymodule.hpp"
+
 #include <ogr_core.h>
 
 #include <sstream>
@@ -52,8 +54,6 @@
 
 #include "../mesh.hpp"
 #include "../meshop.hpp"
-
-#include "geometrymodule.hpp"
 
 namespace fs = boost::filesystem;
 namespace bp = boost::python;

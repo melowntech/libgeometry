@@ -27,6 +27,7 @@
 #ifndef geometry_python_geometrymodule_hpp_included_
 #define geometry_python_geometrymodule_hpp_included_
 
+#include <pysupport/boost-python-definitions.hpp>
 #include <boost/python.hpp>
 
 namespace geometry { namespace py {
