@@ -81,19 +81,20 @@ struct DefaultAccessor {
  *
  *  Estimate normals of all points in the input point pointcloud. 
  * 
- *  typename T:     point in a K-dimensional space
+ *  typename C:     random access container of points in a K-dimensional space
  *  unsigned K:     number of dimensions of the space
  *  typename A:     dimension value accessor (has to support get(),
  *                               set() and also diff() [used in Kdtree]
  */
-template<typename T, unsigned K = 3, typename A = DefaultAccessor<T>>
-std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
-                               unsigned nEstimatorPts = 40,
-                               double radius = 0)
+template<typename C, unsigned K = 3, typename A = DefaultAccessor<typename C::value_type>>
+std::vector<typename C::value_type> estimateNormals(const C& pointcloud,
+                                                    unsigned nEstimatorPts = 40,
+                                                    double radius = 0)
 {
     static_assert(K >= 2,
                   "Estimation of point normals makes sense only in at least "
                   "2-dimensional space.");
+    using T = typename C::value_type;  
     using Neighbor = typename KdTree<T, K, A>::Neighbor;
     using Neighbors = typename KdTree<T, K, A>::Neighbors;
     
@@ -119,13 +120,13 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
         }
     });
 
-    const size_t nPoints(pointCloud.size());
+    const size_t nPoints(pointcloud.size());
     // prepare space for normals
     std::vector<T> normals(nPoints);
     
     LOG(info3) << "Building a kd-tree from the pointcloud of "
                << nPoints << " points.";
-    KdTree<T, K, A> kdtree(pointCloud.begin(), pointCloud.end());
+    KdTree<T, K, A> kdtree(pointcloud.begin(), pointcloud.end());
 
     /** per thread accumulative variables **/
     double searchRadiusTotal(0.0);
@@ -135,7 +136,7 @@ std::vector<T> estimateNormals(const std::vector<T>& pointCloud,
                firstprivate(searchRadiusTotal, pointsProcessed))
     for (size_t i = 0; i < nPoints; ++i)
     {
-        const T& point(pointCloud[i]);
+        const T& point(pointcloud[i]);
         T& normal(normals[i]);
 
         // Mode 1: use provided radius as search radius
