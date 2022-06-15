@@ -260,7 +260,7 @@ void filterInplace(
         = Giterator::iteratorPositions( container, diff );
 
     UTILITY_OMP(parallel for schedule( dynamic, 20 ))
-    for(uint p=0; p<poss.size(); ++p){
+    for(std::int64_t p=0; p<static_cast<std::int64_t>(poss.size()); ++p){
         VolumeBase_t::Position_s pos = poss[p];
         Giterator sit( container, pos, diff );
         Giterator send = Giterator::gend( sit );

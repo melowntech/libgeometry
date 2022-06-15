@@ -1,7 +1,8 @@
 define_module(LIBRARY pygeometry=${MODULE_geo_VERSION}
   DEPENDS
-  geometry=${MODULE_geometry_VERSION}
-  Boost_THREAD Boost_SYSTEM Boost_PYTHON PYTHONLIBS)
+  geometry=${MODULE_geometry_VERSION} GDAL
+  pysupport>=1.5
+  Boost_THREAD Boost_SYSTEM)
 
 set(pygeometry_SOURCES
   geometrymodule.cpp

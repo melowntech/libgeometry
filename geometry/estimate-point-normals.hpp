@@ -134,7 +134,7 @@ std::vector<typename C::value_type> estimateNormals(const C& pointcloud,
 
     UTILITY_OMP(parallel for schedule(static) default(shared) 
                firstprivate(searchRadiusTotal, pointsProcessed))
-    for (size_t i = 0; i < nPoints; ++i)
+    for (std::int64_t i = 0; i < static_cast<std::int64_t>(nPoints); ++i)
     {
         const T& point(pointcloud[i]);
         T& normal(normals[i]);
