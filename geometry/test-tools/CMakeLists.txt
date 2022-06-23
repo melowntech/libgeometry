@@ -10,5 +10,5 @@ set(geometry-load-obj_SOURCES
 
 add_executable(geometry-load-obj ${geometry-load-obj_SOURCES})
 target_link_libraries(geometry-load-obj ${MODULE_LIBRARIES})
-buildsys_target_compile_definitions(geometry-load-obj ${MODULE_DEFINITIONS})
+target_compile_definitions(geometry-load-obj PRIVATE ${MODULE_DEFINITIONS})
 buildsys_binary(geometry-load-obj)

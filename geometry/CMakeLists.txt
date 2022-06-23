@@ -1,5 +1,5 @@
 # bump version here
-set(geometry_VERSION 1.16)
+set(geometry_VERSION 1.17)
 
 set(geometry_EXTRA_DEPENDS)
 set(geometry_EXTRA_DEFINITIONS)
@@ -92,7 +92,7 @@ else()
 endif()
 
 define_module(LIBRARY geometry=${geometry_VERSION}
-  DEPENDS math>=1.8 utility>=1.38 dbglog>=1.4
+  DEPENDS math>=1.10 utility>=1.41 dbglog>=1.7
   ${geometry_EXTRA_DEPENDS}
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
@@ -137,6 +137,6 @@ set(geometry_SOURCES
 add_library(geometry STATIC ${geometry_SOURCES})
 buildsys_library(geometry)
 target_link_libraries(geometry ${MODULE_LIBRARIES})
-buildsys_target_compile_definitions(geometry ${MODULE_DEFINITIONS})
+target_compile_definitions(geometry PRIVATE ${MODULE_DEFINITIONS})
 
 add_subdirectory(test-tools EXCLUDE_FROM_ALL)
