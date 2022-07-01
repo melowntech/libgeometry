@@ -164,7 +164,7 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
             continue;
         }
 
-        if (textured && (face.imageId != currentImageId)) {
+        if (face.imageId != currentImageId) {
             addMtl(out, mtl, face.imageId);
             currentImageId = face.imageId;
         }
