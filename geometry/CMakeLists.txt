@@ -91,6 +91,21 @@ else()
   message(STATUS "geometry: compiling without Boost.IOStreams support")
 endif()
 
+if(Eigen3_FOUND)
+  message(STATUS "geometry: compiling in Eigen3 support")
+
+  # add definitions
+  list(APPEND geometry_EXTRA_DEFINITIONS GEOMETRY_HAS_EIGEN=1)
+
+  set(geometry_EIGEN_SOURCES
+    estimate-point-normals.hpp estimate-point-normals.cpp
+    )
+
+  list(APPEND geometry_EXTRA_DEPENDS Eigen3)
+else()
+  message(STATUS "geometry: compiling without Eigen3 support")
+endif()
+
 define_module(LIBRARY geometry=${geometry_VERSION}
   DEPENDS math>=1.10 utility>=1.41 dbglog>=1.7
   ${geometry_EXTRA_DEPENDS}
@@ -110,7 +125,6 @@ set(geometry_SOURCES
 
   neighbors.hpp
   bvh.hpp
-  estimate-point-normals.hpp estimate-point-normals.cpp
 
   smoothcloud.hpp smoothcloud.cpp
 
@@ -132,6 +146,7 @@ set(geometry_SOURCES
   ${geometry_OPENCV_SOURCES}
   ${geometry_MGTS_SOURCES}
   ${geometry_BIO_SOURCES}
+  ${geometry_EIGEN_SOURCES}
   )
 
 add_library(geometry STATIC ${geometry_SOURCES})
