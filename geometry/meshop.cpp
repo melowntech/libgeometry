@@ -1001,7 +1001,7 @@ Mesh::list splitById(const Mesh &mesh)
         Index vertex(const Mesh &m, Index v) {
             auto fvertices(vertices.find(v));
             if (fvertices == vertices.end()) {
-                auto nv(mesh.vertices.size());
+                geometry::Face::index_type nv(mesh.vertices.size());
                 mesh.vertices.push_back(m.vertices[v]);
                 fvertices = vertices.insert(VMap::value_type(v, nv)).first;
             }

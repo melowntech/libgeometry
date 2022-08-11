@@ -116,7 +116,8 @@ Mesh clip(const Mesh &mesh, const math::MultiPolygon &clipRegion)
         }
 
         const auto index(om.vertices.size());
-        syntheticVertices.insert(SyntheticVertices::value_type(p, index));
+        syntheticVertices.insert(
+            SyntheticVertices::value_type(p, static_cast<int>(index)));
         om.vertices.push_back(p);
         return index;
     });
@@ -162,7 +163,10 @@ Mesh clip(const Mesh &mesh, const math::MultiPolygon &clipRegion)
 
             for (const auto &mt : t3d) {
                 om.faces.emplace_back
-                    (addVertex(mt[0]), addVertex(mt[1]), addVertex(mt[2]));
+                    (static_cast<geometry::Face::index_type>(addVertex(mt[0]))
+                    , static_cast<geometry::Face::index_type>(addVertex(mt[1]))
+                    , static_cast<geometry::Face::index_type>(
+                        addVertex(mt[2])));
             }
             continue;
         }
