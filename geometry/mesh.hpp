@@ -249,7 +249,9 @@ inline void Mesh::addFace(math::Points3::size_type a
                           , math::Points3::size_type b
                           , math::Points3::size_type c)
 {
-    faces.emplace_back(a, b, c);
+    faces.emplace_back(static_cast<geometry::Face::index_type>(a)
+                      , static_cast<geometry::Face::index_type>(b)
+                      , static_cast<geometry::Face::index_type>(c));
 }
 
 inline void
