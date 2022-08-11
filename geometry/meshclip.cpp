@@ -133,7 +133,7 @@ Mesh clip(const Mesh &mesh, const math::MultiPolygon &clipRegion)
         }
 
         const auto index(om.tCoords.size());
-        syntheticUv.insert(SyntheticUv::value_type(p, index));
+        syntheticUv.insert(SyntheticUv::value_type(p, static_cast<int>(index)));
         om.tCoords.push_back(p);
         return index;
     });
@@ -196,8 +196,12 @@ Mesh clip(const Mesh &mesh, const math::MultiPolygon &clipRegion)
         for (const auto &mt : t3d) {
             const auto &tt(*it2d++);
             om.faces.emplace_back
-                (addVertex(mt[0]), addVertex(mt[1]), addVertex(mt[2])
-                 , addUv(tt[0]), addUv(tt[1]), addUv(tt[2])
+                (static_cast<geometry::Face::index_type>(addVertex(mt[0]))
+                , static_cast<geometry::Face::index_type>(addVertex(mt[1]))
+                , static_cast<geometry::Face::index_type>(addVertex(mt[2]))
+                , static_cast<geometry::Face::index_type>(addUv(tt[0]))
+                , static_cast<geometry::Face::index_type>(addUv(tt[1]))
+                , static_cast<geometry::Face::index_type>(addUv(tt[2]))
                  , face.imageId);
         }
     }
