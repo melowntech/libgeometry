@@ -321,8 +321,11 @@ geometry::Mesh::pointer simplify_gts_in_grid(const geometry::Mesh &mesh
             // The error:
             //     Gts:ERROR:surface.c:184:gts_surface_remove_face: assertion failed: (s->keep_faces == FALSE)
             // Solution: prepare all sub surfaces for this bunch in advance
-
+#ifdef _MSC_VER
+            UTILITY_OMP(parallel for schedule(dynamic, 1))
+#else
             UTILITY_OMP(parallel for schedule(dynamic, 1) collapse(2))
+#endif
             for (int64_t row = cellRowStart ; row < (int64_t)rows; row+=cellRowShift)
             for (unsigned int column = cellColumnStart ; column < columns;
                  column+=cellColumnShift)

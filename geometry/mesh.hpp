@@ -239,14 +239,19 @@ inline void Mesh::addFace(math::Points3::size_type a
                           , math::Points3::size_type c
                           , unsigned int imageId)
 {
-    faces.emplace_back(a, b, c, imageId);
+    faces.emplace_back(static_cast<geometry::Face::index_type>(a)
+                      , static_cast<geometry::Face::index_type>(b)
+                      , static_cast<geometry::Face::index_type>(c)
+                      , imageId);
 }
 
 inline void Mesh::addFace(math::Points3::size_type a
                           , math::Points3::size_type b
                           , math::Points3::size_type c)
 {
-    faces.emplace_back(a, b, c);
+    faces.emplace_back(static_cast<geometry::Face::index_type>(a)
+                      , static_cast<geometry::Face::index_type>(b)
+                      , static_cast<geometry::Face::index_type>(c));
 }
 
 inline void
@@ -254,7 +259,12 @@ Mesh::addFace(math::Points3::size_type a, math::Points3::size_type b
               , math::Points3::size_type c, math::Points2::size_type ta
               , math::Points2::size_type tb, math::Points2::size_type tc)
 {
-    faces.emplace_back(a, b, c, ta, tb, tc);
+    faces.emplace_back(static_cast<geometry::Face::index_type>(a)
+                      , static_cast<geometry::Face::index_type>(b)
+                      , static_cast<geometry::Face::index_type>(c)
+                      , static_cast<geometry::Face::index_type>(ta)
+                      , static_cast<geometry::Face::index_type>(tb)
+                      , static_cast<geometry::Face::index_type>(tc));
 }
 
 inline void
@@ -263,7 +273,13 @@ Mesh::addFace(math::Points3::size_type a, math::Points3::size_type b
               , math::Points2::size_type tb, math::Points2::size_type tc
               , unsigned int imageId)
 {
-    faces.emplace_back(a, b, c, ta, tb, tc, imageId);
+    faces.emplace_back(static_cast<geometry::Face::index_type>(a)
+                      , static_cast<geometry::Face::index_type>(b)
+                      , static_cast<geometry::Face::index_type>(c)
+                      , static_cast<geometry::Face::index_type>(ta)
+                      , static_cast<geometry::Face::index_type>(tb)
+                      , static_cast<geometry::Face::index_type>(tc)
+                      , imageId);
 }
 
 

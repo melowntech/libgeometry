@@ -2303,7 +2303,9 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
 
             auto it = vidMap.find(pVertex);
             if(it==vidMap.end()){
-                vidMap.insert(std::make_pair(pVertex,ret.vertices.size()));
+                vidMap.insert(
+                    std::make_pair(
+                        pVertex, static_cast<uint>(ret.vertices.size())));
                 indices[vertex]=ret.vertices.size();
                 ret.vertices.push_back(pVertex);
                 continue;
