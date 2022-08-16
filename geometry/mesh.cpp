@@ -95,29 +95,25 @@ void Mesh::skirt( const math::Point3 & down ) {
             if ( vdownmap.find( edge.v1 ) == vdownmap.end() ) {
 
                 vertices.push_back( vertices[edge.v1] + down );
-                vdownmap[edge.v1] = static_cast<geometry::Face::index_type>(
-                    vertices.size()) - 1;
+                vdownmap[edge.v1] = static_cast<Index>(vertices.size()) - 1;
             }
 
             if ( tdownmap.find( edge.t1 ) == tdownmap.end() ) {
 
                 tCoords.push_back( tCoords[edge.t1] );
-                tdownmap[edge.t1] = static_cast<geometry::Face::index_type>(
-                    tCoords.size()) - 1;
+                tdownmap[edge.t1] = static_cast<Index>(tCoords.size()) - 1;
             }
 
             if ( vdownmap.find( edge.v2 ) == vdownmap.end() ) {
 
                 vertices.push_back( vertices[edge.v2]  + down );
-                vdownmap[edge.v2] = static_cast<geometry::Face::index_type>(
-                    vertices.size()) - 1;
+                vdownmap[edge.v2] = static_cast<Index>(vertices.size()) - 1;
             }
 
             if ( tdownmap.find( edge.t2 ) == tdownmap.end() ) {
 
                 tCoords.push_back( tCoords[edge.t2] );
-                tdownmap[edge.t2] = static_cast<geometry::Face::index_type>(
-                    tCoords.size()) - 1;
+                tdownmap[edge.t2] = static_cast<Index>(tCoords.size()) - 1;
             }
 
             // add new faces
