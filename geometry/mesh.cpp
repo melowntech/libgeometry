@@ -119,18 +119,19 @@ void Mesh::skirt( const math::Point3 & down ) {
             // add new faces
             if ( edge.status == Status::FW ) {
 
-                faces.emplace_back( vdownmap[edge.v1], edge.v2, edge.v1
-                    , tdownmap[edge.t1], edge.t2, edge.t1 );
-                faces.emplace_back(vdownmap[edge.v1], vdownmap[edge.v2], edge.v2
-                    , tdownmap[edge.t1], tdownmap[edge.t2], edge.t2);
+                faces.emplace_back( vdownmap[edge.v1], edge.v2, edge.v1,
+                    tdownmap[edge.t1], edge.t2, edge.t1 );
+                faces.emplace_back( vdownmap[edge.v1], vdownmap[edge.v2],
+                    edge.v2, tdownmap[edge.t1], tdownmap[edge.t2], edge.t2 );
             }
 
             if ( edge.status == Status::BW ) {
 
-                faces.emplace_back( vdownmap[edge.v1], edge.v1, edge.v2
-                    , tdownmap[edge.t1], edge.t1, edge.t2 );
-                faces.emplace_back( vdownmap[edge.v1], edge.v2, vdownmap[edge.v2]
-                    , tdownmap[edge.t1], edge.t2, tdownmap[edge.t2]);
+                faces.emplace_back( vdownmap[edge.v1], edge.v1, edge.v2,
+                    tdownmap[edge.t1], edge.t1, edge.t2 );
+                faces.emplace_back( vdownmap[edge.v1], edge.v2,
+                    vdownmap[edge.v2], tdownmap[edge.t1], edge.t2,
+                    tdownmap[edge.t2] );
             }
 
             oddc++;
