@@ -237,6 +237,7 @@ template <typename FaceLabels>
 Mesh MultiPolyMesh<FaceLabels>::triangulateFaces(
     std::vector<FaceLabels>* const triFaceLabels) const
 {
+#ifdef GEOMETRY_HAS_GTS
     Mesh triMesh;
     if (triFaceLabels) { triFaceLabels->clear(); }
     triMesh.vertices = vertices; // copy vertices
@@ -279,6 +280,12 @@ Mesh MultiPolyMesh<FaceLabels>::triangulateFaces(
         }
     }
     return triMesh;
+#else
+    (void)triFaceLabels;
+    LOGTHROW(fatal, std::logic_error)
+            << "triangulateFaces requires compiling with GTS";
+    throw;
+#endif
 }
 
 } // namespace geometry
