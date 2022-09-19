@@ -30,8 +30,10 @@
  * 3D mesh operations
  */
 
-#include <unordered_set>
+#include <algorithm>
+#include <numeric>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "meshop.hpp"
 #include "parse-obj.hpp"
@@ -159,7 +161,19 @@ void saveAsObj(const Mesh &mesh, std::ostream &out
 
     unsigned int currentImageId(static_cast<unsigned int>(-1));
 
-    for (const auto &face : mesh.faces) {
+    // stable-sort faces by their material id to reduce the output file size
+    std::vector<decltype(mesh.faces)::size_type> sortedIndices(
+        mesh.faces.size());
+    std::iota(std::begin(sortedIndices), std::end(sortedIndices), 0);
+    std::sort(std::begin(sortedIndices),
+              std::end(sortedIndices),
+              [&mesh](const auto lhs, const auto rhs) {
+                  return std::make_pair(mesh.faces[lhs].imageId, lhs)
+                         < std::make_pair(mesh.faces[rhs].imageId, rhs);
+              });
+
+    for (const auto faceId : sortedIndices) {
+        const auto& face { mesh.faces[faceId] };
         if (face.degenerate()) {
             continue;
         }
