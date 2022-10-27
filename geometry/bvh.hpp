@@ -397,7 +397,7 @@ private:
                 }
             } else {
                 // inner node
-                double left_t0, left_t1, right_t0, right_t1;
+                double left_t0{0}, left_t1{0}, right_t0{0}, right_t1{0};
                 const bool hitLeft =
                     intersectBox(nodes_[idx + 1].bbox, ray, left_t0, left_t1)
                     && left_t1 > 0;
