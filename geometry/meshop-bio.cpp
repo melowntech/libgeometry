@@ -42,7 +42,7 @@ void saveAsGzippedObj(const Mesh &mesh, const boost::filesystem::path &filepath
     std::ofstream f;
     f.exceptions(std::ios::badbit | std::ios::failbit);
     try {
-        f.open(filepath.string(), std::ios_base::out | std::ios_base::trunc);
+        f.open(filepath.string(), std::ios_base::out | std::ios_base::trunc | std::ios_base::binary);
     } catch (const std::exception&) {
         LOGTHROW(err3, std::runtime_error)
             << "Unable to save mesh to <" << filepath << ">.";
