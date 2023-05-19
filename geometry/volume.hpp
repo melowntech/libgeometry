@@ -625,19 +625,42 @@ public :
      * The output is geometry::mesh class.
      */
     geometry::Mesh isosurfaceAsMesh(
-            const Value_t & threshold
+           const Value_t & threshold
           , const SurfaceOrientation_t orientation = TO_MIN
           , const IsosurfaceAlgorithm_t algorithm = M_CUBES
           , const boost::optional<math::Extents3> &ext = boost::none);
 
+    /**
+     * Extract isosurface with marching tetrahedra.
+     * The output is geometry::mesh class.
+     */
+    geometry::Mesh isosurfaceAsMeshTetrahedrons(
+            const Value_t & threshold
+          , const SurfaceOrientation_t orientation = TO_MIN
+          , const boost::optional<math::Extents3> &ext = boost::none);
+
+    /**
+     * Extract isosurface with marching cubes.
+     * The output is geometry::mesh class.
+     */
+    geometry::Mesh isosurfaceAsMeshCubes(
+            const Value_t & threshold
+          , const SurfaceOrientation_t orientation = TO_MIN
+          , const boost::optional<math::Extents3> &ext = boost::none);
+
 private:
     void isoFromCube(
-            std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>> & retval
-            , const FPosition_s * vertices
-            , const Value_t * values
-            , const Value_t & threshold
-            , const SurfaceOrientation_t orientation
-            , int i, int j, int k, int si, int sj) const;
+        std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>&
+            retval,
+        const FPosition_s* vertices,
+        const Value_t* values,
+        const Value_t& threshold,
+        const SurfaceOrientation_t orientation,
+        std::size_t i,
+        std::size_t j,
+        std::size_t k,
+        std::size_t si,
+        std::size_t sj) const;
 
 
     /** Used for isosurface extraction */
@@ -2152,188 +2175,188 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes(
     return utility::flatten<FPosition_s>(tVertices);
 }
 */
-namespace
-{
-std::size_t edgeIds(std::size_t x,
-                    std::size_t y,
-                    std::size_t z,
-                    std::size_t sx,
-                    std::size_t sy,
-                    int localEdge)
-{
-    switch (localEdge)
-    {
-    case 0:
-            return 3 * x + 3 * y * (sx + 1) + 3 * z * (sx + 1) * (sy + 1);
 
-    case 1:
-            return 3 * x + 3 * y * (sx + 1) + 3 * z * (sx + 1) * (sy + 1) + 1;
-    case 2:
-            return 3 * x + 3 * y * (sx + 1) + 3 * z * (sx + 1) * (sy + 1) + 2;
-    case 3:
-            return 3 * (x + 1) + 3 * y * (sx + 1) + 3 * z * (sx + 1) * (sy + 1)
-                   + 1;
-    case 4:
-            return 3 * (x + 1) + 3 * y * (sx + 1) + 3 * z * (sx + 1) * (sy + 1)
-                   + 2;
-    case 5:
-            return 3 * x + 3 * (y + 1) * (sx + 1) + 3 * z * (sx + 1) * (sy + 1);
-    case 6:
-            return 3 * x + 3 * (y + 1) * (sx + 1) + 3 * z * (sx + 1) * (sy + 1)
-                   + 2;
-    case 7:
-            return 3 * (x + 1) + 3 * (y + 1) * (sx + 1)
-                   + 3 * z * (sx + 1) * (sy + 1) + 2;
-    case 8:
-            return 3 * x + 3 * y * (sx + 1) + 3 * (z + 1) * (sx + 1) * (sy + 1);
-    case 9:
-            return 3 * x + 3 * y * (sx + 1) + 3 * (z + 1) * (sx + 1) * (sy + 1)
-                   + 1;
-    case 10:
-            return 3 * (x + 1) + 3 * y * (sx + 1)
-                   + 3 * (z + 1) * (sx + 1) * (sy + 1) + 1;
-    case 11:
-            return 3 * x + 3 * (y + 1) * (sx + 1)
-                   + 3 * (z + 1) * (sx + 1) * (sy + 1);
-    default:
-            LOGTHROW(err3, std::runtime_error) << "Invalid local edge id: " 
-                << localEdge;
-            throw;
-    }
-}
-} // namespace
-
-template<typename Value_t, class Container_t>
+template <typename Value_t, class Container_t>
 void ScalarField_t<Value_t, Container_t>::isoFromCube(
-        std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>> & retval
-        , const typename VolumeBase_t::FPosition_s * vertices
-        , const Value_t * values
-        , const Value_t & threshold, const SurfaceOrientation_t orientation
-        , int i, int j, int k, int si, int sj)
-const
+    std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>&
+        retval,
+    const typename VolumeBase_t::FPosition_s* vertices,
+    const Value_t* values,
+    const Value_t& threshold,
+    const SurfaceOrientation_t orientation,
+    std::size_t i,
+    std::size_t j,
+    std::size_t k,
+    std::size_t si,
+    std::size_t sj) const
 {
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
 
-    int cubeIndex;
     std::pair<FPosition_s, std::size_t> vertexList[12];
 
-    cubeIndex = 0;
-    if(orientation == TO_MIN){
-        if (values[0] < threshold) cubeIndex |= 1;
-        if (values[1] < threshold) cubeIndex |= 2;
-        if (values[2] < threshold) cubeIndex |= 4;
-        if (values[3] < threshold) cubeIndex |= 8;
-        if (values[4] < threshold) cubeIndex |= 16;
-        if (values[5] < threshold) cubeIndex |= 32;
-        if (values[6] < threshold) cubeIndex |= 64;
-        if (values[7] < threshold) cubeIndex |= 128;
-    }else{
-        if (values[0] > threshold) cubeIndex |= 1;
-        if (values[1] > threshold) cubeIndex |= 2;
-        if (values[2] > threshold) cubeIndex |= 4;
-        if (values[3] > threshold) cubeIndex |= 8;
-        if (values[4] > threshold) cubeIndex |= 16;
-        if (values[5] > threshold) cubeIndex |= 32;
-        if (values[6] > threshold) cubeIndex |= 64;
-        if (values[7] > threshold) cubeIndex |= 128;
+    auto edgeId = [i, j, k, si, sj](int localEdge) -> std::size_t {
+        switch (localEdge)
+        {
+        case 0:
+            return 3 * i + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1);
+        case 1:
+            return 3 * (i + 1) + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1)
+                   + 1;
+        case 2:
+            return 3 * i + 3 * (j + 1) * (si + 1) + 3 * k * (si + 1) * (sj + 1);
+        case 3:
+            return 3 * i + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1) + 1;
+        case 4:
+            return 3 * i + 3 * j * (si + 1) + 3 * (k + 1) * (si + 1) * (sj + 1);
+        case 5:
+            return 3 * (i + 1) + 3 * j * (si + 1)
+                   + 3 * (k + 1) * (si + 1) * (sj + 1) + 1;
+        case 6:
+            return 3 * i + 3 * (j + 1) * (si + 1)
+                   + 3 * (k + 1) * (si + 1) * (sj + 1);
+        case 7:
+            return 3 * i + 3 * j * (si + 1) + 3 * (k + 1) * (si + 1) * (sj + 1)
+                   + 1;
+        case 8:
+            return 3 * i + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1) + 2;
+        case 9:
+            return 3 * (i + 1) + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1)
+                   + 2;
+        case 10:
+            return 3 * (i + 1) + 3 * (j + 1) * (si + 1)
+                   + 3 * k * (si + 1) * (sj + 1) + 2;
+        case 11:
+            return 3 * i + 3 * (j + 1) * (si + 1) + 3 * k * (si + 1) * (sj + 1)
+                   + 2;
+        default:
+            LOGTHROW(err3, std::runtime_error)
+                << "Invalid local edge id: " << localEdge;
+            throw;
+        }
+    };
+
+    int cubeIndex = 0;
+    if (orientation == TO_MIN)
+    {
+            if (values[0] < threshold) cubeIndex |= 1;
+            if (values[1] < threshold) cubeIndex |= 2;
+            if (values[2] < threshold) cubeIndex |= 4;
+            if (values[3] < threshold) cubeIndex |= 8;
+            if (values[4] < threshold) cubeIndex |= 16;
+            if (values[5] < threshold) cubeIndex |= 32;
+            if (values[6] < threshold) cubeIndex |= 64;
+            if (values[7] < threshold) cubeIndex |= 128;
+    }
+    else
+    {
+            if (values[0] > threshold) cubeIndex |= 1;
+            if (values[1] > threshold) cubeIndex |= 2;
+            if (values[2] > threshold) cubeIndex |= 4;
+            if (values[3] > threshold) cubeIndex |= 8;
+            if (values[4] > threshold) cubeIndex |= 16;
+            if (values[5] > threshold) cubeIndex |= 32;
+            if (values[6] > threshold) cubeIndex |= 64;
+            if (values[7] > threshold) cubeIndex |= 128;
     }
 
-    if (marchingcubes::edgeTable[cubeIndex] == 0)
-        return;
+    if (marchingcubes::edgeTable[cubeIndex] == 0) return;
 
     if (marchingcubes::edgeTable[cubeIndex] & 1)
-        vertexList[0] = { interpolate(vertices[0],
-                                      values[0],
-                                      vertices[1],
-                                      values[1],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 0) };
+            vertexList[0] = { interpolate(vertices[0],
+                                          values[0],
+                                          vertices[1],
+                                          values[1],
+                                          threshold),
+                              edgeId(0) };
     if (marchingcubes::edgeTable[cubeIndex] & 2)
-        vertexList[1] = { interpolate(vertices[1],
-                                      values[1],
-                                      vertices[2],
-                                      values[2],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 3) };
+            vertexList[1] = { interpolate(vertices[1],
+                                          values[1],
+                                          vertices[2],
+                                          values[2],
+                                          threshold),
+                              edgeId(1) };
     if (marchingcubes::edgeTable[cubeIndex] & 4)
-        vertexList[2] = { interpolate(vertices[2],
-                                      values[2],
-                                      vertices[3],
-                                      values[3],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 5) };
+            vertexList[2] = { interpolate(vertices[2],
+                                          values[2],
+                                          vertices[3],
+                                          values[3],
+                                          threshold),
+                              edgeId(2) };
     if (marchingcubes::edgeTable[cubeIndex] & 8)
-        vertexList[3] = { interpolate(vertices[3],
-                                      values[3],
-                                      vertices[0],
-                                      values[0],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 1) };
+            vertexList[3] = { interpolate(vertices[3],
+                                          values[3],
+                                          vertices[0],
+                                          values[0],
+                                          threshold),
+                              edgeId(3) };
     if (marchingcubes::edgeTable[cubeIndex] & 16)
-        vertexList[4] = { interpolate(vertices[4],
-                                      values[4],
-                                      vertices[5],
-                                      values[5],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 8) };
+            vertexList[4] = { interpolate(vertices[4],
+                                          values[4],
+                                          vertices[5],
+                                          values[5],
+                                          threshold),
+                              edgeId(4) };
     if (marchingcubes::edgeTable[cubeIndex] & 32)
-        vertexList[5] = { interpolate(vertices[5],
-                                      values[5],
-                                      vertices[6],
-                                      values[6],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 10) };
+            vertexList[5] = { interpolate(vertices[5],
+                                          values[5],
+                                          vertices[6],
+                                          values[6],
+                                          threshold),
+                              edgeId(5) };
     if (marchingcubes::edgeTable[cubeIndex] & 64)
-        vertexList[6] = { interpolate(vertices[6],
-                                      values[6],
-                                      vertices[7],
-                                      values[7],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 11) };
+            vertexList[6] = { interpolate(vertices[6],
+                                          values[6],
+                                          vertices[7],
+                                          values[7],
+                                          threshold),
+                              edgeId(6) };
     if (marchingcubes::edgeTable[cubeIndex] & 128)
-        vertexList[7] = { interpolate(vertices[7],
-                                      values[7],
-                                      vertices[4],
-                                      values[4],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 9) };
+            vertexList[7] = { interpolate(vertices[7],
+                                          values[7],
+                                          vertices[4],
+                                          values[4],
+                                          threshold),
+                              edgeId(7) };
     if (marchingcubes::edgeTable[cubeIndex] & 256)
-        vertexList[8] = { interpolate(vertices[0],
-                                      values[0],
-                                      vertices[4],
-                                      values[4],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 2) };
+            vertexList[8] = { interpolate(vertices[0],
+                                          values[0],
+                                          vertices[4],
+                                          values[4],
+                                          threshold),
+                              edgeId(8) };
     if (marchingcubes::edgeTable[cubeIndex] & 512)
-        vertexList[9] = { interpolate(vertices[1],
-                                      values[1],
-                                      vertices[5],
-                                      values[5],
-                                      threshold),
-                          edgeIds(i, j, k, si, sj, 4) };
+            vertexList[9] = { interpolate(vertices[1],
+                                          values[1],
+                                          vertices[5],
+                                          values[5],
+                                          threshold),
+                              edgeId(9) };
     if (marchingcubes::edgeTable[cubeIndex] & 1024)
-        vertexList[10] = { interpolate(vertices[2],
-                                       values[2],
-                                       vertices[6],
-                                       values[6],
-                                       threshold),
-                           edgeIds(i, j, k, si, sj, 7) };
+            vertexList[10] = { interpolate(vertices[2],
+                                           values[2],
+                                           vertices[6],
+                                           values[6],
+                                           threshold),
+                               edgeId(10) };
     if (marchingcubes::edgeTable[cubeIndex] & 2048)
-        vertexList[11] = { interpolate(vertices[3],
-                                       values[3],
-                                       vertices[7],
-                                       values[7],
-                                       threshold),
-                           edgeIds(i, j, k, si, sj, 6) };
+            vertexList[11] = { interpolate(vertices[3],
+                                           values[3],
+                                           vertices[7],
+                                           values[7],
+                                           threshold),
+                               edgeId(11) };
 
 
-    for (uint i=0;marchingcubes::triTable[cubeIndex][i]!=-1;i+=3) {
-        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i+0]]);
-        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i+1]]);
-        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i+2]]);
+    for (uint i = 0; marchingcubes::triTable[cubeIndex][i] != -1; i += 3)
+    {
+            retval.push_back(
+                vertexList[marchingcubes::triTable[cubeIndex][i + 0]]);
+            retval.push_back(
+                vertexList[marchingcubes::triTable[cubeIndex][i + 1]]);
+            retval.push_back(
+                vertexList[marchingcubes::triTable[cubeIndex][i + 2]]);
     }
 }
-
 
 template <typename Value_t, class Container_t>
 std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>
@@ -2514,98 +2537,103 @@ ScalarField_t<Value_t, Container_t>::isosurfaceTetrahedrons(
 /** Cannot be made const since there is a manipulation with border
  *  condition. *sigh*
  */
-/*
 template <typename Value_t, class Container_t>
 geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
-              const Value_t & threshold
-            , const SurfaceOrientation_t orientation
-            , const IsosurfaceAlgorithm_t algorithm
-            , const boost::optional<math::Extents3> &ext)
+    const Value_t& threshold,
+    const SurfaceOrientation_t orientation,
+    const IsosurfaceAlgorithm_t algorithm,
+    const boost::optional<math::Extents3>& ext)
 {
+    switch (algorithm)
+    {
+    case M_CUBES:
+        return this->isosurfaceAsMeshCubes(threshold, orientation, ext);
+    case M_TETRAHEDRONS:
+        return this->isosurfaceAsMeshTetrahedrons(threshold, orientation, ext);
+    }
+}
 
+template <typename Value_t, class Container_t>
+geometry::Mesh
+    ScalarField_t<Value_t, Container_t>::isosurfaceAsMeshTetrahedrons(
+        const Value_t& threshold,
+        const SurfaceOrientation_t orientation,
+        const boost::optional<math::Extents3>& ext)
+{
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
 
-    const auto oldBorderType
-        (this->container_.setBorderType(BorderType::BORDER_REPLICATE));
-    std::vector<FPosition_s> vertices;
-    switch(algorithm){
-    case M_CUBES:
-        vertices = this->isosurfaceCubes(threshold,orientation,ext);
-        break;
-    case M_TETRAHEDRONS:
-        vertices = this->isosurfaceTetrahedrons(threshold,orientation,ext);
-        break;
-    }
+    const auto oldBorderType(
+        this->container_.setBorderType(BorderType::BORDER_REPLICATE));
+    // TODO: index vertices by edge ids as in isosurfaceAsMeshTetrahedrons
+    std::vector<FPosition_s> vertices
+        = this->isosurfaceTetrahedrons(threshold, orientation, ext);
+
     this->container_.setBorderType(oldBorderType);
 
     geometry::Mesh ret;
 
-    std::map<math::Point3,uint> vidMap;
+    std::map<math::Point3, uint> vidMap;
     uint numNaNs = 0;
 
-    //reconstruct faces
-    for(uint face = 0; face<vertices.size()/3;++face){
+    // reconstruct faces
+    for (uint face = 0; face < vertices.size() / 3; ++face)
+    {
         uint indices[3];
         bool finite = true;
-        for(uint vertex = 0; vertex<3; ++vertex){
-            math::Point3 pVertex(
-                      vertices[face*3+vertex].x
-                    , vertices[face*3+vertex].y
-                    , vertices[face*3+vertex].z);
-            finite &= std::isfinite(pVertex(0)) &&
-                      std::isfinite(pVertex(1)) &&
-                      std::isfinite(pVertex(2));
+        for (uint vertex = 0; vertex < 3; ++vertex)
+        {
+            math::Point3 pVertex(vertices[face * 3 + vertex].x,
+                                 vertices[face * 3 + vertex].y,
+                                 vertices[face * 3 + vertex].z);
+            finite &= std::isfinite(pVertex(0)) && std::isfinite(pVertex(1))
+                      && std::isfinite(pVertex(2));
 
             auto it = vidMap.find(pVertex);
-            if(it==vidMap.end()){
+            if (it == vidMap.end())
+            {
                 vidMap.insert(
-                    std::make_pair(
-                        pVertex, static_cast<uint>(ret.vertices.size())));
-                indices[vertex]=ret.vertices.size();
+                    std::make_pair(pVertex,
+                                   static_cast<uint>(ret.vertices.size())));
+                indices[vertex] = ret.vertices.size();
                 ret.vertices.push_back(pVertex);
                 continue;
             }
-            indices[vertex]=it->second;
+            indices[vertex] = it->second;
         }
-        if(indices[0] == indices[1]
-                || indices[0] == indices[2]
-                || indices[1] == indices[2] ){
+        if (indices[0] == indices[1] || indices[0] == indices[2]
+            || indices[1] == indices[2])
+        {
             continue;
         }
-        if (!finite) {
+        if (!finite)
+        {
             numNaNs++;
             continue;
         }
 
-        ret.addFace(indices[0],indices[1],indices[2]);
+        ret.addFace(indices[0], indices[1], indices[2]);
     }
-    if (numNaNs > 0) {
-        LOG(warn4) << "Extracted isosurface mesh has " << numNaNs << " NaN points.";
+    if (numNaNs > 0)
+    {
+        LOG(warn4) << "Extracted isosurface mesh has " << numNaNs
+                   << " NaN points.";
     }
     return ret;
 }
-*/
-template <typename Value_t, class Container_t>
-geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
-              const Value_t & threshold
-            , const SurfaceOrientation_t orientation
-            , const IsosurfaceAlgorithm_t /*algorithm*/
-            , const boost::optional<math::Extents3> &ext)
-{
 
+template <typename Value_t, class Container_t>
+geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMeshCubes(
+    const Value_t& threshold,
+    const SurfaceOrientation_t orientation,
+    const boost::optional<math::Extents3>& ext)
+{
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
 
-    const auto oldBorderType
-        (this->container_.setBorderType(BorderType::BORDER_REPLICATE));
-    std::vector<std::pair<FPosition_s, std::size_t>> vertices;
-    //switch(algorithm){
-    //case M_CUBES:
-        vertices = this->isosurfaceCubes(threshold,orientation,ext);
-    //    break;
-    //case M_TETRAHEDRONS:
-    //    vertices = this->isosurfaceTetrahedrons(threshold,orientation,ext);
-    //    break;
-    //}
+    const auto oldBorderType(
+        this->container_.setBorderType(BorderType::BORDER_REPLICATE));
+    std::vector<std::pair<FPosition_s, std::size_t>> vertices
+        = this->isosurfaceCubes(threshold, orientation, ext);
+
     this->container_.setBorderType(oldBorderType);
 
     geometry::Mesh ret;
@@ -2613,56 +2641,63 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
     std::map<std::size_t, std::pair<math::Point3, uint>> vidMap;
     uint numNaNs = 0;
 
-    //reconstruct faces
-    for(uint face = 0; face<vertices.size()/3;++face){
+    // reconstruct faces
+    for (uint face = 0; face < vertices.size() / 3; ++face)
+    {
         uint indices[3];
         bool finite = true;
-        for(uint vertex = 0; vertex<3; ++vertex){
-            math::Point3 pVertex(
-                      vertices[face*3+vertex].first.x
-                    , vertices[face*3+vertex].first.y
-                    , vertices[face*3+vertex].first.z);
-            std::size_t edgeId = vertices[face*3+vertex].second;
-            finite &= std::isfinite(pVertex(0)) &&
-                      std::isfinite(pVertex(1)) &&
-                      std::isfinite(pVertex(2));
+        for (uint vertex = 0; vertex < 3; ++vertex)
+        {
+            math::Point3 pVertex(vertices[face * 3 + vertex].first.x,
+                                 vertices[face * 3 + vertex].first.y,
+                                 vertices[face * 3 + vertex].first.z);
+            std::size_t edgeId = vertices[face * 3 + vertex].second;
+            finite &= std::isfinite(pVertex(0)) && std::isfinite(pVertex(1))
+                      && std::isfinite(pVertex(2));
 
             auto it = vidMap.find(edgeId);
-            if(it==vidMap.end()){
-                vidMap.insert(
-                    std::make_pair(edgeId,
-                        std::make_pair(pVertex, static_cast<uint>(ret.vertices.size()))));
-                indices[vertex]=ret.vertices.size();
+            if (it == vidMap.end())
+            {
+                vidMap.insert(std::make_pair(
+                    edgeId,
+                    std::make_pair(pVertex,
+                                   static_cast<uint>(ret.vertices.size()))));
+                indices[vertex] = ret.vertices.size();
                 ret.vertices.push_back(pVertex);
                 continue;
             }
             else
             {
-              const auto& qVertex = it->second.first;
-              double nn = (pVertex[0]-qVertex[0]) * (pVertex[0]-qVertex[0]) +
-                (pVertex[1]-qVertex[1]) * (pVertex[1]-qVertex[1]) +
-                (pVertex[2]-qVertex[2]) * (pVertex[2]-qVertex[2]);
-              if (nn > 1e-9)
-              {
-                LOG(info2) << "\n\t" << pVertex << "\n\t" << qVertex << "\n";
-              }
+                const auto& qVertex = it->second.first;
+                double nn
+                    = (pVertex[0] - qVertex[0]) * (pVertex[0] - qVertex[0])
+                      + (pVertex[1] - qVertex[1]) * (pVertex[1] - qVertex[1])
+                      + (pVertex[2] - qVertex[2]) * (pVertex[2] - qVertex[2]);
+                if (nn > 1e-9)
+                {
+                    LOG(info2)
+                        << "\n\t" << pVertex << "\n\t" << qVertex << "\n";
+                }
             }
-            indices[vertex]=it->second.second;
+            indices[vertex] = it->second.second;
         }
-        if(indices[0] == indices[1]
-                || indices[0] == indices[2]
-                || indices[1] == indices[2] ){
+        if (indices[0] == indices[1] || indices[0] == indices[2]
+            || indices[1] == indices[2])
+        {
             continue;
         }
-        if (!finite) {
+        if (!finite)
+        {
             numNaNs++;
             continue;
         }
 
-        ret.addFace(indices[0],indices[1],indices[2]);
+        ret.addFace(indices[0], indices[1], indices[2]);
     }
-    if (numNaNs > 0) {
-        LOG(warn4) << "Extracted isosurface mesh has " << numNaNs << " NaN points.";
+    if (numNaNs > 0)
+    {
+        LOG(warn4) << "Extracted isosurface mesh has " << numNaNs
+                   << " NaN points.";
     }
     return ret;
 }
