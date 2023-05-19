@@ -613,7 +613,7 @@ public :
     /**
      * Extract isosurface with a marching cubes algorithm.
      * The output is a list of points where each consequent triple defines a
-     * triangle.
+     * triangle, each point is assigned the id of the edge where it was created.
      */
     std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>
         isosurfaceCubes( const Value_t & threshold,
@@ -625,7 +625,7 @@ public :
      * The output is geometry::mesh class.
      */
     geometry::Mesh isosurfaceAsMesh(
-           const Value_t & threshold
+            const Value_t & threshold
           , const SurfaceOrientation_t orientation = TO_MIN
           , const IsosurfaceAlgorithm_t algorithm = M_CUBES
           , const boost::optional<math::Extents3> &ext = boost::none);
@@ -2028,6 +2028,27 @@ void ScalarField_t<Value_t, Container_t>::isoFromTetrahedron(
 
 }
 
+/*
+
+|k
+|  /j
+| /
+|/      i
++--------
+
+local vertex and edge ids
+
+   7----6---6
+  7|       5|
+ / 11     / 10
+4----4---5  |
+8  |     9  |
+|  3---2-|--2
+| 3      | 1
+|/       |/
+0----0---1
+
+*/
 template <typename Value_t, class Container_t>
 void ScalarField_t<Value_t, Container_t>::isoFromCube(
     std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>&
@@ -2416,7 +2437,7 @@ geometry::Mesh
 
     const auto oldBorderType(
         this->container_.setBorderType(BorderType::BORDER_REPLICATE));
-    // TODO: index vertices by edge ids as in isosurfaceAsMeshTetrahedrons
+    // TODO: index vertices by edge ids as in isosurfaceAsMeshCubes
     std::vector<FPosition_s> vertices
         = this->isosurfaceTetrahedrons(threshold, orientation, ext);
 
