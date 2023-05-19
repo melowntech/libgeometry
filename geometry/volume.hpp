@@ -2402,6 +2402,9 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
         return this->isosurfaceAsMeshCubes(threshold, orientation, ext);
     case M_TETRAHEDRONS:
         return this->isosurfaceAsMeshTetrahedrons(threshold, orientation, ext);
+    default:
+        LOGTHROW(err3, std::runtime_error) << "Unknown algorithm type";
+        throw;
     }
 }
 
