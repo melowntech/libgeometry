@@ -2195,6 +2195,10 @@ std::size_t edgeIds(std::size_t x,
     case 11:
             return 3 * x + 3 * (y + 1) * (sx + 1)
                    + 3 * (z + 1) * (sx + 1) * (sy + 1);
+    default:
+            LOGTHROW(err3, std::runtime_error) << "Invalid local edge id: " 
+                << localEdge;
+            throw;
     }
 }
 } // namespace
@@ -2585,7 +2589,7 @@ template <typename Value_t, class Container_t>
 geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
               const Value_t & threshold
             , const SurfaceOrientation_t orientation
-            , const IsosurfaceAlgorithm_t algorithm
+            , const IsosurfaceAlgorithm_t /*algorithm*/
             , const boost::optional<math::Extents3> &ext)
 {
 
@@ -2639,7 +2643,9 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMesh(
                 (pVertex[1]-qVertex[1]) * (pVertex[1]-qVertex[1]) +
                 (pVertex[2]-qVertex[2]) * (pVertex[2]-qVertex[2]);
               if (nn > 1e-9)
+              {
                 LOG(info2) << "\n\t" << pVertex << "\n\t" << qVertex << "\n";
+              }
             }
             indices[vertex]=it->second.second;
         }
