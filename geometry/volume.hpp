@@ -649,6 +649,7 @@ public :
           , const boost::optional<math::Extents3> &ext = boost::none);
 
 private:
+    /** Used for isosurface extraction */
     void isoFromCube(
         std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>&
             retval,
@@ -658,9 +659,7 @@ private:
         const SurfaceOrientation_t orientation,
         std::size_t i,
         std::size_t j,
-        std::size_t k,
-        std::size_t si,
-        std::size_t sj) const;
+        std::size_t k) const;
 
 
     /** Used for isosurface extraction */
@@ -2029,26 +2028,29 @@ void ScalarField_t<Value_t, Container_t>::isoFromTetrahedron(
 }
 
 /*
-
-|k
-|  /j
-| /
-|/      i
-+--------
-
-local vertex and edge ids
-
-   7----6---6
-  7|       5|
- / 11     / 10
-4----4---5  |
-8  |     9  |
-|  3---2-|--2
-| 3      | 1
-|/       |/
-0----0---1
-
-*/
+ *
+ * |k
+ * |  /j
+ * | /
+ * |/      i
+ * +--------
+ *
+ * local vertex and edge ids
+ *
+ *     v7------e6-------v6
+ *    /|               /|
+ *   e7|             e5 |
+ *  / e11            /  e10
+ * v4-------e4-----v5   |
+ * |   |           |    |
+ * e8  |           e9   |
+ * |   v3------e2--|---v2
+ * |  /            |   /
+ * | e3            |  e1
+ * |/              | /
+ * v0------e0------v1
+ *
+ */
 template <typename Value_t, class Container_t>
 void ScalarField_t<Value_t, Container_t>::isoFromCube(
     std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>&
@@ -2059,15 +2061,16 @@ void ScalarField_t<Value_t, Container_t>::isoFromCube(
     const SurfaceOrientation_t orientation,
     std::size_t i,
     std::size_t j,
-    std::size_t k,
-    std::size_t si,
-    std::size_t sj) const
+    std::size_t k) const
 {
     typedef typename VolumeBase_t::FPosition_s FPosition_s;
 
     std::pair<FPosition_s, std::size_t> vertexList[12];
 
-    auto edgeId = [i, j, k, si, sj](int localEdge) -> std::size_t {
+    auto edgeId = [this, i, j, k](int localEdge) -> std::size_t {
+        std::size_t si = this->container_.sizeX() + 1;
+        std::size_t sj = this->container_.sizeY() + 1;
+
         switch (localEdge)
         {
         case 0:
@@ -2293,9 +2296,7 @@ ScalarField_t<Value_t, Container_t>::isosurfaceCubes(
                             orientation,
                             i + 1,
                             j + 1,
-                            k + 1,
-                            this->container_.sizeX() + 1,
-                            this->container_.sizeY() + 1);
+                            k + 1);
             }
 
     return utility::flatten<std::pair<FPosition_s, std::size_t>>(tVertices);
