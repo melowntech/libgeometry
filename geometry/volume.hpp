@@ -615,7 +615,7 @@ public :
      * The output is a list of points where each consequent triple defines a
      * triangle, each point is assigned the id of the edge where it was created.
      */
-    std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>
+    std::vector<std::pair<FPosition_s, std::size_t>>
         isosurfaceCubes( const Value_t & threshold,
             const SurfaceOrientation_t orientation = TO_MIN,
             const boost::optional<math::Extents3> &ext = boost::none ) const;
@@ -651,7 +651,7 @@ public :
 private:
     /** Used for isosurface extraction */
     void isoFromCube(
-        std::vector<std::pair<typename VolumeBase_t::FPosition_s, std::size_t>>&
+        std::vector<std::pair<FPosition_s, std::size_t>>&
             retval,
         const FPosition_s* vertices,
         const Value_t* values,
@@ -2546,14 +2546,15 @@ geometry::Mesh ScalarField_t<Value_t, Container_t>::isosurfaceAsMeshCubes(
             else
             {
                 const auto& qVertex = it->second.first;
-                double nn
+                double vertexErr
                     = (pVertex[0] - qVertex[0]) * (pVertex[0] - qVertex[0])
                       + (pVertex[1] - qVertex[1]) * (pVertex[1] - qVertex[1])
                       + (pVertex[2] - qVertex[2]) * (pVertex[2] - qVertex[2]);
-                if (nn > 1e-9)
+                // cannot get easily to voxel size, checking for (1e-4)^2
+                if (vertexErr > 1e-8)
                 {
-                    LOG(info2)
-                        << "\n\t" << pVertex << "\n\t" << qVertex << "\n";
+                    LOG(warn3) << "Vertices " << pVertex << " and " << qVertex
+                               << " should be identical based on edge id";
                 }
             }
             indices[vertex] = it->second.second;
