@@ -601,8 +601,8 @@ public :
                        const SurfaceOrientation_t orientation = TO_MIN ) const;
 
     /**
-     * Extract isosurface with a marching tetrahedrons algorithm.
-     * The output is a list of points where each consequent triple defines a
+     * Extract isosurface with the marching tetrahedrons algorithm.
+     * The output is a list of points where each consecutive triple defines a
      * triangle.
      */
     std::vector<FPosition_s>
@@ -611,8 +611,8 @@ public :
             const boost::optional<math::Extents3> &ext = boost::none ) const;
 
     /**
-     * Extract isosurface with a marching cubes algorithm.
-     * The output is a list of points where each consequent triple defines a
+     * Extract isosurface with the marching cubes algorithm.
+     * The output is a list of points where each consecutive triple defines a
      * triangle, each point is assigned the id of the edge where it was created.
      */
     std::vector<std::pair<FPosition_s, std::size_t>>
@@ -2050,6 +2050,16 @@ void ScalarField_t<Value_t, Container_t>::isoFromTetrahedron(
  * |/              | /
  * v0------e0------v1
  *
+ *  To assign a unique id to each edge in the geometry, we use the following
+ *  construction. Each voxel 'owns' the edges locally denoted as e0, e3, e8.
+ *  This covers all interior edges as well as the edges on the front, left, and
+ *  bottom sides. To also cover edges on the back, right, and upper sides, we
+ *  add ghost elements here and index all such inserted edges. This means that
+ *  some of the edges (e.g. e0 of the rightmost ghost cell) do not lie within
+ *  the volume and are not used in the algorithm (no vertices can be constructed
+ *  there). This is not an issue, since we only need to create an injective
+ *  mapping egde -> id.
+ *
  */
 template <typename Value_t, class Container_t>
 void ScalarField_t<Value_t, Container_t>::isoFromCube(
@@ -2068,42 +2078,38 @@ void ScalarField_t<Value_t, Container_t>::isoFromCube(
     std::pair<FPosition_s, std::size_t> vertexList[12];
 
     auto edgeId = [this, i, j, k](int localEdge) -> std::size_t {
-        std::size_t si = this->container_.sizeX() + 1;
-        std::size_t sj = this->container_.sizeY() + 1;
+        // adding 2 (looping from -1, adding virtual element to cover all edges)
+        std::size_t strideY = this->container_.sizeX() + 2;
+        std::size_t strideZ = strideY * (this->container_.sizeY() + 2);
+
+        std::size_t voxelId = 3 * (i + j * strideY + k * strideZ);
 
         switch (localEdge)
         {
         case 0:
-            return 3 * i + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1);
+            return voxelId;
         case 1:
-            return 3 * (i + 1) + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1)
-                   + 1;
+            return voxelId + 4;
         case 2:
-            return 3 * i + 3 * (j + 1) * (si + 1) + 3 * k * (si + 1) * (sj + 1);
+            return voxelId + 3 * strideY;
         case 3:
-            return 3 * i + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1) + 1;
+            return voxelId + 1;
         case 4:
-            return 3 * i + 3 * j * (si + 1) + 3 * (k + 1) * (si + 1) * (sj + 1);
+            return voxelId + 3 * strideZ;
         case 5:
-            return 3 * (i + 1) + 3 * j * (si + 1)
-                   + 3 * (k + 1) * (si + 1) * (sj + 1) + 1;
+            return voxelId + 3 * strideZ + 4;
         case 6:
-            return 3 * i + 3 * (j + 1) * (si + 1)
-                   + 3 * (k + 1) * (si + 1) * (sj + 1);
+            return voxelId + 3 * (strideY + strideZ);
         case 7:
-            return 3 * i + 3 * j * (si + 1) + 3 * (k + 1) * (si + 1) * (sj + 1)
-                   + 1;
+            return voxelId + 3 * strideZ + 1;
         case 8:
-            return 3 * i + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1) + 2;
+            return voxelId + 2;
         case 9:
-            return 3 * (i + 1) + 3 * j * (si + 1) + 3 * k * (si + 1) * (sj + 1)
-                   + 2;
+            return voxelId + 5;
         case 10:
-            return 3 * (i + 1) + 3 * (j + 1) * (si + 1)
-                   + 3 * k * (si + 1) * (sj + 1) + 2;
+            return voxelId + 3 * strideY + 5;
         case 11:
-            return 3 * i + 3 * (j + 1) * (si + 1) + 3 * k * (si + 1) * (sj + 1)
-                   + 2;
+            return voxelId + 3 * strideY + 2;
         default:
             LOGTHROW(err3, std::runtime_error)
                 << "Invalid local edge id: " << localEdge;
@@ -2114,123 +2120,143 @@ void ScalarField_t<Value_t, Container_t>::isoFromCube(
     int cubeIndex = 0;
     if (orientation == TO_MIN)
     {
-            if (values[0] < threshold) cubeIndex |= 1;
-            if (values[1] < threshold) cubeIndex |= 2;
-            if (values[2] < threshold) cubeIndex |= 4;
-            if (values[3] < threshold) cubeIndex |= 8;
-            if (values[4] < threshold) cubeIndex |= 16;
-            if (values[5] < threshold) cubeIndex |= 32;
-            if (values[6] < threshold) cubeIndex |= 64;
-            if (values[7] < threshold) cubeIndex |= 128;
+        if (values[0] < threshold) { cubeIndex |= 1;}
+        if (values[1] < threshold) { cubeIndex |= 2; }
+        if (values[2] < threshold) { cubeIndex |= 4; }
+        if (values[3] < threshold) { cubeIndex |= 8; }
+        if (values[4] < threshold) { cubeIndex |= 16; }
+        if (values[5] < threshold) { cubeIndex |= 32; }
+        if (values[6] < threshold) { cubeIndex |= 64; }
+        if (values[7] < threshold) { cubeIndex |= 128; }
     }
     else
     {
-            if (values[0] > threshold) cubeIndex |= 1;
-            if (values[1] > threshold) cubeIndex |= 2;
-            if (values[2] > threshold) cubeIndex |= 4;
-            if (values[3] > threshold) cubeIndex |= 8;
-            if (values[4] > threshold) cubeIndex |= 16;
-            if (values[5] > threshold) cubeIndex |= 32;
-            if (values[6] > threshold) cubeIndex |= 64;
-            if (values[7] > threshold) cubeIndex |= 128;
+        if (values[0] > threshold) { cubeIndex |= 1;}
+        if (values[1] > threshold) { cubeIndex |= 2; }
+        if (values[2] > threshold) { cubeIndex |= 4; }
+        if (values[3] > threshold) { cubeIndex |= 8; }
+        if (values[4] > threshold) { cubeIndex |= 16; }
+        if (values[5] > threshold) { cubeIndex |= 32; }
+        if (values[6] > threshold) { cubeIndex |= 64; }
+        if (values[7] > threshold) { cubeIndex |= 128; }
     }
 
-    if (marchingcubes::edgeTable[cubeIndex] == 0) return;
+    if (marchingcubes::edgeTable[cubeIndex] == 0) { return; }
 
     if (marchingcubes::edgeTable[cubeIndex] & 1)
-            vertexList[0] = { interpolate(vertices[0],
-                                          values[0],
-                                          vertices[1],
-                                          values[1],
-                                          threshold),
-                              edgeId(0) };
+    {
+        vertexList[0] = { interpolate(vertices[0],
+                                      values[0],
+                                      vertices[1],
+                                      values[1],
+                                      threshold),
+                          edgeId(0) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 2)
-            vertexList[1] = { interpolate(vertices[1],
-                                          values[1],
-                                          vertices[2],
-                                          values[2],
-                                          threshold),
-                              edgeId(1) };
+    {
+        vertexList[1] = { interpolate(vertices[1],
+                                      values[1],
+                                      vertices[2],
+                                      values[2],
+                                      threshold),
+                          edgeId(1) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 4)
-            vertexList[2] = { interpolate(vertices[2],
-                                          values[2],
-                                          vertices[3],
-                                          values[3],
-                                          threshold),
-                              edgeId(2) };
+    {
+        vertexList[2] = { interpolate(vertices[2],
+                                      values[2],
+                                      vertices[3],
+                                      values[3],
+                                      threshold),
+                          edgeId(2) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 8)
-            vertexList[3] = { interpolate(vertices[3],
-                                          values[3],
-                                          vertices[0],
-                                          values[0],
-                                          threshold),
-                              edgeId(3) };
+    {
+        vertexList[3] = { interpolate(vertices[3],
+                                      values[3],
+                                      vertices[0],
+                                      values[0],
+                                      threshold),
+                          edgeId(3) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 16)
-            vertexList[4] = { interpolate(vertices[4],
-                                          values[4],
-                                          vertices[5],
-                                          values[5],
-                                          threshold),
-                              edgeId(4) };
+    {
+        vertexList[4] = { interpolate(vertices[4],
+                                      values[4],
+                                      vertices[5],
+                                      values[5],
+                                      threshold),
+                          edgeId(4) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 32)
-            vertexList[5] = { interpolate(vertices[5],
-                                          values[5],
-                                          vertices[6],
-                                          values[6],
-                                          threshold),
-                              edgeId(5) };
+    {
+        vertexList[5] = { interpolate(vertices[5],
+                                      values[5],
+                                      vertices[6],
+                                      values[6],
+                                      threshold),
+                          edgeId(5) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 64)
-            vertexList[6] = { interpolate(vertices[6],
-                                          values[6],
-                                          vertices[7],
-                                          values[7],
-                                          threshold),
-                              edgeId(6) };
+    {
+        vertexList[6] = { interpolate(vertices[6],
+                                      values[6],
+                                      vertices[7],
+                                      values[7],
+                                      threshold),
+                          edgeId(6) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 128)
-            vertexList[7] = { interpolate(vertices[7],
-                                          values[7],
-                                          vertices[4],
-                                          values[4],
-                                          threshold),
-                              edgeId(7) };
+    {
+        vertexList[7] = { interpolate(vertices[7],
+                                      values[7],
+                                      vertices[4],
+                                      values[4],
+                                      threshold),
+                          edgeId(7) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 256)
-            vertexList[8] = { interpolate(vertices[0],
-                                          values[0],
-                                          vertices[4],
-                                          values[4],
-                                          threshold),
-                              edgeId(8) };
+    {
+        vertexList[8] = { interpolate(vertices[0],
+                                      values[0],
+                                      vertices[4],
+                                      values[4],
+                                      threshold),
+                          edgeId(8) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 512)
-            vertexList[9] = { interpolate(vertices[1],
-                                          values[1],
-                                          vertices[5],
-                                          values[5],
-                                          threshold),
-                              edgeId(9) };
+    {
+        vertexList[9] = { interpolate(vertices[1],
+                                      values[1],
+                                      vertices[5],
+                                      values[5],
+                                      threshold),
+                          edgeId(9) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 1024)
-            vertexList[10] = { interpolate(vertices[2],
-                                           values[2],
-                                           vertices[6],
-                                           values[6],
-                                           threshold),
-                               edgeId(10) };
+    {
+        vertexList[10] = { interpolate(vertices[2],
+                                       values[2],
+                                       vertices[6],
+                                       values[6],
+                                       threshold),
+                           edgeId(10) };
+    }
     if (marchingcubes::edgeTable[cubeIndex] & 2048)
-            vertexList[11] = { interpolate(vertices[3],
-                                           values[3],
-                                           vertices[7],
-                                           values[7],
-                                           threshold),
-                               edgeId(11) };
-
+    {
+        vertexList[11] = { interpolate(vertices[3],
+                                       values[3],
+                                       vertices[7],
+                                       values[7],
+                                       threshold),
+                           edgeId(11) };
+    }
 
     for (uint i = 0; marchingcubes::triTable[cubeIndex][i] != -1; i += 3)
     {
-            retval.push_back(
-                vertexList[marchingcubes::triTable[cubeIndex][i + 0]]);
-            retval.push_back(
-                vertexList[marchingcubes::triTable[cubeIndex][i + 1]]);
-            retval.push_back(
-                vertexList[marchingcubes::triTable[cubeIndex][i + 2]]);
+        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i + 0]]);
+        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i + 1]]);
+        retval.push_back(vertexList[marchingcubes::triTable[cubeIndex][i + 2]]);
     }
 }
 
