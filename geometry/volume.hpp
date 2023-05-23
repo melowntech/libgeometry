@@ -2052,13 +2052,13 @@ void ScalarField_t<Value_t, Container_t>::isoFromTetrahedron(
  *
  *  To assign a unique id to each edge in the geometry, we use the following
  *  construction. Each voxel 'owns' the edges locally denoted as e0, e3, e8.
- *  This covers all interior edges as well as the edges on the front, left, and
- *  bottom sides. To also cover edges on the back, right, and upper sides, we
- *  add ghost elements here and index all such inserted edges. This means that
- *  some of the edges (e.g. e0 of the rightmost ghost cell) do not lie within
- *  the volume and are not used in the algorithm (no vertices can be constructed
- *  there). This is not an issue, since we only need to create an injective
- *  mapping egde -> id.
+ *  This covers all interior edges of the volume as well as the edges on the
+ *  front, left, and bottom sides. To also cover edges on the back, right, and
+ *  upper sides, we add ghost elements here and index all edges owned by these
+ *  elements. This means that some of the edges (e.g. e0 of the rightmost ghost
+ *  cell) do not lie within the volume and are not used in the algorithm (no
+ *  vertices can be constructed there). This is not an issue, since we only need
+ *  to create an injective mapping egde -> id.
  *
  */
 template <typename Value_t, class Container_t>
