@@ -36,6 +36,7 @@
 #include <iostream>
 
 #include <boost/optional.hpp>
+#include <boost/container/small_vector.hpp>
 
 #include "utility/gccversion.hpp"
 
@@ -226,6 +227,22 @@ Mesh::pointer refine( const Mesh &mesh, unsigned int maxFacesCount);
  * \return processed mesh
  */
 Mesh::pointer removeNonManifoldEdges(Mesh omesh);
+
+/**
+ * Face incidency - for each face lists all neighbors, supports non-manifolds
+ */
+using FaceFaceTable = std::vector<boost::container::small_vector<std::size_t, 3>>;
+
+/** Computes face incidency map, supports non manifold edges (face may have >3
+ * neighbors).
+ *
+ * NB: when two faces are incident over multiple edges, they are repated
+ * respective amount of times
+ *
+ * @param[in] mesh mesh to process
+ * @returns face incicency table
+ */
+FaceFaceTable getFaceFaceTableNonManifold(const Mesh& mesh);
 
 /** Removes isolated vertices, e.g vertices incidental with 0 faces
  * Works with untextured meshes
