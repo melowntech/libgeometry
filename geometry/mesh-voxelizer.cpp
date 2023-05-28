@@ -490,10 +490,8 @@ bool MeshVoxelizer::isInside( const math::Point3 & position
     uint inside=0;
     uint outside=0;
 
-    uint projId = 0;
     for(auto & proj : projectionResults){
         math::Point3 projPos = math::transform(proj.transformation, position);
-        projId++;
         if(params_.method==Method::PARITY_COUNT){
             uint parity=0;
             if(projPos[0]<proj.buffer.size.width
