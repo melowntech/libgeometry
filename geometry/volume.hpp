@@ -81,7 +81,7 @@ class VolumeBase_t {
 
 public:
 
-    class Displacement_s;
+    struct Displacement_s;
 
     struct Position_s {
 
@@ -379,7 +379,9 @@ public:
     /** Value setter. */
     void set( int i, int j, int k, const Value_t & value );
 
-    void grow(const int axis, bool front = false) {
+    void grow([[maybe_unused]] const int axis,
+              [[maybe_unused]] bool front = false)
+    {
         LOGTHROW(err2, std::runtime_error)
             << "Grow not implemented for octree.";
     }
