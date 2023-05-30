@@ -353,6 +353,14 @@ std::tuple<std::vector<VhMpolyFace>, std::vector<int>>
     // check all halfedges
     for (const auto& hehStart : pmesh.halfedges())
     {
+        // skip halfedge with no face to the left
+        if (!hehStart.is_valid()) { continue; }
+        if (hehStart.is_boundary())
+        {
+            LOG(warn2) << "Mesh is not watertight";
+            continue;
+        }
+
         // skip non-boundary
         if (!isBoundaryHalfedge(pmesh, hehStart, faceRegionProp)) { continue; }
         // skip traversed
