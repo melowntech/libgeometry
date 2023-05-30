@@ -466,6 +466,10 @@ MultiPolyMesh<int> polygonizeMesh(const Mesh& mesh,
         auto b { pVertices[mesh.faces[i].b] };
         auto c { pVertices[mesh.faces[i].c] };
         auto fh { pmesh.add_face(a, b, c) };
+        if (!fh.is_valid())
+        {
+            LOGTHROW(err4, std::runtime_error) << "Unable to add face";
+        }
         pmesh.property(faceRegionProp, fh) = faceRegions[i];
     }
 
