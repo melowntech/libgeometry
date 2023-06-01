@@ -42,6 +42,8 @@ namespace geometry
 namespace
 {
 
+namespace ublas = boost::numeric::ublas;
+
 /// Multipolygonal face (i.e. polygonal face with holes) with vertices in pmesh
 using VhMpolyFace = std::vector<std::vector<OMPolyMesh::VertexHandle>>;
 
@@ -218,38 +220,80 @@ void traverseRegionBoundary(
                                    true);
         }
     }
-    else
-    {
-        boundaryVertices.push_back(std::move(boundary));
-    }
+    else { boundaryVertices.push_back(std::move(boundary)); }
 }
 
-/// Returns area of polygon defined by vertices of `boundary` transformed to 2D
-/// by `tf`.
+
+/// To compute area & face normal
+/// Inspired by:
+/// https://math.stackexchange.com/questions/3207981/how-do-you-calculate-the-area-of-a-2d-polygon-in-3d
+template <typename Iter>
+math::Point3
+    sumCrossProds(const Iter& begin, const Iter& end, const OMPolyMesh& pmesh)
+{
+    auto a1 { fromOM(pmesh.point(*begin)) };
+    math::Point3 vec(0, 0, 0);
+    auto it = begin;
+    ++it;
+    auto next = it;
+    ++next;
+    while (next != end)
+    {
+        auto ab { fromOM(pmesh.point(*it)) };
+        auto ac { fromOM(pmesh.point(*next)) };
+        vec += math::crossProduct(ab - a1, ac - a1);
+        ++it;
+        ++next;
+    }
+    return vec;
+}
+
+
+/// Robust to shift by large numbers
+/// (unlike OpenMesh::PolyMeshT::calc_face_normal())
+math::Point3 robustFaceNormal(const OMPolyMesh::FaceHandle& fh,
+                              const OMPolyMesh& pmesh)
+{
+    auto vec { sumCrossProds(pmesh.cfv_begin(fh), pmesh.cfv_end(fh), pmesh) };
+    return vec / math::length(vec);
+}
+
+
+/// Returns signed area of polygon - orientation w.r.t. the given face normal
 double boundaryArea(const std::vector<OMPolyMesh::VertexHandle>& boundary,
                     const OMPolyMesh& pmesh,
-                    const math::Matrix4& glob2plane)
+                    const math::Point3& faceNorm)
 {
-    math::Points2 pts;
-    pts.reserve(boundary.size());
-    for (const auto& v : boundary)
+    if (boundary.size() < 3)
     {
-        math::Point3 pt3(math::transform(glob2plane, fromOM(pmesh.point(v))));
-        pts.emplace_back(pt3(0), pt3(1));
+        LOGTHROW(err4, std::runtime_error)
+            << "Cannot compute area of boundary with < 3 vertices (found "
+            << boundary.size()
+            << " vertices). Typically caused by messed-up polygonal regions "
+               "that lead to wrong topology.";
     }
-    return geometry::area(pts);
+
+    auto vec { sumCrossProds(boundary.begin(), boundary.end(), pmesh) };
+    auto area { math::length(0.5 * vec) };
+
+    // make it signed area
+    if (ublas::inner_prod(faceNorm, vec) < 0) { area *= -1.0; }
+
+    return area;
 }
 
 /// Traverse connected faces of one region and create a multipolygonal face
 VhMpolyFace traverseConnectedFacesOfRegion(
     const OMPolyMesh::HalfedgeHandle& hehStart,
-    const math::Matrix4& glob2plane,
     const OMPolyMesh& pmesh,
     const OMFacePropInt& faceRegionProp,
     utility::small_set<OMPolyMesh::HalfedgeHandle>& traversedHalfedges)
 {
     // get main info
     int rIdx = pmesh.property(faceRegionProp, pmesh.face_handle(hehStart));
+
+    // orientation to distinguish inner/outer boundary
+    auto norm { robustFaceNormal(pmesh.face_handle(hehStart), pmesh) };
 
     // Traverse whole connected component of the region
     utility::small_set<OMPolyMesh::HalfedgeHandle> enqueuedHalfedges;
@@ -270,7 +314,6 @@ VhMpolyFace traverseConnectedFacesOfRegion(
             && !traversedHalfedges.count(heh))
         {
             std::vector<std::vector<OMPolyMesh::VertexHandle>> foundBoundaries;
-
             traverseRegionBoundary(pmesh,
                                    heh,
                                    faceRegionProp,
@@ -280,16 +323,13 @@ VhMpolyFace traverseConnectedFacesOfRegion(
             for (auto& boundary : foundBoundaries)
             {
                 // check if its inner or outer boundary
-                if (boundaryArea(boundary, pmesh, glob2plane) > 0)
+                if (boundaryArea(boundary, pmesh, norm) > 0)
                 {
                     ++outerBoundaryNum;
                     multipolygon.insert(multipolygon.begin(),
                                         std::move(boundary));
                 }
-                else
-                {
-                    multipolygon.push_back(std::move(boundary));
-                }
+                else { multipolygon.push_back(std::move(boundary)); }
             }
         }
 
@@ -324,23 +364,6 @@ VhMpolyFace traverseConnectedFacesOfRegion(
     return multipolygon;
 }
 
-/// Create a transformation to 2D coordinates of the face plane
-inline math::Matrix4 getGlobal2FacePlane(const OMPolyMesh& pmesh,
-                                         const OMPolyMesh::HalfedgeHandle& heh)
-{
-
-    auto n { pmesh.calc_face_normal(pmesh.face_handle(heh)) };
-    if (!isFinite(n))
-    {
-        LOGTHROW(err4, std::runtime_error)
-            << "Got inf/nan face normal - mesh might contain zero-area faces";
-    }
-    auto pt { fromOM(pmesh.point(pmesh.from_vertex_handle(heh))) };
-    math::Plane3 pl(pt, math::Point3(n[0], n[1], n[2]));
-    return math::matrixInvert(math::createPlaneCrs(pl));
-}
-
-
 /// Create multipolygonal faces consisting of connected faces of one region
 std::tuple<std::vector<VhMpolyFace>, std::vector<int>>
     getMultiPolygonalFaces(const OMPolyMesh& pmesh,
@@ -366,11 +389,8 @@ std::tuple<std::vector<VhMpolyFace>, std::vector<int>>
         // skip traversed
         if (traversedHalfedges.count(hehStart)) { continue; }
 
-        auto glob2plane { getGlobal2FacePlane(pmesh, hehStart) };
-
         mpolyFaces.push_back(
             traverseConnectedFacesOfRegion(hehStart,
-                                           glob2plane,
                                            pmesh,
                                            faceRegionProp,
                                            traversedHalfedges));
