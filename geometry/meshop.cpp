@@ -627,11 +627,11 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
     std::map<math::Points3::size_type, math::Points3::size_type> vertexMap;
     std::map<math::Points2::size_type, math::Points2::size_type> tCoordsMap;
 
-    for( const auto& face: imesh.faces ){
+    for (const auto& face: imesh.faces) {
         math::Points3::size_type vindices[3] { face.a , face.b, face.c };
         math::Points2::size_type tindices[3] { face.ta , face.tb, face.tc };
 
-        for(unsigned int i=0; i<3; ++i){
+        for (unsigned int i = 0; i < 3; ++i) {
             auto vit = vertexMap.find(vindices[i]);
             auto tit = tCoordsMap.find(tindices[i]);
 
@@ -639,13 +639,15 @@ Mesh::pointer removeIsolatedVertices( const Mesh& imesh ){
                 mesh.vertices.push_back(imesh.vertices[vindices[i]]);
                 vit = vertexMap.insert(std::make_pair(vindices[i],mesh.vertices.size()-1)).first;
             }
-            if(imesh.tCoords.size() > 0 && tit == tCoordsMap.end()){
-                mesh.tCoords.push_back(imesh.vertices[tindices[i]]);
-                tit = tCoordsMap.insert(std::make_pair(tindices[i],mesh.tCoords.size()-1)).first;
-            }
-
             vindices[i] = vit->second;
-            tindices[i] = tit->second;
+
+            if (imesh.tCoords.size() > 0) {
+                if (tit == tCoordsMap.end()) {
+                    mesh.tCoords.push_back(imesh.vertices[tindices[i]]);
+                    tit = tCoordsMap.insert(std::make_pair(tindices[i],mesh.tCoords.size()-1)).first;
+                }
+                tindices[i] = tit->second;
+            }
         }
 
         if(imesh.tCoords.size() > 0){
