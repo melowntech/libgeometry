@@ -59,12 +59,18 @@ inline bool isFinite(const OMPolyMesh::Normal& n)
 
 
 /// Returns true if the halfedge is on region boundary. Optionally checks for
-/// specific left region.
+/// specific left region. NB: The halfedge has to have a region on the left
 inline bool isBoundaryHalfedge(const OMPolyMesh& pmesh,
                                const OMPolyMesh::HalfedgeHandle& heh,
                                const OMFacePropInt& faceRegionProp,
                                int checkLeftRegion = -1)
 {
+    if (pmesh.is_boundary(heh))
+    {
+        LOGTHROW(err4, std::runtime_error)
+            << "Trying to check region of non-existing face";
+    }
+
     auto leftR { pmesh.property(faceRegionProp, pmesh.face_handle(heh)) };
     if (checkLeftRegion >= 0)
     {
@@ -74,25 +80,37 @@ inline bool isBoundaryHalfedge(const OMPolyMesh& pmesh,
     auto op { pmesh.opposite_halfedge_handle(heh) };
     if (pmesh.is_boundary(op))
     {
-        LOG(warn2) << "Mesh is not watertight.";
+        LOGONCE(info1) << "Mesh is not watertight.";
         return true;
     }
     auto rightR { pmesh.property(faceRegionProp, pmesh.face_handle(op)) };
     return leftR != rightR;
 }
 
-/// Returns true if the vertex is adjacent to more than two regions
+/// Returns true if the start vertex of given halfedge is adjacent to more than
+/// two regions
 inline bool isImportantVertex(const OMPolyMesh& pmesh,
-                              const OMPolyMesh::VertexHandle& vh,
+                              const OMPolyMesh::HalfedgeHandle& hehStart,
                               const OMFacePropInt& faceRegionProp)
 {
-    int r1 { -1 };
+    auto r1 { pmesh.property(faceRegionProp, pmesh.face_handle(hehStart)) };
     int r2 { -1 };
 
     // circulate around the current vertex
-    for (auto vfit = pmesh.cvf_iter(vh); vfit.is_valid(); ++vfit)
+    auto heh { pmesh.next_halfedge_handle(
+        pmesh.opposite_halfedge_handle(hehStart)) };
+    while (heh != hehStart)
     {
-        int region = pmesh.property(faceRegionProp, *vfit);
+        int region;
+        // treat empty face as another region
+        if (pmesh.is_boundary(heh)) { region = -2; }
+        else
+        {
+            region = pmesh.property(faceRegionProp, pmesh.face_handle(heh));
+        }
+
+        heh = pmesh.next_halfedge_handle(pmesh.opposite_halfedge_handle(heh));
+
         if (region == r1 || region == r2) { continue; }
         if (r1 == -1)
         {
@@ -129,9 +147,21 @@ inline OMPolyMesh::HalfedgeHandle
     auto heh { hehStart };
     do
     {
-        if (isBoundaryHalfedge(pmesh, heh, faceRegionProp, rIdx))
+        if (pmesh.is_boundary(heh)) { // no face on left
+            if (!searchCCW)
+            {
+                // should not happen
+                LOGTHROW(err4, std::runtime_error)
+                    << "Expecting face adjacent to the halfedge, but found "
+                       "none.";
+            }
+        }
+        else
         {
-            return heh;
+            if (isBoundaryHalfedge(pmesh, heh, faceRegionProp, rIdx))
+            {
+                return heh;
+            }
         }
 
         if (!searchCCW)
@@ -181,7 +211,7 @@ void traverseRegionBoundary(
         }
 
         visitedVertices.insert(v);
-        if (isImportantVertex(pmesh, v, faceRegionProp))
+        if (isImportantVertex(pmesh, heh, faceRegionProp))
         {
             boundary.push_back(v);
         }
@@ -208,7 +238,8 @@ void traverseRegionBoundary(
 
         for (auto it { pmesh.cvoh_begin(v) }; it.is_valid(); ++it)
         {
-            if (!isBoundaryHalfedge(pmesh, *it, faceRegionProp, rIdx))
+            if (pmesh.is_boundary(*it)
+                || !isBoundaryHalfedge(pmesh, *it, faceRegionProp, rIdx))
             {
                 continue;
             }
@@ -292,7 +323,7 @@ VhMpolyFace traverseConnectedFacesOfRegion(
     // get main info
     int rIdx = pmesh.property(faceRegionProp, pmesh.face_handle(hehStart));
 
-    // orientation to distinguish inner/outer boundary
+    // orientation of the original face to distinguish inner/outer boundary
     auto norm { robustFaceNormal(pmesh.face_handle(hehStart), pmesh) };
 
     // Traverse whole connected component of the region
@@ -338,11 +369,14 @@ VhMpolyFace traverseConnectedFacesOfRegion(
         auto neighbour { neighboursStart };
         do
         {
-            if (pmesh.property(faceRegionProp, pmesh.face_handle(neighbour))
-                != rIdx)
+            // exit if not in region
+            if (!neighbour.is_valid() || pmesh.is_boundary(neighbour)
+                || (pmesh.property(faceRegionProp, pmesh.face_handle(neighbour))
+                    != rIdx))
             {
-                break; // exit if not in region
+                break;
             }
+
             if (!enqueuedHalfedges.count(neighbour))
             {
                 halfedgeQ.push(neighbour);
@@ -380,7 +414,7 @@ std::tuple<std::vector<VhMpolyFace>, std::vector<int>>
         if (!hehStart.is_valid()) { continue; }
         if (hehStart.is_boundary())
         {
-            LOG(warn2) << "Mesh is not watertight";
+            LOGONCE(info1) << "Mesh is not watertight.";
             continue;
         }
 

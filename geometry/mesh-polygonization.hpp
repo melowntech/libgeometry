@@ -79,8 +79,12 @@ MultiPolyMesh<int> polygonizeMesh(const OMPolyMesh& mesh,
 /**
  * Merge regions of triangles to polygons (with holes).
  *
- * Works on watertight 2-manifolds. Mesh must have correct topology. On errors,
- * check for zero-area faces, non-manifold edges, duplicite vertices, ...
+ * Works on well-oriented 2-manifolds. Mesh must have correct topology. On
+ * errors, check for zero-area faces, non-manifold edges, duplicite vertices,
+ * etc...
+ *
+ * The face regions must lead to correct topology (each region is adjacent 
+ * to >2 other regions or mesh borders).
  *
  * NB: OpenMesh is required
  *
