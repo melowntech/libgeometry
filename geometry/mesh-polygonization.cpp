@@ -52,15 +52,9 @@ inline math::Point3 fromOM(const OMPolyMesh::Point& p)
     return math::Point3(p[0], p[1], p[2]);
 }
 
-inline bool isFinite(const OMPolyMesh::Normal& n)
-{
-    return std::isfinite(n[0]) && std::isfinite(n[1]) && std::isfinite(n[2]);
-}
-
-
 /// Returns true if the halfedge is on region boundary. Optionally checks for
 /// specific left region. NB: The halfedge has to have a region on the left
-inline bool isBoundaryHalfedge(const OMPolyMesh& pmesh,
+inline bool isOnRegionBoundary(const OMPolyMesh& pmesh,
                                const OMPolyMesh::HalfedgeHandle& heh,
                                const OMFacePropInt& faceRegionProp,
                                int checkLeftRegion = -1)
@@ -127,53 +121,63 @@ inline bool isImportantVertex(const OMPolyMesh& pmesh,
     return false;
 }
 
-/// Find the next halfedge that points to a face of the same region
+/// Find next halfedge when traversing outer boundary of a region = search in CW
+/// direction
 inline OMPolyMesh::HalfedgeHandle
-    getNextRegionHalfedge(const OMPolyMesh& pmesh,
-                          const OMPolyMesh::HalfedgeHandle& hehPrev,
-                          const OMFacePropInt& faceRegionProp,
-                          bool searchCCW = false)
+    nextHEOuterBoundary(const OMPolyMesh& pmesh,
+                        const OMPolyMesh::HalfedgeHandle& hehPrev,
+                        const OMFacePropInt& faceRegionProp)
 {
     auto rIdx { pmesh.property(faceRegionProp, pmesh.face_handle(hehPrev)) };
 
     // iterate over outcoming edges
     auto hehStart { pmesh.next_halfedge_handle(hehPrev) };
-    if (searchCCW)
-    {
-        hehStart = pmesh.opposite_halfedge_handle(pmesh.prev_halfedge_handle(
-            pmesh.opposite_halfedge_handle(hehPrev)));
-    }
-
     auto heh { hehStart };
     do
     {
-        if (pmesh.is_boundary(heh)) { // no face on left
-            if (!searchCCW)
-            {
-                // should not happen
-                LOGTHROW(err4, std::runtime_error)
-                    << "Expecting face adjacent to the halfedge, but found "
-                       "none.";
-            }
+        if (pmesh.is_boundary(heh))
+        { // no face on left - should not happen
+            LOGTHROW(err4, std::runtime_error)
+                << "Expecting face adjacent to the halfedge, but found "
+                   "none.";
         }
-        else
+        if (isOnRegionBoundary(pmesh, heh, faceRegionProp, rIdx))
         {
-            if (isBoundaryHalfedge(pmesh, heh, faceRegionProp, rIdx))
-            {
-                return heh;
-            }
+            return heh;
         }
+        heh = pmesh.next_halfedge_handle(pmesh.opposite_halfedge_handle(heh));
+    }
+    while (heh != hehStart);
 
-        if (!searchCCW)
+    LOGTHROW(err4, std::runtime_error)
+        << "Cannot find the next halfedge on the region boundary (something is "
+           "very wrong).";
+    throw;
+}
+
+
+/// Find next halfedge when traversing inner boundary of a region = search in
+/// CCW direction
+inline OMPolyMesh::HalfedgeHandle
+    nextHEInnerBoundary(const OMPolyMesh& pmesh,
+                           const OMPolyMesh::HalfedgeHandle& hehPrev,
+                           const OMFacePropInt& faceRegionProp)
+{
+    auto rIdx { pmesh.property(faceRegionProp, pmesh.face_handle(hehPrev)) };
+
+    // iterate over outcoming edges
+    auto hehStart { pmesh.opposite_halfedge_handle(
+        pmesh.prev_halfedge_handle(pmesh.opposite_halfedge_handle(hehPrev))) };
+    auto heh { hehStart };
+    do
+    {
+        // skip halfedges without adjacent face
+        if (!pmesh.is_boundary(heh)
+            && isOnRegionBoundary(pmesh, heh, faceRegionProp, rIdx))
         {
-            heh = pmesh.next_halfedge_handle(
-                pmesh.opposite_halfedge_handle(heh));
+            return heh;
         }
-        else
-        {
-            heh = pmesh.opposite_halfedge_handle(
-                pmesh.prev_halfedge_handle(heh));
-        }
+        heh = pmesh.opposite_halfedge_handle(pmesh.prev_halfedge_handle(heh));
     }
     while (heh != hehStart);
 
@@ -215,10 +219,13 @@ void traverseRegionBoundary(
         {
             boundary.push_back(v);
         }
-        heh = getNextRegionHalfedge(pmesh,
-                                    heh,
-                                    faceRegionProp,
-                                    knownIsInnerBoundary);
+
+        // next halfedge
+        if (!knownIsInnerBoundary)
+        {
+            heh = nextHEOuterBoundary(pmesh, heh, faceRegionProp);
+        }
+        else { heh = nextHEInnerBoundary(pmesh, heh, faceRegionProp); }
     }
     while (heh != hehStart);
 
@@ -239,7 +246,7 @@ void traverseRegionBoundary(
         for (auto it { pmesh.cvoh_begin(v) }; it.is_valid(); ++it)
         {
             if (pmesh.is_boundary(*it)
-                || !isBoundaryHalfedge(pmesh, *it, faceRegionProp, rIdx))
+                || !isOnRegionBoundary(pmesh, *it, faceRegionProp, rIdx))
             {
                 continue;
             }
@@ -341,7 +348,7 @@ VhMpolyFace traverseConnectedFacesOfRegion(
         halfedgeQ.pop();
 
         // if boundary halfedge, traverse the boundary
-        if (isBoundaryHalfedge(pmesh, heh, faceRegionProp)
+        if (isOnRegionBoundary(pmesh, heh, faceRegionProp)
             && !traversedHalfedges.count(heh))
         {
             std::vector<std::vector<OMPolyMesh::VertexHandle>> foundBoundaries;
@@ -353,7 +360,7 @@ VhMpolyFace traverseConnectedFacesOfRegion(
 
             for (auto& boundary : foundBoundaries)
             {
-                // check if its inner or outer boundary
+                // check if it is inner or outer boundary
                 if (boundaryArea(boundary, pmesh, norm) > 0)
                 {
                     ++outerBoundaryNum;
@@ -419,7 +426,7 @@ std::tuple<std::vector<VhMpolyFace>, std::vector<int>>
         }
 
         // skip non-boundary
-        if (!isBoundaryHalfedge(pmesh, hehStart, faceRegionProp)) { continue; }
+        if (!isOnRegionBoundary(pmesh, hehStart, faceRegionProp)) { continue; }
         // skip traversed
         if (traversedHalfedges.count(hehStart)) { continue; }
 
