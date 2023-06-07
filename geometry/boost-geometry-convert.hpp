@@ -24,16 +24,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  @file polyop.cpp
- *  @author Jakub Cerveny <jakub.cerveny@melowntech.com>
+ *  @file boost-geometry-convert.hpp
  *
- *  Polygon operations, based on Boost.Geometry.
+ *  Conversions from and to Boost.Geometry.
  *
  */
 
-#include "polyop.hpp"
+#ifndef geometry_boost_geometry_convert_hpp_included_
+#define geometry_boost_geometry_convert_hpp_included_
+
 #include "polygon.hpp"
-#include "boost-geometry-convert.hpp"
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
@@ -49,55 +49,9 @@ typedef bg::model::polygon<bgPoint, false, false> bgPolygon; // ccw, unclosed
 typedef bg::model::multi_polygon<bgPolygon> bgMultiPolygon;
 typedef bgPolygon::ring_type bgRing;
 
-math::MultiPolygon intersectPolygons(const math::MultiPolygon &mp1,
-                                     const math::MultiPolygon &mp2)
-{
-    bgMultiPolygon out;
-    bg::intersection(convert2bg(mp1), convert2bg(mp2), out);
-    return convert2math(out);
+bgMultiPolygon convert2bg(const math::MultiPolygon &mpoly);
+math::MultiPolygon convert2math(const bgMultiPolygon &bgmpoly);
+
 }
 
-math::MultiPolygon subtractPolygons(const math::MultiPolygon &mp1,
-                                    const math::MultiPolygon &mp2)
-{
-    bgMultiPolygon out;
-    bg::difference(convert2bg(mp1), convert2bg(mp2), out);
-    return convert2math(out);
-}
-
-math::MultiPolygon unitePolygons(const math::MultiPolygon &mp1,
-                                 const math::MultiPolygon &mp2)
-{
-    bgMultiPolygon out;
-    bg::union_(convert2bg(mp1), convert2bg(mp2), out);
-    return convert2math(out);
-}
-
-math::MultiPolygon offsetPolygon(const math::MultiPolygon &mpoly,
-                                 double distance, double miterLimit,
-                                 double epsSimplify)
-{
-    bg::strategy::buffer::distance_symmetric<double> s_distance(distance);
-    bg::strategy::buffer::side_straight s_side;
-    bg::strategy::buffer::join_miter s_join(miterLimit);
-    bg::strategy::buffer::end_flat s_end;
-    bg::strategy::buffer::point_circle s_circle(1);
-
-    bgMultiPolygon out;
-    bg::buffer(convert2bg(mpoly), out,
-               s_distance, s_side, s_join, s_end, s_circle);
-
-    if (epsSimplify > 0.0)
-    {
-        // get rid of collinear points produced by Boost.Geomertry around joins
-        bgMultiPolygon out2;
-        bg::simplify(out, out2, epsSimplify);
-        return convert2math(out2);
-    }
-    else
-    {
-        return convert2math(out);
-    }
-}
-
-} // namespace geometry
+#endif // geometry_boost_geometry_convert_hpp_included_

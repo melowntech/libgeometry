@@ -38,6 +38,7 @@
 
 #include "nonconvexclip.hpp"
 #include "triangulate.hpp"
+#include "boost-geometry-convert.hpp"
 
 namespace bg = boost::geometry;
 
@@ -101,12 +102,7 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     double ccw(checkCcw(tri2[0], tri2[1], tri2[2]));
 
     // convert clipRegion to boost MultiPolygon
-    MultiPolygon clipMultiPoly;
-    for (const auto &pts : clipRegion) {
-        Polygon part;
-        bg::assign_points(part, bgPoints(pts));
-        clipMultiPoly.push_back(part);
-    }
+    MultiPolygon clipMultiPoly { convert2bg(clipRegion) };
 
     if (std::abs(ccw) < 1e-4)
     {
