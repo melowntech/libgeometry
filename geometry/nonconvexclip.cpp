@@ -51,17 +51,6 @@ typedef Polygon::ring_type Ring;
 
 namespace {
 
-template<typename List>
-std::vector<Point> bgPoints(const List &list)
-{
-    std::vector<Point> result;
-    result.reserve(list.size() + 1);
-    for (const auto &p : list) {
-        result.emplace_back(p(0), p(1));
-    }
-    return result;
-}
-
 inline math::Points2d ringPoints(const Ring &ring)
 {
     math::Points2d result;
@@ -130,7 +119,9 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
 
     // convert input to 2D polygons
     Polygon trianglePoly;
-    bg::assign_points(trianglePoly, bgPoints(tri));
+    bg::append(trianglePoly.outer(), Point(tri[0][0], tri[0][1]));
+    bg::append(trianglePoly.outer(), Point(tri[1][0], tri[1][1]));
+    bg::append(trianglePoly.outer(), Point(tri[2][0], tri[2][1]));
 
     // calculate intersection
     std::deque<Polygon> isect;

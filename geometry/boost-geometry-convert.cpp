@@ -34,31 +34,18 @@
 
 namespace geometry {
 
-namespace {
-
-bgRing makeRing(const math::Points2d &points)
-{
-    bgRing ring;
-    ring.reserve(points.size());
-    for (const auto &p : points) {
-        ring.emplace_back(p(0), p(1));
-    }
-    return ring;
-}
-
-math::Points2d ringPoints(const bgPolygon::ring_type &ring)
-{
-    math::Points2d result;
-    result.reserve(ring.size());
-    for (const auto &p : ring) {
-        result.emplace_back(p.x(), p.y());
-    }
-    return result;
-}
-}
-
 bgMultiPolygon convert2bg(const math::MultiPolygon &mpoly)
 {
+    auto makeRing = [](const math::Points2d &points)
+    {
+        bgRing ring;
+        ring.reserve(points.size());
+        for (const auto &p : points) {
+            ring.emplace_back(p(0), p(1));
+        }
+        return ring;
+    };
+
     bgMultiPolygon result;
     result.reserve(mpoly.size());
 
@@ -82,6 +69,16 @@ bgMultiPolygon convert2bg(const math::MultiPolygon &mpoly)
 
 math::MultiPolygon convert2math(const bgMultiPolygon &bgmpoly)
 {
+    auto ringPoints = [](const bgPolygon::ring_type &ring)
+    {
+        math::Points2d result;
+        result.reserve(ring.size());
+        for (const auto &p : ring) {
+            result.emplace_back(p.x(), p.y());
+        }
+        return result;
+    };
+
     math::MultiPolygon result;
     result.reserve(bgmpoly.size());
     for (const auto &poly : bgmpoly)
