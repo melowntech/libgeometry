@@ -118,6 +118,7 @@ set(geometry_SOURCES
 
   polygon.hpp
   polyclip.cpp
+  polyop.hpp polyop.cpp
 
   triclip.hpp
 

@@ -211,7 +211,7 @@ struct Mesh {
     /** Iterator that iterates over face points (a->b->c->end)
      */
     struct FaceVertexConstIterator;
-    struct FaceVertexConstIteratorRange;
+    class FaceVertexConstIteratorRange;
 
     FaceVertexConstIterator begin(const Face &face) const;
 

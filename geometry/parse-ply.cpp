@@ -28,7 +28,7 @@
  * @author Tomas Novak <tomas.novak@melowntech.com>
  *
  * PLY parser that allows loading ply files using simple interface
- * 
+ *
  * Specify your own `PlyParserBase` child and load any ply you want!
  */
 
@@ -188,7 +188,7 @@ std::pair<std::vector<PlyElement>, std::vector<std::string>>
     parseHeader(std::ifstream& f)
 {
     // check magic number
-    std::string line; 
+    std::string line;
     nextLine(f, line);
     if (line != "ply")
     {
@@ -197,8 +197,8 @@ std::pair<std::vector<PlyElement>, std::vector<std::string>>
     }
 
     // check line specifying PLY format ("format ascii 1.0")
-    checkFormatLine(f); 
-    
+    checkFormatLine(f);
+
     // parse elements & comments
     std::vector<PlyElement> elements;
     std::vector<std::string> comments;
@@ -279,19 +279,15 @@ void parsePly(PlyParserBase& parser, const fs::path& path)
                << "; faces on lines " << fStart << " - " << fEnd;
 
     // read the rest of the file
-    std::size_t fRead = 0;
-    std::size_t vRead = 0;
     for (idx = 0; idx < totNum; ++idx)
     {
         if (idx >= fStart && idx < fEnd)
         {
             parser.addFace(f);
-            ++fRead;
         }
         else if (idx >= vStart && idx < vEnd)
         {
             parser.addVertex(f);
-            ++vRead;
         }
         else
         {
