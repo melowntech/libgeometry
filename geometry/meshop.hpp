@@ -236,11 +236,11 @@ using FaceFaceTable = std::vector<boost::container::small_vector<std::size_t, 3>
 /** Computes face incidency map, supports non manifold edges (face may have >3
  * neighbors).
  *
- * NB: when two faces are incident over multiple edges, they are repated
+ * NB: when two faces are incident over multiple edges, they are repeated
  * respective amount of times
  *
  * @param[in] mesh mesh to process
- * @returns face incicency table
+ * @returns face incidency table
  */
 FaceFaceTable getFaceFaceTableNonManifold(const Mesh& mesh);
 
