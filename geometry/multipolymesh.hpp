@@ -34,11 +34,13 @@
 #ifndef geometry_multipolymesh_hpp_included_
 #define geometry_multipolymesh_hpp_included_
 
-#include "geometry/mesh.hpp"
-#include "geometry/multipolygon-triangulate-gts.hpp"
-#include "geometry/polygon.hpp"
 #include "math/geometry_core.hpp"
 #include "math/transform.hpp"
+
+#include "mesh.hpp"
+#include "meshop.hpp"
+#include "multipolygon-triangulate-gts.hpp"
+#include "polygon.hpp"
 
 namespace geometry
 {
@@ -153,6 +155,24 @@ struct MultiPolyMesh
     Mesh triangulateFaces(std::vector<FaceLabels>* const triFaceLabels
                           = nullptr) const;
 };
+
+
+/**
+ * Save mulipolygonal mesh as obj file
+ *
+ * Non-negative face labels indicate the index of material.
+ * NB: holes in polygons are omitted
+ *
+ * @param[in] mesh
+ * @param[in] filepath
+ * @param[in] mtl
+ * @param[in] streamSetup function to setup output stream
+ */
+void saveAsObj(const MultiPolyMesh<int>& mesh,
+               const boost::filesystem::path& filepath,
+               const ObjMaterial& mtl,
+               const std::function<bool(std::ostream&)>& streamSetup);
+
 
 // Implementation following
 

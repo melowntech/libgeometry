@@ -12,6 +12,7 @@ if (OPENMESH_FOUND)
 
   set(geometry_OPENMESH_SOURCES
     meshop-openmesh.cpp
+    mesh-polygonization.cpp
     )
 
   # handle() is deprecated -> no warning
@@ -141,6 +142,8 @@ set(geometry_SOURCES
   multipolymesh.hpp multipolymesh.cpp
 
   parse-ply.cpp parse-ply.hpp
+
+  mesh-polygonization.hpp
 
   ${geometry_OPENMESH_SOURCES}
   ${geometry_CGAL_SOURCES}
