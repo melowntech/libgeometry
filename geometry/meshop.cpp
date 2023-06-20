@@ -546,29 +546,6 @@ Mesh clip(const Mesh &omesh, const math::Extents3 &extents)
     return out;
 }
 
-namespace
-{
-
-template <typename T>
-struct EdgeKeyTmpl
-{
-    T v1_, v2_; // vertex indices
-
-    EdgeKeyTmpl(T v1, T v2)
-    {
-        v1_ = std::min(v1, v2);
-        v2_ = std::max(v1, v2);
-    }
-
-    bool operator<(const EdgeKeyTmpl& other) const
-    {
-        return (v1_ == other.v1_) ? (v2_ < other.v2_) : (v1_ < other.v1_);
-    }
-};
-
-using EdgeKey = EdgeKeyTmpl<Face::index_type>;
-using NonManifoldEdge = boost::container::small_vector<Face::index_type, 2>;
-using EdgeMap = std::map<EdgeKey, NonManifoldEdge>;
 
 /// Creates map edge->faces, supports non-manifold edges (>2 incident faces)
 EdgeMap getNonManifoldEdgeMap(const Mesh& mesh)
@@ -584,7 +561,6 @@ EdgeMap getNonManifoldEdgeMap(const Mesh& mesh)
     return edgeMap;
 }
 
-} // namespace
 
 Mesh::pointer removeNonManifoldEdges(Mesh omesh)
 {

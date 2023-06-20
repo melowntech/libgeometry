@@ -230,6 +230,10 @@ struct Mesh {
     /** Calculate face barycenter.
      */
     math::Point3 barycenter(const Face &face) const;
+
+    /** Calculate volume of a mesh.
+    */
+    double volume() const;
 };
 
 // inlines
