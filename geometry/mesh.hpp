@@ -231,7 +231,7 @@ struct Mesh {
      */
     math::Point3 barycenter(const Face &face) const;
 
-    /** Calculate volume of a mesh.
+    /** Calculate volume of a watertight mesh.
     */
     double volume() const;
 };
