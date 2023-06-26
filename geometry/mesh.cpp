@@ -182,15 +182,14 @@ double signedVolumeOfTriangle(const math::Point3& p1, const math::Point3& p2, co
     double v213 = p2[0]*p1[1]*p3[2];
     double v123 = p1[0]*p2[1]*p3[2];
 
-    return (1.0f/6.0f)*(-v321 + v231 + v312 - v132 - v213 + v123);
+    return (1.0/6.0)*(-v321 + v231 + v312 - v132 - v213 + v123);
 }
 } // namespace
 
 double Mesh::volume() const
 {
     double vols = 0.0;
-    for (auto face : faces)
-    {
+    for (auto face : faces) {
         math::Point3 p1 = a(face);
         math::Point3 p2 = b(face);
         math::Point3 p3 = c(face);
