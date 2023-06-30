@@ -171,4 +171,32 @@ math::Point3 Mesh::barycenter(const Face &face) const
     };
 }
 
+namespace
+{
+double signedVolumeOfTriangle(const math::Point3& p1, const math::Point3& p2, const math::Point3& p3)
+{
+    double v321 = p3[0]*p2[1]*p1[2];
+    double v231 = p2[0]*p3[1]*p1[2];
+    double v312 = p3[0]*p1[1]*p2[2];
+    double v132 = p1[0]*p3[1]*p2[2];
+    double v213 = p2[0]*p1[1]*p3[2];
+    double v123 = p1[0]*p2[1]*p3[2];
+
+    return (1.0/6.0)*(-v321 + v231 + v312 - v132 - v213 + v123);
+}
+} // namespace
+
+double Mesh::volume() const
+{
+    double vols = 0.0;
+    for (auto face : faces) {
+        math::Point3 p1 = a(face);
+        math::Point3 p2 = b(face);
+        math::Point3 p3 = c(face);
+
+        vols += signedVolumeOfTriangle(p1, p2, p3);
+    }
+    return std::abs(vols);
+}
+
 } //namespace geometry

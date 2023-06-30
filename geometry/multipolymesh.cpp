@@ -26,8 +26,13 @@
 
 #include "multipolymesh.hpp"
 
+#include <fstream>
+#include <ios>
+#include <numeric>
+
 #include "math/math.hpp"
 
+#include <boost/filesystem.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 
 namespace geometry
@@ -56,5 +61,98 @@ FacePlaneCrs::FacePlaneCrs(const math::Point3& p1,
 
     g2p_ = math::matrixInvert(p2g_);
 }
+
+namespace {
+
+void saveAsObj(const MultiPolyMesh<int>& mesh,
+               std::ostream& out,
+               const ObjMaterial& mtl,
+               const boost::filesystem::path& filepath,
+               const std::function<bool(std::ostream&)>& streamSetup)
+{
+    for (const auto& lib : mtl.libs)
+    {
+        out << "mtllib " << lib << '\n';
+    }
+
+    if (!streamSetup(out))
+    {
+        out.setf(std::ios::scientific, std::ios::floatfield);
+    }
+
+    for (const auto& v : mesh.vertices)
+    {
+        out << "v " << v(0) << ' ' << v(1) << ' ' << v(2) << '\n';
+    }
+
+    // stable-sort faces by their material id to reduce the output file size
+    std::vector<std::size_t> sortedIndices(mesh.faces.size());
+    std::iota(std::begin(sortedIndices), std::end(sortedIndices), 0);
+    std::sort(std::begin(sortedIndices),
+              std::end(sortedIndices),
+              [&mesh](const auto lhs, const auto rhs) {
+                  return std::make_pair(mesh.faceLabels[lhs], lhs)
+                         < std::make_pair(mesh.faceLabels[rhs], rhs);
+              });
+
+    int currentLab { -1 };
+    for (const auto fI : sortedIndices)
+    {
+        if (mesh.faces[fI].size() > 1)
+        {
+            LOG(warn2) << "Encountered face with a hole. Skipping holes.";
+        }
+        if (mesh.faces[fI].empty())
+        {
+            LOG(warn4) << "Skipping empty face";
+            continue;
+        }
+
+        auto& lab { mesh.faceLabels[fI] };
+        if ((lab >= 0) && (lab != currentLab))
+        {
+            out << "usemtl " << mtl.name(lab) << '\n';
+            currentLab = lab;
+        }
+
+        out << "f";
+        for (auto& v : mesh.faces[fI][0])
+        {
+            out << ' ' << v + 1;
+        }
+        out << "\n";
+    }
+
+    if (!out)
+    {
+        LOGTHROW(err3, std::runtime_error)
+            << "Unable to save mesh to <" << filepath << ">.";
+    }
+}
+
+} // namespace
+
+void saveAsObj(const MultiPolyMesh<int>& mesh,
+               const boost::filesystem::path& filepath,
+               const ObjMaterial& mtl,
+               const std::function<bool(std::ostream&)>& streamSetup)
+{
+    LOG(info2) << "Saving polygonal mesh to file <" << filepath << ">.";
+
+    std::ofstream f;
+    f.exceptions(std::ios::badbit | std::ios::failbit);
+    try
+    {
+        f.open(filepath.string(), std::ios_base::out | std::ios_base::trunc);
+    }
+    catch (const std::exception&)
+    {
+        LOGTHROW(err3, std::runtime_error)
+            << "Unable to save mesh to <" << filepath << ">.";
+    }
+
+    saveAsObj(mesh, f, mtl, filepath, streamSetup);
+}
+
 
 } // namespace geometry

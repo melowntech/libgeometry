@@ -41,7 +41,6 @@
 #include "triclip.hpp"
 
 #include "utility/expect.hpp"
-#include "utility/small_list.hpp"
 
 #include <set>
 #include <boost/algorithm/string.hpp>
@@ -372,7 +371,7 @@ Mesh loadPly(const boost::filesystem::path& filepath)
     return simpleParser.mesh;
 }
 
-const unsigned int imageIdLimit(1<<16);
+const unsigned int imageIdLimit { 1 << 16 };
 
 void loadObj( ObjParserBase &parser
             , const boost::filesystem::path &filename)
@@ -547,65 +546,44 @@ Mesh clip(const Mesh &omesh, const math::Extents3 &extents)
     return out;
 }
 
+
+/// Creates map edge->faces, supports non-manifold edges (>2 incident faces)
+EdgeMap getNonManifoldEdgeMap(const Mesh& mesh)
+{
+    EdgeMap edgeMap;
+    for (std::size_t i = 0; i < mesh.faces.size(); i++)
+    {
+        auto& f = mesh.faces[i];
+        edgeMap[EdgeKey(f.a, f.b)].push_back(i);
+        edgeMap[EdgeKey(f.b, f.c)].push_back(i);
+        edgeMap[EdgeKey(f.c, f.a)].push_back(i);
+    }
+    return edgeMap;
+}
+
+
 Mesh::pointer removeNonManifoldEdges(Mesh omesh)
 {
+    auto edgeMap { getNonManifoldEdgeMap(omesh) };
+
     auto ofaces = omesh.faces;
     auto pmesh(std::make_shared<geometry::Mesh>(std::move(omesh)));
     auto& mesh(*pmesh);
     mesh.faces.clear();
     mesh.faces.shrink_to_fit();
 
-    typedef Face::index_type index_type;
+    using index_type = Face::index_type;
 
-    struct EdgeKey
-    {
-        index_type v1, v2; // vertex indices
-
-        EdgeKey(index_type v1, index_type v2)
-        {
-            this->v1 = std::min(v1, v2);
-            this->v2 = std::max(v1, v2);
-        }
-
-        bool operator< (const EdgeKey& other) const
-        {
-            return (v1 == other.v1) ? (v2 < other.v2) : (v1 < other.v1);
-        }
-    };
-
-    struct Edge {
-        utility::small_list<index_type, 2> facesIndices;
-    };
-
-    //count faces for each edge
-    std::map<EdgeKey,Edge> edgeMap;
-    for(index_type fi=0; fi<ofaces.size(); fi++){
-        const auto & face(ofaces[fi]);
-        EdgeKey edgeKeys[3] = { EdgeKey(face.a,face.b)
-                           , EdgeKey(face.b,face.c)
-                           , EdgeKey(face.c,face.a) };
-        for(const auto & key : edgeKeys){
-            auto it = edgeMap.find(key);
-            if(it==edgeMap.end()){
-                //if edge is not present insert it with current face
-                Edge edge;
-                edge.facesIndices.insert(fi);
-                edgeMap.insert(std::make_pair(key,edge));
-            }
-            else{
-                //if edge is present add current face to it
-                it->second.facesIndices.insert(fi);
-            }
-        }
-    }
-
-    //collect faces incident with non-manifold edge
+    // collect faces incident with non-manifold edge
     std::set<index_type> facesToOmit;
-    for(auto it = edgeMap.begin(); it!=edgeMap.end(); it++){
-        if(it->second.facesIndices.size()>2){
-            it->second.facesIndices.for_each([&](index_type fi) {
+    for (auto& edge : edgeMap)
+    {
+        if (edge.second.size() > 2)
+        {
+            for (auto& fi : edge.second)
+            {
                 facesToOmit.insert(fi);
-            });
+            }
         }
     }
 
@@ -618,6 +596,34 @@ Mesh::pointer removeNonManifoldEdges(Mesh omesh)
     }
 
     return pmesh;
+}
+
+FaceFaceTable getFaceFaceTableNonManifold(const Mesh& mesh)
+{
+    auto edgeMap { getNonManifoldEdgeMap(mesh) };
+
+    FaceFaceTable ffTable;
+    ffTable.resize(mesh.faces.size());
+
+    // collect neighbours across each edge of a face
+    for (std::size_t fI = 0; fI < mesh.faces.size(); fI++)
+    {
+        auto& face { mesh.faces[fI] };
+
+        std::array<EdgeKey, 3> triEdges = { EdgeKey(face.a, face.b),
+                                            EdgeKey(face.b, face.c),
+                                            EdgeKey(face.c, face.a) };
+        for (const auto& e : triEdges)
+        {
+            for (const auto& n : edgeMap.at(e))
+            {
+                if (n == fI) { continue; }
+                ffTable[fI].push_back(n);
+            }
+        }
+    }
+
+    return ffTable;
 }
 
 Mesh::pointer removeIsolatedVertices( const Mesh& imesh )
@@ -671,21 +677,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
     auto pmesh(std::make_shared<geometry::Mesh>(omesh));
     auto & mesh(*pmesh);
 
-    struct EdgeKey
-    {
-        std::size_t v1, v2; // vertex indices
-
-        EdgeKey(std::size_t v1, std::size_t v2)
-        {
-            this->v1 = std::min(v1, v2);
-            this->v2 = std::max(v1, v2);
-        }
-
-        bool operator< (const EdgeKey& other) const
-        {
-            return (v1 == other.v1) ? (v2 < other.v2) : (v1 < other.v1);
-        }
-    };
+    using EdgeKeyST = EdgeKeyTmpl<std::size_t>;
 
     struct Edge {
         typedef enum {
@@ -725,7 +717,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
     };
 
     struct EdgeMap {
-        std::map<EdgeKey, std::shared_ptr<Edge>> map;
+        std::map<EdgeKeyST, std::shared_ptr<Edge>> map;
         std::vector<std::shared_ptr<Edge>> heap;
 
         bool compareEdgePtr(const std::shared_ptr<Edge> &a, const std::shared_ptr<Edge> &b){
@@ -735,7 +727,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
         void addFaceEdge(std::size_t pv1, std::size_t pv2, int fid
                          , Edge::EdgeType type, float length)
         {
-            EdgeKey key(pv1, pv2);
+            EdgeKeyST key(pv1, pv2);
             auto it(map.find(key));
             if(it!=map.end()){
                 it->second->addFace(pv1, pv2, fid, type );
@@ -758,7 +750,7 @@ Mesh::pointer refine( const Mesh & omesh, unsigned int maxFacesCount)
                 return this->compareEdgePtr(a,b);
             });
             heap.pop_back();
-            map.erase(EdgeKey(edge.v1, edge.v2));
+            map.erase(EdgeKeyST(edge.v1, edge.v2));
             return edge;
         }
 

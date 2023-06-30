@@ -36,6 +36,7 @@
 #include <iostream>
 
 #include <boost/optional.hpp>
+#include <boost/container/small_vector.hpp>
 
 #include "utility/gccversion.hpp"
 
@@ -161,6 +162,30 @@ private:
     boost::optional<std::vector<float>> weights_;
 };
 
+
+template <typename T>
+struct EdgeKeyTmpl
+{
+    T v1_, v2_; // vertex indices
+
+    EdgeKeyTmpl(T v1, T v2)
+    {
+        v1_ = std::min(v1, v2);
+        v2_ = std::max(v1, v2);
+    }
+
+    bool operator<(const EdgeKeyTmpl& other) const
+    {
+        return (v1_ == other.v1_) ? (v2_ < other.v2_) : (v1_ < other.v1_);
+    }
+};
+
+
+using EdgeKey = EdgeKeyTmpl<Face::index_type>;
+using NonManifoldEdge = boost::container::small_vector<Face::index_type, 2>;
+using EdgeMap = std::map<EdgeKey, NonManifoldEdge>;
+
+
 Mesh::pointer simplify(const Mesh &mesh, int faceCount
                       , const SimplifyOptions &simplifyOptions
                        =  SimplifyOption::CORNERS
@@ -219,6 +244,10 @@ Mesh::pointer simplifyToError(const Mesh &mesh, double maxErr
  */
 Mesh::pointer refine( const Mesh &mesh, unsigned int maxFacesCount);
 
+
+EdgeMap getNonManifoldEdgeMap(const Mesh& mesh);
+
+
 /** Removes non manifold edges (edges with more than 2 incident faces)
  ** and their incident faces.
  *
@@ -226,6 +255,22 @@ Mesh::pointer refine( const Mesh &mesh, unsigned int maxFacesCount);
  * \return processed mesh
  */
 Mesh::pointer removeNonManifoldEdges(Mesh omesh);
+
+/**
+ * Face incidency - for each face lists all neighbors, supports non-manifolds
+ */
+using FaceFaceTable = std::vector<boost::container::small_vector<std::size_t, 3>>;
+
+/** Computes face incidency map, supports non manifold edges (face may have >3
+ * neighbors).
+ *
+ * NB: when two faces are incident over multiple edges, they are repeated
+ * respective amount of times
+ *
+ * @param[in] mesh mesh to process
+ * @returns face incidency table
+ */
+FaceFaceTable getFaceFaceTableNonManifold(const Mesh& mesh);
 
 /** Removes isolated vertices, e.g vertices incidental with 0 faces
  * Works with untextured meshes
