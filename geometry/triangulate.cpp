@@ -248,8 +248,8 @@ math::Triangles2d generalPolyTriangulateCDT(const math::MultiPolygon &mpolygon)
 
     for (const auto &poly : mpolygon) {
         if (poly.size()) {
-            std::size_t cdtVertexOffset = cdtVertices.size();
-            std::size_t cdtVertexId = 0;
+            CDT::VertInd cdtVertexOffset = static_cast<CDT::VertInd>(cdtVertices.size());
+            CDT::VertInd cdtVertexId = 0;
             cdtVertices.reserve(cdtVertices.size() + poly.size());
             cdtEdges.reserve(cdtEdges.size() + poly.size() - 1);
             for (const auto &p : poly) {
@@ -292,10 +292,6 @@ math::Triangles2d generalPolyTriangulateCDT(const math::MultiPolygon &mpolygon)
             math::Point2d{cdt.vertices[cdtTri.vertices[1]].x, cdt.vertices[cdtTri.vertices[1]].y},
             math::Point2d{cdt.vertices[cdtTri.vertices[2]].x, cdt.vertices[cdtTri.vertices[2]].y}
         });
-    }
-    std::cout << "constrainedDelaunayTriangulation" << std::endl;
-    for (const auto & t : tris2d) {
-        std::cout << t[0] << t[1] << t[2] << std::endl;
     }
     return tris2d;
 }
