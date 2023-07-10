@@ -256,7 +256,7 @@ math::Triangles2d generalPolyTriangulateCDT(const math::MultiPolygon &mpolygon)
                 cdtVertices.push_back({p(0), p(1)});
                 cdtEdges.emplace_back(
                     cdtVertexOffset + cdtVertexId, 
-                    cdtVertexOffset + (cdtVertexId + 1) % poly.size());
+                    cdtVertexOffset + (cdtVertexId + 1) % static_cast<CDT::VertInd>(poly.size()));
                 cdtVertexId++;
             }
         }
