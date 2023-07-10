@@ -39,6 +39,8 @@
 #include "nonconvexclip.hpp"
 #include "triangulate.hpp"
 #include "boost-geometry-convert.hpp"
+#include "geos-geometry-convert.hpp"
+#include <geos/util/GEOSException.h>
 
 namespace bg = boost::geometry;
 
@@ -75,7 +77,8 @@ inline double area(const math::Triangle2d &t) {
 
 } // namespace
 
-math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
+// TODO cleanup: remove unused
+[[maybe_unused]] math::Triangles3d clipTriangleNonconvexOld(const math::Triangle3d &tri_,
                                         const math::MultiPolygon &clipRegion)
 {
     math::Triangle3d tri(tri_);
@@ -175,6 +178,70 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     }
 
     return tris3;
+}
+
+math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri,
+                                        const math::MultiPolygon &clipRegion)
+{
+    math::Triangle2d tri2d {
+        math::Point2d{tri[0](0), tri[0](1)},
+        math::Point2d{tri[1](0), tri[1](1)},
+        math::Point2d{tri[2](0), tri[2](1)}
+    };
+    bool tri2dCCW = checkCcw(tri2d[0], tri2d[1], tri2d[2]) > 0;
+
+    // TODO performance: avoid conversion of clipMultiPoly for each triangle, supply function that takes clipMultiPoly in geos format 
+    std::unique_ptr<geos::geom::Polygon> trianglePoly { convert2geos(tri2d) };
+    std::unique_ptr<geos::geom::MultiPolygon> clipMultiPoly { convert2geos(clipRegion) };
+
+    std::unique_ptr<geos::geom::Geometry> isect;
+    try {
+        isect = trianglePoly->intersection(clipMultiPoly.get());
+    } catch (const geos::util::GEOSException &) {
+        // unable to solve intersection (TODO: check if coveredBy is working !!!)
+        if (trianglePoly->coveredBy(clipMultiPoly.get())) {
+            // input triangle is covered, return it
+            return {tri};
+        } else {
+            // no intersection, return empty triangles
+            return {};
+        }
+    }
+    if (!isect) {
+        // no intersection, return empty triangles
+        return {};
+    }
+    if (isect->getGeometryTypeId() != geos::geom::GeometryTypeId::GEOS_POLYGON &&
+        isect->getGeometryTypeId() != geos::geom::GeometryTypeId::GEOS_MULTIPOLYGON) 
+    {
+        // some other kind of intersection, just return input triangle
+        return {tri};
+    }
+    
+    // TODO performance: avoid conversion from geos to math to cdt
+    math::Triangles2d tris2d{generalPolyTriangulateCDT(convert2math(isect.get()))};
+
+    // restore orientation and restore Z coords using barycentric coordinates
+    math::Triangles3d tris3d;
+    for (const auto & t2 : tris2d) 
+    {
+        math::Triangle3d t3;
+        bool orientationMismatch = tri2dCCW ^ (checkCcw(t2[0], t2[1], t2[2]) > 0);
+        for (int i = 0; i < 3; i++)
+        {
+            int j = i;
+            if (orientationMismatch) { j = 2 - i; }
+            math::Point3 b(math::barycentricCoords(t2[i], tri2d));
+            t3[j](0) = t2[i](0);
+            t3[j](1) = t2[i](1);
+            t3[j](2) = b(0) * tri[0](2) +
+                       b(1) * tri[1](2) +
+                       b(2) * tri[2](2);
+        }
+        tris3d.emplace_back(t3);
+    }
+
+    return tris3d;
 }
 
 

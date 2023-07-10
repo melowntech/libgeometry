@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2017 Melown Technologies SE
+ * Copyright (c) 2023 Melown Technologies SE
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -24,37 +24,28 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  @file triangulate.hpp
- *  @author Jakub Cerveny <jakub.cerveny@melown.com>
+ *  @file geos-geometry-convert.hpp
  *
- *  Triangulation polygons.
+ *  Conversions from and to GEOS Geometry.
+ *
  */
 
-#ifndef geometry_triangulate_hpp_included_
-#define geometry_triangulate_hpp_included_
+#ifndef geometry_geos_geometry_convert_hpp_included_
+#define geometry_geos_geometry_convert_hpp_included_
 
-#include "math/geometry.hpp"
+#include "polygon.hpp"
+
+#include <geos/geom/Polygon.h>
+#include <geos/geom/MultiPolygon.h>
 
 namespace geometry {
 
-/** Perform triangulation of a simple polygon by the ear clipping algorithm (see
- *  https://en.wikipedia.org/wiki/Polygon_triangulation#Ear_clipping_method)
- *  The polygon must be CCW oriented, must not self-intersect and must not
- *  contain holes. It may be nonconvex.
- */
-math::Triangles2d simplePolyTriangulate(const math::Polygon &polygon);
+std::unique_ptr<geos::geom::Polygon> convert2geos(const math::Triangle2d &tri);
+math::Triangle2d convert2math(const geos::geom::Polygon *tri);
 
-/** Triangulate a general multipolygon (possibly with holes). The function first
- *  performs Delaunay triangulation of all points in the multipolygon and then
- *  returns triangles that lie inside.
- */
-math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon);
+std::unique_ptr<geos::geom::MultiPolygon> convert2geos(const math::MultiPolygon &mpoly);
+math::MultiPolygon convert2math(const geos::geom::Geometry *g);
 
-/** Triangulate a general multipolygon (possibly with holes) using 
- *  constrained Delaunay triangulation.
- */
-math::Triangles2d generalPolyTriangulateCDT(const math::MultiPolygon &mpolygon);
+}
 
-} // namespace geometry
-
-#endif // geometry_triangulate_hpp_included_
+#endif // geometry_geos_geometry_convert_hpp_included_

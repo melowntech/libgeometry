@@ -34,6 +34,8 @@
 
 #include "triangulate.hpp"
 
+#include "CDT/CDT.h"
+
 namespace geometry {
 
 namespace bp = boost::polygon;
@@ -234,6 +236,68 @@ math::Triangles2d generalPolyTriangulate(const math::MultiPolygon &mpolygon)
         while (edge != vertex.incident_edge());
     }
     return result;
+}
+
+math::Triangles2d generalPolyTriangulateCDT(const math::MultiPolygon &mpolygon)
+{
+    std::vector<CDT::V2d<double>> cdtVertices;
+    std::vector<CDT::Edge> cdtEdges;
+
+    // Note math::MultiPolygon consists of open CCW rings and open CW holes
+    // (ie. first point of the ring is not same as the last point)
+
+    for (const auto &poly : mpolygon) {
+        if (poly.size()) {
+            std::size_t cdtVertexOffset = cdtVertices.size();
+            std::size_t cdtVertexId = 0;
+            cdtVertices.reserve(cdtVertices.size() + poly.size());
+            cdtEdges.reserve(cdtEdges.size() + poly.size() - 1);
+            for (const auto &p : poly) {
+                cdtVertices.push_back({p(0), p(1)});
+                cdtEdges.emplace_back(
+                    cdtVertexOffset + cdtVertexId, 
+                    cdtVertexOffset + (cdtVertexId + 1) % poly.size());
+                cdtVertexId++;
+            }
+        }
+    }
+
+    if (cdtVertices.size() == 0 || cdtEdges.size() == 0) {
+        return {};
+    }
+
+    [[maybe_unused]] CDT::DuplicatesInfo di =
+        CDT::RemoveDuplicatesAndRemapEdges(cdtVertices, cdtEdges);
+
+    // Pre-conditions:
+    // - No duplicated points (use provided functions for removing duplicate points and re-mapping edges)
+    // - No two constraint edges intersect each other (overlapping boundaries are allowed)
+    // Post-conditions:
+    // - Triangles have counter-clockwise (CCW) winding
+    
+    CDT::Triangulation cdt(
+        CDT::VertexInsertionOrder::Auto,
+        CDT::IntersectingConstraintEdges::Resolve,
+        /*minDistToConstraintEdge*/ 0.0);
+
+    cdt.insertVertices(cdtVertices);
+    cdt.insertEdges(cdtEdges);
+    cdt.eraseOuterTrianglesAndHoles();
+
+    math::Triangles2d tris2d;
+    tris2d.reserve(cdt.triangles.size());
+    for (const auto & cdtTri : cdt.triangles) {
+        tris2d.emplace_back(math::Triangle2d{
+            math::Point2d{cdt.vertices[cdtTri.vertices[0]].x, cdt.vertices[cdtTri.vertices[0]].y},
+            math::Point2d{cdt.vertices[cdtTri.vertices[1]].x, cdt.vertices[cdtTri.vertices[1]].y},
+            math::Point2d{cdt.vertices[cdtTri.vertices[2]].x, cdt.vertices[cdtTri.vertices[2]].y}
+        });
+    }
+    std::cout << "constrainedDelaunayTriangulation" << std::endl;
+    for (const auto & t : tris2d) {
+        std::cout << t[0] << t[1] << t[2] << std::endl;
+    }
+    return tris2d;
 }
 
 } // namespace geometry

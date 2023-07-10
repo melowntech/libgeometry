@@ -108,7 +108,7 @@ else()
 endif()
 
 define_module(LIBRARY geometry=${geometry_VERSION}
-  DEPENDS math>=1.10 utility>=1.41 dbglog>=1.7
+  DEPENDS math>=1.10 utility>=1.41 dbglog>=1.7 GEOS #CDT
   ${geometry_EXTRA_DEPENDS}
   DEFINITIONS ${geometry_EXTRA_DEFINITIONS})
 
@@ -117,6 +117,7 @@ set(geometry_SOURCES
   parse-obj.cpp
 
   boost-geometry-convert.cpp
+  geos-geometry-convert.cpp
   polygon.hpp
   polyclip.cpp
   polyop.hpp polyop.cpp
