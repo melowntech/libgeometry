@@ -53,7 +53,7 @@ math::MultiPolygon intersectPolygons(const math::MultiPolygon &mp1,
                                      const math::MultiPolygon &mp2)
 {
     bgMultiPolygon out;
-    bg::intersection(convert2bg(mp1), convert2bg(mp2), out);
+    bg::intersection(convert2bg<bgMultiPolygon>(mp1), convert2bg<bgMultiPolygon>(mp2), out);
     return convert2math(out);
 }
 
@@ -61,7 +61,7 @@ math::MultiPolygon subtractPolygons(const math::MultiPolygon &mp1,
                                     const math::MultiPolygon &mp2)
 {
     bgMultiPolygon out;
-    bg::difference(convert2bg(mp1), convert2bg(mp2), out);
+    bg::difference(convert2bg<bgMultiPolygon>(mp1), convert2bg<bgMultiPolygon>(mp2), out);
     return convert2math(out);
 }
 
@@ -69,7 +69,7 @@ math::MultiPolygon unitePolygons(const math::MultiPolygon &mp1,
                                  const math::MultiPolygon &mp2)
 {
     bgMultiPolygon out;
-    bg::union_(convert2bg(mp1), convert2bg(mp2), out);
+    bg::union_(convert2bg<bgMultiPolygon>(mp1), convert2bg<bgMultiPolygon>(mp2), out);
     return convert2math(out);
 }
 
@@ -84,7 +84,7 @@ math::MultiPolygon offsetPolygon(const math::MultiPolygon &mpoly,
     bg::strategy::buffer::point_circle s_circle(1);
 
     bgMultiPolygon out;
-    bg::buffer(convert2bg(mpoly), out,
+    bg::buffer(convert2bg<bgMultiPolygon>(mpoly), out,
                s_distance, s_side, s_join, s_end, s_circle);
 
     if (epsSimplify > 0.0)

@@ -32,9 +32,22 @@
 
 #include "boost-geometry-convert.hpp"
 
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/geometries/multi_polygon.hpp>
+
+namespace bg = boost::geometry;
+
 namespace geometry {
 
-bgMultiPolygon convert2bg(const math::MultiPolygon &mpoly)
+typedef bg::model::d2::point_xy<double> bgPoint;
+typedef bg::model::polygon<bgPoint, false, false> bgPolygon; // ccw, unclosed
+typedef bg::model::multi_polygon<bgPolygon> bgMultiPolygon;
+typedef bgPolygon::ring_type bgRing;
+
+template<>
+bgMultiPolygon convert2bg<bgMultiPolygon>(const math::MultiPolygon &mpoly)
 {
     auto makeRing = [](const math::Points2d &points)
     {
@@ -67,7 +80,8 @@ bgMultiPolygon convert2bg(const math::MultiPolygon &mpoly)
     return result;
 }
 
-math::MultiPolygon convert2math(const bgMultiPolygon &bgmpoly)
+template<>
+math::MultiPolygon convert2math<bgMultiPolygon>(const bgMultiPolygon &bgmpoly)
 {
     auto ringPoints = [](const bgPolygon::ring_type &ring)
     {

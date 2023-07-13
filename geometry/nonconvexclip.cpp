@@ -91,7 +91,7 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     double ccw(checkCcw(tri2[0], tri2[1], tri2[2]));
 
     // convert clipRegion to boost MultiPolygon
-    MultiPolygon clipMultiPoly { convert2bg(clipRegion) };
+    MultiPolygon clipMultiPoly { convert2bg<MultiPolygon>(clipRegion) };
 
     if (std::abs(ccw) < 1e-4)
     {

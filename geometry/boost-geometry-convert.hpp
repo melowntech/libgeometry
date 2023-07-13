@@ -35,22 +35,12 @@
 
 #include "polygon.hpp"
 
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
-#include <boost/geometry/geometries/polygon.hpp>
-#include <boost/geometry/geometries/multi_polygon.hpp>
-
-namespace bg = boost::geometry;
-
 namespace geometry {
 
-typedef bg::model::d2::point_xy<double> bgPoint;
-typedef bg::model::polygon<bgPoint, false, false> bgPolygon; // ccw, unclosed
-typedef bg::model::multi_polygon<bgPolygon> bgMultiPolygon;
-typedef bgPolygon::ring_type bgRing;
-
-bgMultiPolygon convert2bg(const math::MultiPolygon &mpoly);
-math::MultiPolygon convert2math(const bgMultiPolygon &bgmpoly);
+template <typename BoostMultiPolygon>
+BoostMultiPolygon convert2bg(const math::MultiPolygon &mpoly);
+template <typename BoostMultiPolygon>
+math::MultiPolygon convert2math(const BoostMultiPolygon &bgmpoly);
 
 }
 
