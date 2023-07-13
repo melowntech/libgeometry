@@ -116,6 +116,7 @@ set(geometry_SOURCES
   pointcloud.cpp
   parse-obj.cpp
 
+  boost-geometry-convert.cpp
   polygon.hpp
   polyclip.cpp
   polyop.hpp polyop.cpp

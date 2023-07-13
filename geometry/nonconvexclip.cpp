@@ -38,6 +38,7 @@
 
 #include "nonconvexclip.hpp"
 #include "triangulate.hpp"
+#include "boost-geometry-convert.hpp"
 
 namespace bg = boost::geometry;
 
@@ -49,17 +50,6 @@ typedef bg::model::multi_polygon<Polygon> MultiPolygon;
 typedef Polygon::ring_type Ring;
 
 namespace {
-
-template<typename List>
-std::vector<Point> bgPoints(const List &list)
-{
-    std::vector<Point> result;
-    result.reserve(list.size() + 1);
-    for (const auto &p : list) {
-        result.emplace_back(p(0), p(1));
-    }
-    return result;
-}
 
 inline math::Points2d ringPoints(const Ring &ring)
 {
@@ -101,12 +91,7 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
     double ccw(checkCcw(tri2[0], tri2[1], tri2[2]));
 
     // convert clipRegion to boost MultiPolygon
-    MultiPolygon clipMultiPoly;
-    for (const auto &pts : clipRegion) {
-        Polygon part;
-        bg::assign_points(part, bgPoints(pts));
-        clipMultiPoly.push_back(part);
-    }
+    MultiPolygon clipMultiPoly { convert2bg<MultiPolygon>(clipRegion) };
 
     if (std::abs(ccw) < 1e-4)
     {
@@ -134,7 +119,9 @@ math::Triangles3d clipTriangleNonconvex(const math::Triangle3d &tri_,
 
     // convert input to 2D polygons
     Polygon trianglePoly;
-    bg::assign_points(trianglePoly, bgPoints(tri));
+    bg::append(trianglePoly.outer(), Point(tri[0][0], tri[0][1]));
+    bg::append(trianglePoly.outer(), Point(tri[1][0], tri[1][1]));
+    bg::append(trianglePoly.outer(), Point(tri[2][0], tri[2][1]));
 
     // calculate intersection
     std::deque<Polygon> isect;

@@ -24,15 +24,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- *  @file polyop.cpp
- *  @author Jakub Cerveny <jakub.cerveny@melowntech.com>
+ *  @file boost-geometry-convert.cpp
  *
- *  Polygon operations, based on Boost.Geometry.
+ *  Conversions from and to Boost.Geometry.
  *
  */
 
-#include "polyop.hpp"
-#include "polygon.hpp"
 #include "boost-geometry-convert.hpp"
 
 #include <boost/geometry.hpp>
@@ -49,55 +46,63 @@ typedef bg::model::polygon<bgPoint, false, false> bgPolygon; // ccw, unclosed
 typedef bg::model::multi_polygon<bgPolygon> bgMultiPolygon;
 typedef bgPolygon::ring_type bgRing;
 
-math::MultiPolygon intersectPolygons(const math::MultiPolygon &mp1,
-                                     const math::MultiPolygon &mp2)
+template<>
+bgMultiPolygon convert2bg<bgMultiPolygon>(const math::MultiPolygon &mpoly)
 {
-    bgMultiPolygon out;
-    bg::intersection(convert2bg<bgMultiPolygon>(mp1), convert2bg<bgMultiPolygon>(mp2), out);
-    return convert2math(out);
-}
-
-math::MultiPolygon subtractPolygons(const math::MultiPolygon &mp1,
-                                    const math::MultiPolygon &mp2)
-{
-    bgMultiPolygon out;
-    bg::difference(convert2bg<bgMultiPolygon>(mp1), convert2bg<bgMultiPolygon>(mp2), out);
-    return convert2math(out);
-}
-
-math::MultiPolygon unitePolygons(const math::MultiPolygon &mp1,
-                                 const math::MultiPolygon &mp2)
-{
-    bgMultiPolygon out;
-    bg::union_(convert2bg<bgMultiPolygon>(mp1), convert2bg<bgMultiPolygon>(mp2), out);
-    return convert2math(out);
-}
-
-math::MultiPolygon offsetPolygon(const math::MultiPolygon &mpoly,
-                                 double distance, double miterLimit,
-                                 double epsSimplify)
-{
-    bg::strategy::buffer::distance_symmetric<double> s_distance(distance);
-    bg::strategy::buffer::side_straight s_side;
-    bg::strategy::buffer::join_miter s_join(miterLimit);
-    bg::strategy::buffer::end_flat s_end;
-    bg::strategy::buffer::point_circle s_circle(1);
-
-    bgMultiPolygon out;
-    bg::buffer(convert2bg<bgMultiPolygon>(mpoly), out,
-               s_distance, s_side, s_join, s_end, s_circle);
-
-    if (epsSimplify > 0.0)
+    auto makeRing = [](const math::Points2d &points)
     {
-        // get rid of collinear points produced by Boost.Geomertry around joins
-        bgMultiPolygon out2;
-        bg::simplify(out, out2, epsSimplify);
-        return convert2math(out2);
+        bgRing ring;
+        ring.reserve(points.size());
+        for (const auto &p : points) {
+            ring.emplace_back(p(0), p(1));
+        }
+        return ring;
+    };
+
+    bgMultiPolygon result;
+    result.reserve(mpoly.size());
+
+    // add polygons with positive area as regular bgPolygons
+    for (const auto &poly : mpoly) {
+        if (geometry::area(poly) > 0) {
+            result.push_back(bgPolygon({makeRing(poly)}));
+        }
     }
-    else
+
+    // add all holes as interior rings of the first bgPolygon
+    // -- boost::geometry seems OK with that
+    for (const auto &poly : mpoly) {
+        if (geometry::area(poly) < 0) {
+            bg::interior_rings(result.front()).push_back(makeRing(poly));
+        }
+    }
+
+    return result;
+}
+
+template<>
+math::MultiPolygon convert2math<bgMultiPolygon>(const bgMultiPolygon &bgmpoly)
+{
+    auto ringPoints = [](const bgPolygon::ring_type &ring)
     {
-        return convert2math(out);
+        math::Points2d result;
+        result.reserve(ring.size());
+        for (const auto &p : ring) {
+            result.emplace_back(p.x(), p.y());
+        }
+        return result;
+    };
+
+    math::MultiPolygon result;
+    result.reserve(bgmpoly.size());
+    for (const auto &poly : bgmpoly)
+    {
+        result.push_back(ringPoints(poly.outer()));
+        for (const auto &ring : poly.inners()) {
+            result.push_back(ringPoints(ring));
+        }
     }
+    return result;
 }
 
 } // namespace geometry
