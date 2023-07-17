@@ -97,7 +97,7 @@ public:
         Base::mesh().remove_property(weights_);
     }
 
-    virtual float collapse_priority(const CollapseInfo& ci) {
+    virtual float collapse_priority(const CollapseInfo& ci) override {
         const float baseCost = OpenMesh::Decimater::ModQuadricT<MeshT>::collapse_priority(ci);
         if (baseCost != Base::ILLEGAL_COLLAPSE) {
             const double w = Base::mesh().property(weights_, ci.v1);
