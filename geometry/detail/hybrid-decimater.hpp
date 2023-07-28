@@ -139,14 +139,14 @@ public:
 public: // inherited
 
   /// Initalize the module and prepare the mesh for decimation.
-  virtual void initialize(void);
+  virtual void initialize(void) override;
 
   /** Compute collapse priority based on error quadrics.
    *
    *  \see ModBaseT::collapse_priority() for return values
    *  \see set_max_err()
    */
-  virtual float collapse_priority(const CollapseInfo& _ci)
+  virtual float collapse_priority(const CollapseInfo& _ci) override
   {
     using namespace OpenMesh;
 
@@ -162,14 +162,14 @@ public: // inherited
 
 
   /// Post-process halfedge collapse (accumulate quadrics)
-  virtual void postprocess_collapse(const CollapseInfo& _ci)
+  virtual void postprocess_collapse(const CollapseInfo& _ci) override
   {
     Base::mesh().property(quadrics_, _ci.v1) +=
       Base::mesh().property(quadrics_, _ci.v0);
   }
 
   /// set the percentage of maximum quadric error
-  void set_error_tolerance_factor(double _factor);
+  void set_error_tolerance_factor(double _factor) override;
 
   /** Set alternative set of vertices.
    */
@@ -353,7 +353,7 @@ public:
 public: // inherited
 
   /// Initalize the module and prepare the mesh for decimation.
-  virtual void initialize(void) {
+  virtual void initialize(void) override{
   }
 
   /** Compute collapse priority based on error quadrics.
@@ -361,7 +361,7 @@ public: // inherited
    *  \see ModBaseT::collapse_priority() for return values
    *  \see set_max_err()
    */
-  virtual float collapse_priority(const CollapseInfo& _ci)
+  virtual float collapse_priority(const CollapseInfo& _ci) override
   {
     auto &mesh = Base::mesh();
     if (!isAllowed (mesh.data(_ci.v1).classLabel)) {
@@ -474,7 +474,7 @@ public: // inherited
    *  Compute collapse priority based on error quadrics
    *  and modifies it based on convexity of the vertex
    */
-  virtual float collapse_priority(const CollapseInfo& _ci)
+  virtual float collapse_priority(const CollapseInfo& _ci) override
   {
     float priority = OpenMesh::Decimater::ModQuadricT<MeshT>::collapse_priority(_ci);
     if (concaveVertexModifier_ == 1) {
