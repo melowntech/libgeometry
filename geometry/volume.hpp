@@ -338,6 +338,9 @@ public:
     //~VolumeArray(){}
 
     Value_t get( int i, int j, int k ) const;
+
+    /** Get value reference without boundary checking. */
+    Value_t & operator()( int i, int j, int k );
     void set( int i, int j, int k, const Value_t & value );
 
     void grow(const int axis, bool front = false);
@@ -375,6 +378,9 @@ public:
 
     /** Value getter. */
     Value_t get( int i, int j, int k ) const;
+
+    /** Get value reference without boundary checking. */
+    Value_t & operator()( int i, int j, int k );
 
     /** Value setter. */
     void set( int i, int j, int k, const Value_t & value );
@@ -501,6 +507,8 @@ public :
 
     /** Value getter. */
     Value_t get( int i, int j, int k ) const;
+    /** Get value reference without boundary checking. */
+    Value_t & operator()( int i, int j, int k ) { return container_(i, j, k); }
     /** Value setter. */
     void set( int i, int j, int k, const Value_t & value );
 
@@ -1054,10 +1062,18 @@ Value_t VolumeArray<Value_t>::get( int i, int j, int k ) const{
 }
 
 template <typename Value_t>
-void VolumeArray<Value_t>::set( int i, int j, int k, const Value_t & value  ){
-    const auto & size_(this->size_);
+Value_t &VolumeArray<Value_t>::operator()( int i, int j, int k ){
     const auto & offset_(this->offset_);
     const auto & capacity_(this->capacity_);
+
+    return this->data[ std::size_t(k + offset_(2))
+                     + std::size_t(j + offset_(1)) * capacity_(2)
+                     + std::size_t(i + offset_(0)) * capacity_(2) * capacity_(1)];
+}
+
+template <typename Value_t>
+void VolumeArray<Value_t>::set( int i, int j, int k, const Value_t & value  ){
+    const auto & size_(this->size_);
     if ( i < 0 || i >= size_(0) || j < 0
        || j >= size_(1) || k < 0 || k >= size_(2) )
     {
@@ -1065,9 +1081,7 @@ void VolumeArray<Value_t>::set( int i, int j, int k, const Value_t & value  ){
                 << "Setting value outside the volume.";
     }
 
-    this->data[ std::size_t(k + offset_(2))
-              + std::size_t(j + offset_(1)) * capacity_(2)
-              + std::size_t(i + offset_(0)) * capacity_(2) * capacity_(1)] = value;
+    (*this)(i, j, k) = value;
 }
 
 template <typename Value_t>
